@@ -169,24 +169,24 @@ _surfaces = [{
 blend_shape_mode = 0
 shadow_mesh = SubResource("ArrayMesh_jehu4")
 
-[node name="body_kenney_n" type="Node3D" unique_id=1382812990]
+[node name="body_kenney_n" type="Node3D" unique_id=411731630]
 
-[node name="leg-left" type="MeshInstance3D" parent="." unique_id=1734757313]
-transform = Transform3D(0.508, 0, 0, 0, 0.508, 0, 0, 0, 0.508, 0.10159998, -0.068072036, 1.033723e-14)
+[node name="leg-left" type="MeshInstance3D" parent="." unique_id=597652201]
+transform = Transform3D(-0.508, 0, -4.4410772e-08, 0, 0.508, 0, 4.4410772e-08, 0, -0.508, -0.10159998, -0.068072036, 8.882141e-09)
 mesh = SubResource("ArrayMesh_2e810")
 
-[node name="leg-right" type="MeshInstance3D" parent="." unique_id=1570018201]
-transform = Transform3D(0.508, 0, 0, 0, 0.508, 0, 0, 0, 0.508, -0.101600036, -0.068072036, 1.1093613e-14)
+[node name="leg-right" type="MeshInstance3D" parent="." unique_id=1621800406]
+transform = Transform3D(-0.508, 0, -4.4410772e-08, 0, 0.508, 0, 4.4410772e-08, 0, -0.508, 0.101600036, -0.068072036, -8.882168e-09)
 mesh = SubResource("ArrayMesh_cshg2")
 
-[node name="torso" type="MeshInstance3D" parent="." unique_id=381775469]
-transform = Transform3D(0.508, 0, 0, 0, 0.508, 0, 0, 0, 0.508, -3.027916e-08, -0.22047204, 0)
+[node name="torso" type="MeshInstance3D" parent="." unique_id=2022074239]
+transform = Transform3D(-0.508, 0, -4.4410772e-08, 0, 0.508, 0, 4.4410772e-08, 0, -0.508, 3.027916e-08, -0.22047204, -2.6470883e-15)
 mesh = SubResource("ArrayMesh_35bnr")
 
-[node name="arm-left" type="MeshInstance3D" parent="." unique_id=1482725948]
-transform = Transform3D(0.508, 0, 0, 0, 0.508, 0, 0, 0, 0.508, 0.20320003, 0.33832794, -0.050799955)
+[node name="arm-left" type="MeshInstance3D" parent="." unique_id=879136807]
+transform = Transform3D(-0.508, 0, -4.4410772e-08, 0, 0.508, 0, 4.4410772e-08, 0, -0.508, -0.20320003, 0.33832794, 0.050799973)
 mesh = SubResource("ArrayMesh_xr7a5")
 
-[node name="arm-right" type="MeshInstance3D" parent="." unique_id=1635677363]
-transform = Transform3D(0.508, 0, 0, 0, 0.508, 0, 0, 0, 0.508, -0.20319997, 0.33832794, -0.050799955)
+[node name="arm-right" type="MeshInstance3D" parent="." unique_id=617232858]
+transform = Transform3D(-0.508, 0, -4.4410772e-08, 0, 0.508, 0, 4.4410772e-08, 0, -0.508, 0.20319997, 0.33832794, 0.050799936)
 mesh = SubResource("ArrayMesh_5sjtd")
