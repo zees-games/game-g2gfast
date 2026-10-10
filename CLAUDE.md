@@ -542,6 +542,7 @@ godot --headless --path . res://examples/headless_client.tscn  # 24 checks: the 
 godot --headless --path . res://examples/headless_net.tscn   # 193 checks, 27 sections
 godot --headless --path . res://examples/dedicated.tscn      # 189 checks, 16 sections
 godot --headless --path . res://examples/jitter_probe.tscn   # 4 configurations
+godot --headless --path . res://examples/headless_feel.tscn  # 21 checks: a real client over a real lossy socket; -- --ws for a browser's link
 godot --headless --path . res://examples/headless_imported.tscn  # 45 per map, +1 per track and stage: 2074 over the 42 (run with --fixed-fps 128)
 godot --headless --path . res://examples/headless_maps.tscn      # 51 checks
 godot --headless --path . res://examples/headless_stack.tscn     # 29 checks
@@ -825,11 +826,7 @@ either half on its own.
 | **engine 60** | 47% spread | 47% spread |
 | **engine 128** | 47% spread | **0%** |
 
-**View angles are deliberately still not interpolated**, and they never juddered: mouse
-motion is delivered once per frame and `DotFpsSampler.sample` consumes everything
-pending, so whichever tick runs next absorbs exactly that frame's motion and the yaw
-tracks the mouse per frame however many ticks ran. Blending it would add a tick of
-latency to aiming to fix nothing.
+**View angles are deliberately still not interpolated**: blending them toward the last tick would add a tick of latency to aiming. They did judder, though, on any display faster than the tick rate, and are drawn from the sampler once a frame since 2026-10-10: see *What a connected player sees*.
 
 The cost is real and worth naming: a browser client now steps Godot's physics 128 times
 a second instead of 60. The work inside the tick is unchanged — the clock was already
@@ -839,6 +836,17 @@ for a world of static geometry and one query-driven controller is close to free.
 **Nothing headless could see any of this**, which is why it survived every suite:
 every check in this repository asserts a simulated value, and every simulated value was
 correct. `jitter_probe` is the first thing here that samples what a *frame* shows.
+
+## What a connected player sees (2026-10-10, `net-review`)
+
+`examples/headless_feel.tscn` is the first suite here that connects the real `G2GClient` to a real server and looks at the frames: a dual-stack `DotServer` running `G2GModule` on `bhop_g2g_intro`, the client over ENet through dot-net's UDP relay (or `-- --ws`, over WebSocket through a TCP proxy whose lost segments hold the whole stream for 200 ms, as a retransmit does), W held and the mouse turning at 240 degrees a second, and a seated bot running a circle for the client to draw. The display rate is `Engine.max_fps` (60, 144, 240; this machine reaches about 145). Per window it prints the eye's frame-to-frame motion against its speed, the view's turn against the mouse's, the share of server ticks that had the client's command, every prediction correction, and the remote runner drawn against where the server had it at that render time. Two things it had to learn to measure honestly: the server shares the process, so the probe polls the server's `MultiplayerAPI` once a physics frame, as a dedicated server at `max_fps = tickrate` hears its clients (left at the frame rate, a third of the client's commands reached it after their tick at 60 Hz, which was the harness); and the client scene is built once the link is playing, as the shell builds it, because a WebSocket peer has no unique id before its handshake and a client built before then registers its own player as somebody else's and never predicts it. Found, by how much a player would feel it:
+
+- **At 144 Hz the view stood still on one frame in nine and turned double on the next.** `G2GPlayer.present` drew the state's yaw and pitch, which only change when a tick runs, and a 144 Hz display against 128 ticks has frames with no tick in them (240 Hz: nearly every other frame). Measured: 96 of 864 frames did not turn while the mouse moved, 96-114 turned twice as far. Decision 10's note that the view "never juddered" was true at 60 Hz, where every frame runs two or three ticks, and only there. `G2GClient._fold_look` calls `DotFpsSampler.look_now()` (dot-player-controller) once a frame and hands the result to `G2GPlayer.view_now`, which present draws; the commands are unchanged, because the sampler's angles are cumulative and the next tick carries exactly what was drawn. After: 0 of 864, 0 double, in every window. By name, with the state's angles as the fallback, so a shell without `look_now` draws as before. Armed (no `_fold_look`): 96 of 864 still, 114 double.
+- **A prediction correction moved the eye in one frame.** dot-net has always computed `DotNetPredictor.visual_offset`, the part of a correction still to be eased, and nothing in the family read it. A 30 cm correction (the server moves the player, as a misprediction does) jumped the eye 30.4 cm in one frame; `G2GClient._fold_correction` hands the offset to `G2GPlayer.drawn_offset`, which present adds to the eye and the rig, and the worst frame is 4.1-5.4 cm. Under real loss corrections are 1-35 cm (5% and 20% loss, 30..80 ms). With dot-net's change that eases every correction, not only those over a centimetre, the eye's frame-to-frame speed at 144 Hz on a clean link went from 0.92-1.16 of the true speed (5th-95th percentile) to 0.96-1.05: a replay starts from the server's quantised state, so the eye was nudged a few millimetres 32 times a second. Armed (no `_fold_correction`): 30.4 cm.
+- **Remote runners extrapolated on 7.5-11% of frames under loss, and were drawn up to 3.45 ticks back when a link turned jittery.** Both dot-net's (its docs/timelines.md, "The render time"): the buffer is now sized from how late snapshots actually arrive and grows at a bounded rate instead of at once. Measured here at 5% and 20% loss, 30..80 ms: extrapolated 0.4-2.8% of frames, worst error 2-3.5 cm against 4.6-8.3, the render time never back more than 0.11 tick; the cost is the buffer, about 125 ms under loss where it was 70-90.
+- **Not this game's to fix, and measured:** key to motion is the next frame (5-7 ms at 144 Hz, one tick, at a 105 ms round trip). Physics frames that ran no client tick or two were 0-7 a window, too few to see. Over WebSocket with segments lost, TCP holds every command behind the lost one: at 1% of segments the server had the client's command for 78-86% of its ticks and at 3% for 41-56%, the rest arriving after their tick and repeated over, with corrections up to 0.7 m; the copies in each input packet cannot help, since they are in the same stalled stream. The correction easing above is what a browser player sees of it now; the cure is the desktop client's UDP. On ENet at 5% loss 1.3-3.2% of ticks still ran on a repeated command (the input lead runs on a clock whose jitter reads about zero on ENet: dot-net's open item).
+
+**The six-pages check accepts dot-menu's optional `advanced` page** (`headless_presentation`): this game's six in its order, or those six followed by `advanced`, which dot-menu appends for its connection overlay; anything else still fails.
 
 ## Decision 8: the browser is asked for the mouse, not told
 

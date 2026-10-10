@@ -1325,8 +1325,12 @@ func _test_the_menu_is_a_view_of_the_settings() -> void:
 	await get_tree().process_frame
 
 	var order: Array = menu.screen.visible_pages().map(func(page: DotMenuPage) -> StringName: return page.id)
-	_check(order == [&"general", &"hud", &"gameplay", &"video", &"audio", &"controls"],
-		"six pages, in this game's order", str(order))
+	# dot-menu may append its own optional `advanced` page (the connection overlay) after
+	# this game's six; it is the addon's, not a reordering of ours, so both shapes pass and
+	# anything else -- a page missing, moved or added elsewhere -- does not.
+	var ours: Array = [&"general", &"hud", &"gameplay", &"video", &"audio", &"controls"]
+	_check(order == ours or order == ours + [&"advanced"],
+		"six pages, in this game's order, then dot-menu's optional advanced page if it has one", str(order))
 
 	menu.open(&"general")
 	await get_tree().process_frame

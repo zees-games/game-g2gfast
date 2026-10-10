@@ -596,6 +596,9 @@ func _process(delta: float) -> void:
 	if hud != null and bridge != null:
 		hud.show_loading(bridge.transit_text())
 
+	_fold_look()
+	_fold_correction()
+
 	for id in (game.players if game != null else {}):
 		(game.players[id] as G2GPlayer).present(delta)
 
@@ -646,6 +649,35 @@ func _process(delta: float) -> void:
 	# because they asked the spectator manager where the camera should be, not where the
 	# camera was. `headless_client` asks the camera.
 	_drive_spectator_camera()
+
+
+## Hands the local player this frame's view, the mouse motion of THIS frame folded in,
+## so a frame on which no tick ran still turns. See [member G2GPlayer.view_now].
+##
+## By name, with the state's angles as the fallback: a pack runs on whatever
+## dot-player-controller the client shell carries, and a shell older than `look_now`
+## draws exactly what it drew before.
+func _fold_look() -> void:
+	if player == null:
+		return
+	var sampler := _active_sampler()
+	if sampler == null or not sampler.has_method(&"look_now") or is_spectating():
+		player.view_now = null
+		return
+	player.view_now = sampler.call(&"look_now")
+
+
+## Hands the local player what is left of its prediction corrections, so the eye eases
+## across one rather than jumping with it. See [member G2GPlayer.drawn_offset].
+func _fold_correction() -> void:
+	if player == null:
+		return
+	player.drawn_offset = Vector3.ZERO
+	if _offline or net == null or net.predictor == null or bridge == null:
+		return
+	var mine := bridge.behaviour_for(bridge.local_player_id)
+	if mine != null and mine.identity != null and mine.player == player:
+		player.drawn_offset = net.predictor.visual_offset(mine.identity.net_id)
 
 
 ## Where a spectator looks.

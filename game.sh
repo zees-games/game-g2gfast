@@ -32,7 +32,7 @@
 GAME_NAME="g2gfast"
 PACK="g2gfast"
 EXTRA_PACKS=""
-SUITES="headless_run headless_net headless_maps headless_presentation headless_client headless_stack headless_imported headless_mechanics dedicated"
+SUITES="headless_run headless_net headless_maps headless_presentation headless_client headless_feel headless_stack headless_imported headless_mechanics dedicated"
 # --------------------------------------------------------------------------------
 
 set -uo pipefail

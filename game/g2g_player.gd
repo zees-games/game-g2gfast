@@ -439,21 +439,29 @@ func fill_sample(sample: DotTimerSample) -> void:
 ## networked case, which is exactly the set that is simulated here.
 func present(delta: float) -> void:
 	var state := controller.render_state() if has_camera else controller.state
+	var yaw := state.yaw
+	var pitch := state.pitch
+
+	# The view as of THIS frame's mouse, not as of the last tick. See [member view_now].
+	if has_camera and view_now != null:
+		yaw = (view_now as Vector2).x
+		pitch = (view_now as Vector2).y
 
 	rig.set_crouch(state.crouch_fraction)
-	rig.global_basis = Basis(Vector3.UP, deg_to_rad(state.yaw))
+	rig.global_basis = Basis(Vector3.UP, deg_to_rad(yaw))
 
 	# The rig hangs off this node, which only moves on a tick — so in third person the
 	# body would step even with a smooth camera. Written globally rather than by moving
 	# this node, because this node is the controller's body and the tick writes it.
 	if has_camera:
-		rig.global_position = state.position
+		rig.global_position = state.position + drawn_offset
 
 	if camera != null:
 		var eye := controller.motor.eye_position(state) if controller.motor != null else state.position
+		eye += drawn_offset if has_camera else Vector3.ZERO
 		camera.global_position = eye
-		camera.global_basis = Basis(Vector3.UP, deg_to_rad(state.yaw))
-		camera.look(state.pitch, delta)
+		camera.global_basis = Basis(Vector3.UP, deg_to_rad(yaw))
+		camera.look(pitch, delta)
 		_apply_own_body()
 
 	_present_beacon(delta, state.position)
@@ -539,6 +547,32 @@ func describe() -> Dictionary:
 
 ## Set by [method teleport], read once by [method replay_flags].
 var _teleported: bool = false
+
+
+## The view to draw this frame, (yaw, pitch) in degrees, or null for the simulated
+## state's. Set every frame by the client from `DotFpsSampler.look_now()`.
+##
+## [b]Because a frame with no tick in it would otherwise not turn.[/b] The state's angles
+## change only when a tick runs, and with the display faster than the server's 128 ticks
+## some frames run none: at 144 Hz one in nine drew the view where the last frame left it
+## while the mouse moved, and the next frame turned twice as far -- 96 frozen and 96
+## doubled of 864 in `examples/headless_feel.tscn`, and at 240 Hz it would be nearly every
+## other frame. The sampler's angles are the ones the next command will carry, so
+## drawing them shows nothing the simulation will not do.
+var view_now: Variant = null
+
+
+## Added to where the local player is drawn this frame: what is left of the last
+## prediction corrections, easing to zero. Set every frame by the client from
+## `DotNetPredictor.visual_offset`; zero offline.
+##
+## [b]A correction moves the simulation at once and the eye over a tenth of a second.[/b]
+## When a snapshot says the prediction was wrong, the predictor rewinds and replays, and
+## the state jumps. Drawn straight, the camera jumps with it: 1 to 30 cm in one frame on
+## a lossy link (`examples/headless_feel.tscn`), and a few millimetres on every snapshot
+## even on a clean one, because the replay starts from the server's quantised state.
+## dot-net has always computed the offset that hides it, and nothing here read it.
+var drawn_offset: Vector3 = Vector3.ZERO
 
 
 ## This tick's dot-timer replay flags: ducked, jumped and teleported. A replay declared all
