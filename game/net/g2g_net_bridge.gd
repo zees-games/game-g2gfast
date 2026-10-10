@@ -1176,7 +1176,7 @@ func _on_map_ready(_map: DotMapDef) -> void:
 # until the change settled, thinned progress to four a second, and fetched a delivered
 # map by its own convention before dot-map saw the announce — then queued every map
 # message behind that fetch, because a straggler's `load` overtook it. All of that is
-# dot-map's now (see its CLAUDE.md, "What the first transport found"), and what is left
+# dot-map's now (see its docs/history.md, "What the first transport found"), and what is left
 # is the one decision that IS this game's:
 #
 # - [b]The imported-map scene is a trusted template.[/b] Every imported map is ONE scene

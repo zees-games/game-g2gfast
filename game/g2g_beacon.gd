@@ -23,7 +23,7 @@ extends Node3D
 ##
 ## Top level, so it is placed where the runner is DRAWN rather than inheriting the body's
 ## per-tick transform: the local player's body steps at the tick rate and is drawn between
-## ticks (Decision 10), and a ring that stepped under a smoothly moving camera would judder.
+## ticks (docs/netcode.md, "The client draws between ticks"), and a ring that stepped under a smoothly moving camera would judder.
 ##
 ## Sized to this game's hull rather than copied from game-arena's: a runner here is 32
 ## units across, 0.61 m, and a ring as wide as the arena's would read as a mark on the

@@ -1,0 +1,47 @@
+# Layers over the timer: deathmatch, hunters, blocks, effects, spectating
+
+None of these is a mode. Each is a layer that **takes nothing away**: the timer still runs, and a player who ignores the layer plays exactly the game they played before.
+
+## Deathmatch is a layer
+
+`sv_deathmatch` adds hitboxes, health, an arsenal and a scoreboard (`G2GCombat`: dot-combat + dot-loadout + dot-match; `G2GArsenal`: the weapons, items and match rules). Surf and bhop communities have run deathmatch on their own maps for twenty years because a map whose movement everybody has learned is a map where a fight is about movement.
+
+- **The genre's weapons, not an arena's**: a one-shot pistol and a knife, hitscan, **no magazine and no reload**. Reloading takes a hand off the strafe keys, and on a surf map that is falling. The rate of fire is the cost instead; spread is wide when moving and tight when still, so the fastest player on the map is the hardest to hit and the worst shot.
+- **Entity ids come from `DotEntityTable`**, not from the player id with the `u` taken off: a derived id is a formula with an inverse, and two spellings of one id format never meet. The `u` still comes off for the **userid** (a loadout's storage key and `session_by_userid` want the account number). `G2GCombat.entity_for` is `id_for_key` and `player_id_for` is `key_for_id`. A caller that hashed the name instead would get a stable, plausible number that is not the one health, hitboxes and the kill feed use.
+- **The match carries no time limit.** The map's clock (dot-vote's) ends the map; a second clock would be two authorities over one question.
+- **The ghost is not armed.**
+- **`G2GArsenal.weapon_table` is the join** between dot-loadout (which has never heard of a `DotWeapon`) and dot-combat (which has never heard of a `DotItem`). Without it the loadout manager was a manager of nothing.
+- **Spawn points move with the map**: `G2GCombat._on_map_ready` must replace the previous map's points (dot-match has no `remove_spawn_point`; calling it aborted the handler before the new points went in). `dedicated` changes map twice with combat up.
+
+## The trigger is one tick's input
+
+A shot happens on a tick and has to be replayed with that tick's movement, so the fire command is **a bit on `G2GNetCommand`**, not a request (a separately delivered trigger would be replayed against a different tick's position every time). It is applied in `_net_apply_input`, the one place that runs on a replay as well as a fresh tick.
+
+- **Not retained across a lost packet**, unlike movement: a held trigger that survives a hiccup is a weapon that empties itself during one. dot-net skips `_net_apply_input` for a tick whose packet never arrived, so `G2GCombat.tick` reads the meta with `has_meta` and **consumes it on read**; `previous` is left alone on a starved tick so a trigger really held across the gap is not a fresh press.
+- **Never `get_meta(key, null)`**: a null default is the engine's *no default*, and every armed player without a command was an engine ERROR every tick on a suite that reported 0 failed.
+
+## A timer map is a critical path, so the hunters have no navigation graph
+
+`G2GHunters` (dot-npc + dot-npc-ai + dot-npc-ai-director). A hunter cannot catch a runner who is running well (the fastest does 8 m/s; a good bhop line does forty). What a hunter punishes is **stopping**, which the timer already punishes, made visible. Being chased costs the record (see [movement.md](movement.md#a-movement-effect-is-a-style-and-a-style-you-did-not-choose-is-a-record-you-did-not-set)), which is what makes hunters interesting rather than annoying.
+
+`DotNpcDirectorFlow` is "the map's own critical path" as something a position can be measured along, and a timer map *is* one: start, stage lines, end. The route is built from the map's own zones, the director spawns **ahead** along it, and a hunter with nothing to chase patrols it. **`require_navigable_spawn` is off, and must be**: there is no graph, so the requirement would refuse every spawn. `g2g_hunt spawn` is the admin door. Replication is in [netcode.md](netcode.md#hunters-reach-a-connected-client).
+
+## Practice blocks are frozen, and they cost you the record
+
+`G2GProps` (`sv_props`). What a records community places is a practice line, a temporary block on the section everybody fails, a marker at the spot people keep asking about. All want to stay where they were put, so a prop is spawned **frozen**, the opposite of a sandbox's default (and why `g2g_prop_body.gd` has `starts_frozen`). Sizes are 32, 64 and 128 units, the genre's grid.
+
+**`only_practice` is on, and it is what makes the feature safe to ship**: a board with one time set over a placed block is a board nobody trusts, and trusting an admin to clear up is a rule enforced by memory. Admin-only by default. **A grab is once and a held prop moves every tick**: a layer that calls `grab` without `hold` leaves the block where it was picked up. `g2g_nudge` is the admin door to the physics gun. This is not a sandbox; game-playground is.
+
+## Effects
+
+`G2GEffects` splits combat effects (anybody, any time) from movement effects (refused during a ranked run unless `allow_movement_during_runs`, which taints): see [movement.md](movement.md#a-movement-effect-is-a-style-and-a-style-you-did-not-choose-is-a-record-you-did-not-set).
+
+## Spectating
+
+**On a timer server spectating is the point**, not a consolation for being dead: a record is set by one person, once, and everybody else wants to watch. `G2GSpectate` over dot-spectate.
+
+- **`force_camera` is 0**: there are no sides, so "your own team" means everybody. It tightens to 1 the moment `sv_deathmatch` is on, where a living player watching a living one is a free wallhack.
+- **`allow_while_alive` is on**: somebody in the start zone deciding whether to run is not dead.
+- **`!spec` with no argument watches whoever is furthest into a run**, not the fastest: "who is nearly finished" is the question a spectator asks. `!spec <name>` matches the whole name, then a prefix, then anywhere.
+- **A client builds a mirror** (`DotSpectatorManager.authoritative` follows the game's), and the bridge watches the server's manager and sends **SPECTATE** (target key, mode, name) to the viewer; the camera follows from poses the client already draws, once a **frame**. A viewer with nobody to watch is stopped, not parked. `Ask.SPECTATE` carries left click (previous), right click (next), stop and best. While spectating the sampler is suspended.
+- **Who is watching you is `sv_spec_list`, gated on the server**: SPECTATORS (up to 32 names) goes to the watched player and their watchers when it changes; `sv_spec_list 0` sends every list empty once and then nothing, so a modified client cannot draw what was never sent. `show_spectators` hides it locally.

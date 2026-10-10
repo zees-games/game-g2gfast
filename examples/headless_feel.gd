@@ -34,7 +34,7 @@ const Relay := preload("res://addons/dot_net/testing/dot_net_udp_relay.gd")
 ## it went backwards, frames more than 2 cm off steady motion, the share of server ticks
 ## that had this client's command, and every correction and its size; for the REMOTE
 ## runner, the drawing against where the server had it at that render time, the render
-## timeline going back, and frames extrapolated. CLAUDE.md "What a connected player
+## timeline going back, and frames extrapolated. docs/netcode.md "What a connected player
 ## sees" has the numbers.
 
 const PORT := 28794

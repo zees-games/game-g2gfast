@@ -1,0 +1,78 @@
+# Routes, reach and the bots that run them
+
+Every bonus on the hand-built maps is driven end to end by a bot in `headless_run`, which means the geometry, the zones, the splits and the end line are proved by something other than reading them. The imported maps have a route bot and a replay follower of their own, at the end of this file.
+
+## What a jump reaches
+
+`G2GReach` holds this genre's two reaches, read off the `DotFpsTunables` the server applies (apex, climb limit, airtime and RUN reach are `DotFpsTunables.jump_apex`/`climb_limit`/`jump_airtime`/`jump_reach`, asked in metres and converted by `G2GUnits`), so `sv_gravity` and `sv_enablebunnyhopping` move every answer with no second number. Only the CHAIN is this game's own arithmetic.
+
+- **RUN** is a jump from the lip at run speed. Ground acceleration gets a player back to 250 u/s in about thirty units, so anybody who lands anywhere on a block can run to its edge. It clears **189 u flat, 166 u onto a 24-u step, 222 u down 48**. The landing height is the whole point: the airtime everybody writes down is the time back to the height you left.
+- **CHAIN** is a hop inside a run of auto-hops, a different quantity rather than a longer one. With the key held there is no grounded tick to walk to the lip on, so a hop takes off where the last one landed and the hops must average a whole block period (gap *and* block). A chain is judged by simulating a **perfect strafe** every tick (`v² + 30²`, `DotFpsMotor.accelerate`'s own arithmetic). That is an upper bound on purpose: a chain it refuses is one nobody can run. How much of a perfect strafe a chain needs is printed, not asserted, because no threshold on it would be anything but a guess.
+
+**A map declares which bodies are a route and which reach it is for.** `G2GMap.add_course(name, track, kind, bodies)` is called from `_build` with the bodies `G2GGeometry.box` just returned; rise, clear air and landing depth are read off their transforms, so the declaration cannot drift from the geometry because it *is* the geometry. Clear air is the least distance between footprints (the stages map's zigzag is flown diagonally). No hull credit is spent: the capsule can stand about eleven units past a lip, and that is the margin. `surf_g2g_intro` declares nothing and says why in its header.
+
+| course | reach | widest | needs |
+| --- | --- | --- | --- |
+| `bhop_g2g_intro` main | CHAIN, 17 hops | 288 | 44% of a perfect strafe |
+| `bhop_g2g_intro` warm-up | RUN | 128 | inside 189 |
+| `bhop_g2g_intro` the needle | RUN | 96 | inside 189 |
+| `bhop_g2g_intro` the hairpin | RUN | 192 down 48 | inside 222 |
+| `bhop_g2g_intro` the stutter | RUN | 176 down 48 | inside 222 |
+| `bhop_g2g_stages` main | CHAIN, 40 hops | 288 | 54% |
+| `bhop_g2g_stages` the ridge | RUN | 192 down 48 | inside 222 |
+| `bhop_g2g_stages` the weave | RUN | 161 down 48 | inside 222 |
+| `bhop_g2g_stages` the bend | RUN | 146 down 48 | inside 222 |
+
+**`!s2` and `!s3` on `bhop_g2g_intro` put a player where nobody can continue.** A stage restart is a chain that begins at run speed rather than at what the stages before it built; from block 14 the next gap is 275 u and a perfect single hop from 250 u/s covers 245. The restarts are printed, not asserted. The only fixes are moving a stage line on a scored track or putting `!s3` somewhere that is not stage 3, which is Christian's call.
+
+**With `sv_enablebunnyhopping 0`, neither bhop map's main route exists**: the landing cap trims every take-off to 275 u/s and one hop of strafing cannot span the period. That is asserted, which is also the proof that the chain arithmetic refuses something.
+
+## How the bots drive
+
+- **A scripted bot cannot strafe, so it cannot gain**, so every bonus a bot drives is a RUN route: each gap sized with `G2GReach` and at least ~29 units inside it, so it asks for a line and never for speed a player has not got.
+- **Jumped AT the gaps, not held.** A bot holding jump with auto-hop leaves the ground on the tick it lands, never gets a grounded `accelerate` tick, and bleeds to `sv_maxairwishspeed` (30 u/s). Every bot presses jump only in the last 20 to 30 units of a block, read off the **map's** constants, so moving a block moves the jump with it.
+- **A gap a standing jump clears is not a gap a chain of them clears.** A chained hop takes off wherever the last one landed, so the distance available is the jump minus how far onto the block the bot arrived. The needle's gap is 96 rather than 160 for that reason.
+- `_test_bhop_run`'s 240 u/s while holding jump is the **prestrafe** carried into the first hop. True, and not evidence that the bot is running.
+- **Pace is asserted** (at least 80% of run speed) on the newer routes, so a route that only works at a crawl fails.
+- **Count resets in an `Array`, never a captured local.** A GDScript lambda captures a local by value, so `reset = true` inside a signal handler never reached the loop, and three route checks "passed without a reset" whatever happened. All use `var reset: Array[bool] = [false]`.
+- A bot that aims at a point just past a lip hovers there and falls (a bot that has reached its target stops); aim at the next block's exit instead.
+
+## The routes
+
+| route | map, track | the idea | geometry notes |
+| --- | --- | --- | --- |
+| **the needle** | intro, 2 | aim, not speed: ten blocks at a constant 96 u gap whose width closes 192 to 48 (16 u wider than the player). The practice route for a player who cannot yet chain. | constant gap: the one shape a bot can complete |
+| **the hairpin** | intro, 3 | the first route a bot has to steer: out along -Z, a 256-square corner, right up four 24 u climbs, a second corner, back down four 48 u drops | the corners are the splits; each split's `!s<n>` faces the way the route leaves the corner |
+| **the stutter** | intro, 4 | a straight line whose rhythm changes: 96 u **stones** and 224 u **runways** | a stone is sized *from* the reach: each gap puts the landing 40 to 60 u onto 96 (128 before a flat stone, 112 before a step up, 144 before a step down 24, 160 before a drop). The bot must stand on every block |
+| **the ridge** | stages, 2 | climb 24 u five times, a narrowing crest, drop 48 u five times | — |
+| **the weave** | stages, 3 | **the blocks zigzag and the line does not**: each block's inner edge reaches the centre line, so the fast way clips every inner corner | blocks 192 u long (`WEAVE_BLOCK_LENGTH`), not 160, because the turn is made on them. Three drafts; only once inner edges met the line did a runner aiming at the next block reach the end |
+| **the bend** | stages, 4 | a 640 u left-hand arc that never stops turning | every block turned to face along the arc; zones on a turned block are the largest square inside its footprint, because a zone is axis-aligned. Drops are 30° apart and the rest 22.5°: at 22.5° a drop's landing at climb-exit speed left the next take-off going off the side |
+| **the single bank** | surf intro, 1 | a level bank, ridden on entry speed alone | the line is read off the map (`bonus_bank_lip_x()` plus a hull width); the bot rides +24 u from the lip, which finishes from every state it arrives in |
+
+`tools/route_preview.sh <map> <track>` renders one track from its own spawn looking down it (`bsp_preview` orbits a whole map, which makes every route a sliver).
+
+**`surf_g2g_intro` bonus 1's finish only catches a slow rider.** Only the strip of bank between its lip and the pad's far edge lies over the pad, so a rider leaving the bank faster than about 470 to 590 u/s passes over the 512-deep zone and lands in the pit. On a surf route, going well is what fails it. Not changed: it is a scored track, and the fixes either keep times comparable or make every future one faster, which is Christian's call.
+
+## Imported maps: a route written as data
+
+The line a map is run along is not in the `.bsp`, so it is written per map in `maps/routes/<id>.json`: points in the manifest's units and axes, passed in order before the finish. `tools/route_bot.gd` drives it, shared by `tools/stage_ride.tscn -- <id> 0 <seconds>` and `headless_imported`'s route section.
+
+- **The bot strafes, and in the air it aims its landing**: it works out the horizontal velocity that brings it down onto the next point's height over the next point, and spends its wish turning its velocity into that one. Under `sv_airaccelerate 1000` a wish can change the velocity by nearly anything in a tick, so it can brake in the air too.
+- **A point counts only once the bot has landed on or past it** (`land`, default true): aiming at the next block from the air above this one commits to a jump it never took off for.
+- On the ground it runs at the point and jumps at a lip or a step too tall to walk (`ledge_ahead`, `wall_ahead`), so a chained hop never starts mid-block. A `door` point is passed by the teleport.
+- **`tools/route_plan.py <id> --reach 280 --out maps/routes/<id>.json` writes a route from the collision**: brush tops (and 64-unit terrain cells) are nodes, joined when the gap is within reach, the rise at most 54, the line clear at body height and a drop's landing column open; TELEPORT doors join tops to the top under their destination; Dijkstra from the spawn to the END. A point is the centre of a **brush** top, never a block's outline (L and U blocks have holes in the middle).
+- Only bhop_grove has a route. On the others the planner stops short: rotated brushes make box tops, terrain cells and the importer's pit/teleport split on staged maps confuse it, and some gaps are not clearable by a bot that lands and runs. A hand-written `via` point is the cheap fix where it picks a wall. The surf half of the bot has not been driven down a map.
+- Route and recording sections turn sinking blocks off: the route bot lands and runs to the lip, which is exactly what a trap punishes, and they test the collision line.
+
+## A recorded run, followed with the real movement
+
+A ghost writes each frame's pose and passes through walls, proving nothing about the map. `tools/replay_follow.gd` drives the motor with ordinary `DotFpsCommand`s along a dot-timer replay (`maps/routes/<id>.replay`) and reports where a run can no longer be repeated: *"left the recorded line at frame N"*, which is where to look for a collision fault. `headless_imported`'s recording section follows the map's recording to a finish, then follows a copy lifted 200 u from frame 2000 and asserts the report names that frame. `tools/follow_replay.tscn -- <id>` is the same as a tool; `RIDE_SAVE_REPLAY=<path>` on `stage_ride` saves a route bot's run as one (it takes the replay on `player_finished`, because dot-timer drops `last_replay` the moment no store keeps the run).
+
+The genre's air physics decides how the follower must steer, and a "pull back onto the line" controller cannot work:
+
+- **A wish near the velocity adds nothing.** Air acceleration adds speed along the wish only up to 30 u/s past what the velocity already has along it; a turn is a wish at right angles to the velocity.
+- **The same holds on the ground above run speed** (a landing is 270 to 360 u/s against a run of 250).
+- **Short of speed, strafe at full wish toward the side the line bends**: it gains and turns at once, which is what a player's strafe is.
+- **A jump is copied by place and held until airborne**, and within 24 frames of a recorded landing the air aims at the landing itself.
+
+bhop_grove's recording is a bot's, recorded on the current motor. A person's record replay copied to `maps/routes/<id>.replay` is the line the follower was built for; none exists yet.

@@ -1,0 +1,52 @@
+# History: bugs this game found, and how they looked
+
+Kept where the bug could come back and the story says how to recognise it. Each lesson that is still live is also a rule in [CLAUDE.md](../CLAUDE.md) or a topic doc. Bugs that were really another addon's are one line each; the family list is [bugs-found.md](../../../docs/bugs-found.md).
+
+## The simulation and the timer
+
+- **The stages map had no finish for as long as it existed.** The pad was drawn along world -Z and the zone placed along the course heading, which the stage-2 turn leaves at 90°; 543 units apart. Every check was about the zones, none about the zones adding up to a run; a player arrived on a pad drawn in the finish colour and the clock counted on. Found by a raycast down every START/END/STAGE volume. Rule: one function answers "where", and zones must hang over something.
+- **Bonus routes had no pit, three times.** A RESPAWN zone on track 0 catches nobody on track 1; a bot that missed the needle was still falling 1,370 m down. The guard existed and was asked of the surf map only; then a helper was asked of whichever map a section had loaded. Now `route_problems()` is asked of every map.
+- **Nothing listened to `request_stage`**, so no stage destination on any map could be reached, until `_on_stage_requested`. And `DotTimer.effect_requested` was emitted by nothing, so respawn zones did nothing and a bot that missed the ramps fell for ever, while "most of the descent is airborne, which is surf" passed comfortably on a bot nowhere near the map.
+- **`sv_autobunnyhopping 0` was undone by the styles** on top, silently; and a failed movement cvar left the config invalid so every later cvar did nothing while the console said "set".
+- **A door ended the run.** `doorways` made doors TELEPORT zones precisely to keep the run, and the handler called `teleport`, which stops the timer. The map `doorways` was written for could not be timed past its first section.
+- **Points grew with every retry**, the site received nothing (boards defined with `publish` off), and the HUD never compared against a best (`set_comparisons` called nowhere). None errored.
+- **The timer's sounds were reachable from the suite and nothing else**: catalogued, tested by calling the methods directly, never called by the client. Every run started and finished in silence. The suite drives the timer's signals now.
+- **The landing made no sound**: the catalogue named `.ogg` files nobody produced. And both gate effects were refused on every run: `fx_catalogue()` named scenes that did not exist, and dot-fx refuses at DEBUG. Then the start gate drew at the world origin (world-space particles, transform set after entering the tree).
+
+## The client and the netcode
+
+- **The first-person camera drew the player's own avatar**: `_set_layers_recursive` set both layers unconditionally, and `owner_sees` fed a `cast_shadow` ternary whose two branches were identical (the tell). A magenta dome over the bottom third of every frame, found in a screen recording; no assertion looked at a layer mask.
+- **The local player was null for every networked session**: looked up on HELLO, created on JOIN. Movement, the HUD and the camera worked; the mouse and the keyboard did nothing. Confirmed through F5 under the same guard, because a pointer-locked mouse cannot be driven by Playwright.
+- **A 60 Hz client against a 128 server** never converged and read every finish 128/60 too long. `headless_net` could not see it: both halves share one engine rate. The same shape found an invalid client config (an empty `initial_map` refused) and dot-timer warning every client.
+- **"Very jittery in the browser" with every number right.** Ticks ran in bursts and nothing rendered between them; `render_state` existed and was unreachable under `Drive.EXTERNAL`; and the engine rate was the one copy of the tick rate `_adopt_tick_rate` did not move. Either fix alone measured as nothing. Later, at 144 Hz, the view itself stood still one frame and turned double the next (the state's yaw only changes on a tick), and a correction moved the eye in one frame (nobody read `visual_offset`).
+- **The browser pointer**: `_ready()` captured the mouse, which a browser refuses silently; then Escape toggled, which a browser defeats every other press.
+- **`sv_deathmatch` was a mode nobody could shoot in** (`set_fire_command` called by nothing) and the loadout manager managed nothing (`weapon_table` unused); then the fire command was replayed until the next packet and logged an engine ERROR every tick through `get_meta(key, null)`. Found by the detector "a public method whose name occurs once in its repository is a method nothing calls".
+- **Typing moved the runner offline**: only the networked sampler was suspended. Nothing caught it because no suite stood up `G2GClient`; `headless_client` does now.
+- **Spectating never reached a client**: the spectator manager was built only on an authoritative game, nothing told a client anything, and then the camera-shake line overwrote the spectator's camera every frame. The net suite asked the manager where the camera should be, which was right.
+- **The HUD's time left was a clock the client started itself**, so an extend added ten minutes on the server and none on any screen; `g2g_status` had the same bug one screen over.
+- **Every chat line drew blank** until dot-chat refused dot-server's wire shape instead of parsing it as an empty message (dot-chat's).
+- **The exit leak** was chased through self-preloads: removing `g2g_browser.gd`'s took fifteen objects off; the rest is not a self-preload and is still open.
+
+## Imported maps
+
+- **`dmodel_t` read as 52 bytes instead of 48** produced a perfect world: model 0 is first, so it rendered flawlessly, and every trigger after it was garbage. It showed only because sizes came out negative.
+- **Brush-entity `origin` ignored**: every pit piled round the centre of the map. **LZMA lumps**: three maps could not be imported and the failure named the wrong lump. **Spawn yaw**: right place, wrong way. **An 8-unit spawn lift** dropped the player through the floor from exactly the point the map shipped with, and from no point a unit either side.
+- **Thin pits stepped over**: the original engine sweeps triggers; a once-a-tick point test at 3500 u/s misses a 16-unit plane. Then the thickened slab swallowed the blocks above it, filtered anti-standing teleports fired on every landing, and a sloped teleport's bounding box sent riders back mid-ramp.
+- **The collider was the drawn faces**: most of every solid is never drawn. Convex per brush fixed it; the suite's "stands for three seconds" check had passed on every map throughout.
+- **Every brush face was drawn from behind** ("because the other engine winds the other way"; it does not). Floors and walls hid it; a surf ramp's ridden face was clear. Found by drawing one material flat magenta, double- and single-sided.
+- **Every brush seam was a bump**, and a resting normal reversed by `get_rest_info` depenetrated riders a whole step (dot-player-controller's, `[ramp-pop-1]`). Both reported as "the ramps are jumpy" from footage.
+- **One `ALPHA = base.a;`** put every surface of every map into the transparent pass: a grey floor read as brown sand because the terrain behind it drew in front. **Dividing the lightmap by 255** made every map three times too dark; then a Reinhard encode flattened it, a 99th-percentile white point handed exposure to outliers, and displacements sampled the lightmap off the end of their luxel range. "Theirs looks better" was a measurable 300:1 against 8:1.
+- **Kenney's prototype set was installed and invisible**: a one-pixel line on a flat field mipmaps to the field colour at distance. The checker is composited on now. The tile constant was then "measured" as 4 squares instead of 8, because the faint lines fell under a noise threshold.
+- **`bsp_preview`'s overrides never changed a pixel** (assigned after `build_from` had built), and it rendered under the map's own environment while saying it was neutral (a second `WorldEnvironment` is ignored without a warning). The one tool for looking was not showing what it said.
+- **A map black on purpose hid two real faults** (a flat-black missing texture and the ALPHA pass): the explanation arrived before the question did.
+- **The texture lookup missed two spellings** (a leading slash, a quoted name with a space) and drew the grid with the texture right there. Found by asking every untextured material *why*.
+- **Static props were missing on most maps**; then lit by the leaf cube alone (black); then a cubemap-suffix strip renamed a mapper's own model; then a flat collision piece killed the process inside Godot's convex hull builder.
+- **311 surfaces, a 256 limit**: the last 55 never drew and the engine said so 55 times at every load. Collision was unaffected, so every play check passed.
+- **The entity parser kept the first of a repeated key**, losing the second `OnTrigger` that carried a trap's delay.
+- **A probe built on an overlap test** reported 70% of runs broken and did not move when the motor changed: collision margins make every resting capsule "overlap".
+- **A sampling probe produced a trend on request**: unseeded `Array.shuffle()`.
+
+## Process
+
+- **A missing flag its neighbours have is evidence of nothing until you have checked whether a suite asserts the difference.** `g2g_map` lacking `.with_chat()` was defended by an assertion written on sound reasoning in the wrong place.
+- **Three hardcoded copies of three map ids** (`G2GGame._map_catalogue`, `tools/export_zones.gd`, the export scripts): the tree's most repeated bug, here too. Replaced by discovery.

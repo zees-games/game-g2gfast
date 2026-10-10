@@ -7,7 +7,7 @@ const G2GUnits := preload("g2g_units.gd")
 ## A map builds its geometry and its zones from the same constants, so a start line
 ## cannot drift from the block it sits on; the written-out JSON copy in `maps/` is what
 ## a DELIVERED map would ship, and the headless suite checks the two agree. See
-## game-playground's CLAUDE.md for the reasoning; it is the same here.
+## game-playground's docs/maps.md for the reasoning; it is the same here.
 ##
 ## Positions and sizes are in genre units throughout. Zone volumes are converted to
 ## metres where they are built, because the timer works in whatever the movement

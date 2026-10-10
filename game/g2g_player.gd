@@ -142,7 +142,7 @@ func _ready() -> void:
 	controller.name = "Controller"
 	controller.tick_rate = tick_rate
 	# EXTERNAL: the game owns the tick, so the timer can be fed the position the move
-	# just produced. See game-playground's CLAUDE.md for the ordering argument.
+	# just produced. See game-playground's docs/simulation.md for the ordering argument.
 	controller.drive = DotFpsController.Drive.EXTERNAL
 	controller.tunables = base_tunables
 	# Every player, both ends: an admin's noclip is a modifier whose index travels on the

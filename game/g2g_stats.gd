@@ -45,7 +45,7 @@ const STRAFES := &"g2g.strafes"
 ## Fastest horizontal speed ever reached, in genre units per second. BEST.
 ##
 ## [b]In units, not metres.[/b] Everything an operator or a player reads in this game
-## is in the genre's units — that is Decision 1 — and a stat is read by a player on a
+## is in the genre's units — that is docs/movement.md, "Everything the operator touches is in genre units" — and a stat is read by a player on a
 ## website. The conversion happens where every other one does.
 const TOP_SPEED := &"g2g.top_speed"
 

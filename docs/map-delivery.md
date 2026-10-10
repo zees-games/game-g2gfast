@@ -1,0 +1,49 @@
+# Maps: the catalogue, delivery and the change protocol
+
+## Maps are dropped in, not listed
+
+There is no list of maps in this repository. `G2GMapCatalogue.scan` scans, and a map is whatever has a scene and a sidecar, or is just a manifest:
+
+```
+maps/<id>.tscn   + maps/<id>.zones.json    hand-written: a scene and a script
+<root>/<id>/<id>.json                      imported: data, and nothing else
+```
+
+A second place to remember a map is the shape that went stale four times in this tree (`setup.sh`, check scripts, bootstrap manifests, `tools/export_zones.gd`). `headless_maps` proves there is no list: it removes a map from the catalogue that is still on disk and checks a rescan puts it back, and adds one that is not on disk and checks a rescan takes it away. Counting three maps proves nothing, because a hardcoded list of three counts three too.
+
+**An imported map has no scene and no script, and that is what makes it droppable.** Every one is `maps/imported_map.tscn` (`G2GMapCatalogue.IMPORTED_SCENE`), one scene in the build, pointed at a manifest through `DotMapDef.meta`. A generated `<id>.gd` and `<id>.tscn` per map cannot work for a map that arrives after the export (`res://` is a read-only PCK), and a script in a delivered pack cannot `extends` a build class (the family's mount constraint). The same constraint is why **nothing in this game declares a `class_name`**: the whole game is a delivered pack, so every script is preloaded by path (`const G2GGame := preload("g2g_game.gd")`), and a `G2G*` name in these docs is that constant, not a global.
+
+- **Roots**, first wins: `res://maps/imported` (in the build; a gitignored link to `../g2gfast-maps/maps/`), `user://maps` (anything downloaded at runtime, and the only way a shipped server is given a new map), and `g2g_maps_directory`. A map in the build is never silently replaced by one dropped beside it.
+- **`g2g_maps_reload` rescans without a restart**, and mutates the catalogue in place: `DotMapRotation` holds it by reference, so a swapped object leaves the rotation offering maps that are gone.
+- **The map being played is not unloaded when it disappears from disk**: its players are mid-run. It finishes and is never chosen again; the reload says so.
+- `headless_imported` skips cleanly when `maps/imported/` is empty, and iterates what is there rather than naming a map: imported maps are optional content.
+
+## g2gfast-maps and owners
+
+The imported maps live in their own repository, `../g2gfast-maps` (see its `CLAUDE.md`): the map data, `maps.json` with each map's author and source, and `tools/g2gmaps` to publish each as its own `gamemann/<map id>` pack (through this repository's `tools/publish_maps.sh`) and mirror them back. **The zone data stays here** in `maps/zones/`, because starts, finishes and stages are this game's, not the map's. Maps are released by tagging g2gfast-maps.
+
+- **A delivered map belongs to somebody.** The map id is what a player types and every record is filed under, and it does not change; the pack is `<owner>/<map id>`. `sv_map_content_owner` (`G2GConfig.map_content_owner`) prefixes only where a map is fetched (`map_content_id`); empty keeps the unowned layout. `game.yml` sets `gamemann`.
+- **Which maps a server offers is the server's, not this game's.** `game.yml`'s `maps:` is empty on purpose: the game ships its three built-in maps, and a server owner lists the courses in their deployment's map config (dot-server-deploy's `cfg/content.yml`), carried by dot-server as `DotGameDescriptor.maps` and read by `G2GGame._adopt_descriptor_maps`. A map id typed at the console that is not listed is fetched from the owner at the origin's latest.
+- **The boot map's owner is read from the descriptor being loaded.** dot-server instantiates the scene, whose `_ready` starts fetching `initial_map`, *before* it applies the descriptor's `cvars:`. `G2GGame._adopt_descriptor_owner` reads `sv_map_content_owner` off the game manager's `pending()` descriptor just before the boot fetch. `_descriptor_for_this_scene` takes `pending()` only when its scene path is this scene's, else `current()`: when a game change fails, dot-server re-instantiates the previous game while `pending()` is still the failed one. An owner set only in a per-game `.cfg` still lands after the boot fetch.
+- The map sweep waits one frame before its first request, so an owner set by the same descriptor pass lands first whatever order the cvars are written in.
+
+## A map pack's version is its files'
+
+dot-cloud keys a mount on `id@version` and **a mount can never be undone**, so a republished map at the same version is the old geometry for ever on any client that mounted it. `tools/publish_maps.gd` publishes each map as `G2GMapCatalogue.pack_version(dir)`: `0.0.0-` and 12 hex digits of a SHA-256 over every file in the map's directory (path and bytes, in path order; `.godot`, `.git`, `__pycache__` left out, `.import` markers in). Derived, because it changes exactly when the files do and needs nobody to remember a bump; republishing unchanged files gives the same version. `--version` forces one. `tools/publish_maps.sh --owner gamemann --key ../dot-server-deploy/keys/content.key` signs with the key clients trust as `default`.
+
+## A map change is announced, and then made
+
+`DotMapSyncHost` and `DotMapSyncClient` (dot-map's protocol) carried over dot-net: a host message is `G2GEvents.Kind.MAP` to one peer and a peer's answer is `Ask.MAP`, both a `DotMapMessage` as JSON inside a byte cap (4096 from the host, 256 from a peer, because the second is what a client can make the server parse). `G2GGame.change_map` goes through `G2GGame.map_sync` on a server, so `map`, `g2g_map`, the vote and the rotation all announce, wait and then swap without knowing it. HELLO carries no map; the map a joiner lands on arrives as the protocol's own announce.
+
+- **JSON rather than a field-by-field encoding**, because dot-map owns these shapes; a re-encoding would silently drop whatever `DotMapDef.to_dictionary` gains next. **A message too large for its cap is refused whole with an ERROR**, because `DotNetWriter.write_string` truncates without a word and half a JSON document looks like a hostile host.
+- **A built-in map is announced as one**: no content id, found in the client's own catalogue, ready without a fetch.
+- **The wait is thirty seconds, not dot-map's three hundred** (`sv_map_sync_timeout`, `G2GConfig.map_sync_seconds`): the wait holds the whole server on the old map for its slowest client, and a timer server's players came to run. `swap_without_stragglers` stays on.
+- **The server does not kick a straggler**: it is authoritative, so a straggler's inputs are simulated on the new map whatever its screen shows, and nothing it does reaches a board. It follows the moment its download finishes. **A client that refuses leaves** (`G2GClient._on_map_refused`): dot-map keeps a refusal silent to the host by design, so the client is the only end that knows.
+- **The imported-map scene is a trusted template.** dot-map's rule is that a delivered map's scene is in the pack, which would refuse every delivered map here. The client lists `IMPORTED_SCENE` in `DotMapSyncClient.trusted_template_scenes`, and dot-map then requires the manifest (`meta.manifest`) and any other path to be inside `res://dot_cloud/<content>/<version>/`. A server marks a map it fetched into a mount as that content and version (`G2GGame._mark_delivered`, read off the mount directory so there is no second record); a map on the server's own disk stays local, and a client that lacks it refuses it. So a map a client can be sent is one the server itself got from the content origin, the only case where both ends are known to mean the same bytes by one id. **The template is matched by exact path**: a server run from source and a client on the pack would disagree.
+- The protocol bugs running it found are dot-map's and fixed there ([its history](../../dot-map/docs/history.md#what-the-first-transport-found)).
+
+## Rotation and the map list
+
+- **Maps that rotate are a file, and a map out of rotation is still installed.** `cfg/map_rotation(.yml|.yaml|.json|.txt|.cfg|.ini)` (`sv_map_rotation_file`, `G2GMapRotationFile`); unlisted maps get `enabled = false`, which the rotation's pool, dot-vote's ballot and nominations already read. The file never overrides a catalogue file's own `"enabled": false` (`meta.catalogue_enabled`). Combat surf maps (`"kind": "arena"`) are out of rotation unless named.
+- **M is the map list.** Offline it changes this client's own map. Online it is the server's catalogue, sent (`Ask.MAPS` / `Kind.MAPS`) only to a session with the changemap flag (`G2GNetBridge.may_change_map_fn`), which the server checks again on the change. M once changed only the client's own world online, so the server corrected the player into geometry their screen no longer had.
+- **Offline there is no map time limit** (`G2GConfig.offline_map_seconds`, 0).

@@ -11,7 +11,7 @@ extends RefCounted
 ## passes in order before it heads for the finish.
 ##
 ## [b]It strafes.[/b] The hand-built routes' bots hold forward and never gain, because a
-## route that asked for a gain could not be driven (CLAUDE.md, `the needle`). An imported
+## route that asked for a gain could not be driven (docs/routes.md, "How the bots drive"). An imported
 ## bhop map asks for one on every section, so this one strafes: in the air it looks along
 ## its own velocity and holds strafe toward the side its next point is on. With this
 ## game's `sv_airaccelerate` the whole of `sv_maxairwishspeed` is added every tick, and
@@ -242,7 +242,7 @@ func _advance(at: Vector3, grounded: bool) -> void:
 
 
 ## No ground under the point the player is about to move over: a lip, so jump now.
-## A chained hop takes off wherever the last one landed (CLAUDE.md, `the needle`), so the
+## A chained hop takes off wherever the last one landed (docs/routes.md, "How the bots drive"), so the
 ## default jumps AT gaps, from the last ground before them.
 static func ledge_ahead(space: PhysicsDirectSpaceState3D, position: Vector3, dir: Vector3, speed: float) -> bool:
 	var ahead := G2GUnits.to_metres(LEDGE_LEAD + speed * LEDGE_TICKS / 128.0)

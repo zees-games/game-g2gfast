@@ -1,0 +1,73 @@
+# Imported maps: how they are drawn
+
+`G2GBspMap` builds an imported map from its manifest; `g2g_bsp_lightmapped.gdshader`, `g2g_bsp_translucent.gdshader`, `g2g_bsp_water.gdshader` and `g2g_sky.gdshader` draw it; `G2GLighting` picks a profile and dot-lighting does the rest. **Every value in this file was checked by looking at a picture beside a reference**, because none of these bugs errors: a texture decodes, the UVs are in range, the material is configured, and the map is wrong. Render with `tools/bsp_preview.sh` (under `xvfb-run`; `--headless` gives a null renderer and a frame of nothing that looks like a screenshot).
+
+## A rule that applies at build time reaches published packs
+
+Stock-texture stand-ins, glass, water and the white-sky fix are applied in `G2GBspMap._material_for` / `G2GLighting`, **not in the importer**, so packs already on the content origin get them from a new game pack with no republish. Prefer that placement for any new drawing rule. A rule that needs new data in the manifest (a second texture, sky faces, mipmaps) needs a re-import and a republish of the map packs.
+
+## Lighting: the map says how it is lit
+
+Every `.bsp` carries its own lighting in the entity lump: `light_environment` (sun pitch, yaw, colour, compiled brightness, ambient), `env_fog_controller`, the sky name, `sky_camera`. `lighting_of` writes it into the manifest and **dot-lighting applies it** (`DotLightDocument.from_dictionary`, `DotLightRig.apply`). `G2GLighting` keeps one decision: which `DotLightProfile` a machine gets, `web()` in a browser, which drops shadows (a surf map is a large open volume and the shadow pass costs the whole canyon) and keeps glow (how a neon strip reads as a light, and how some maps signpost the route).
+
+- **The sun lights the characters and not the world.** Imported surfaces are `unshaded`; the baked lightmap *is* their lighting. What changes how the world looks is the tone map, fog, glow and the colour behind everything.
+- **The tone map is filmic.** Godot's `LINEAR` is a clip, not a tone map; the shoulder is why a bright sky and a dark rock face can both be readable.
+- **The glow threshold is under 1.0 on purpose.** The atlas is 8-bit, so nothing is ever above white and an HDR threshold would bloom nothing, on any map.
+- **`_light`'s fourth number is not a multiplier.** It is the compiler's intensity, 20 to 600 across the held maps; it is used as a soft-curved ratio against a reference.
+- `G2GLighting.profile()` sets `sky_below_horizon`: the maps float in their skybox, and a dark procedural "ground" made every look down between two ramps a floor that is not there.
+
+## The lightmap atlas keeps the map's contrast
+
+The measure is the linear luminance ratio between a frame's 5th and 95th percentile pixels. A reference frame of one of these maps in its own engine spans about 300:1; the import once spanned 8:1, which is the whole of "why does theirs look better". Three things compressed it:
+
+- **The atlas encode is expose, clip, gamma, never a tone map.** `build_lightmap` once wrote Reinhard, a *display* operator, onto a light term that is still to be multiplied by an albedo; it compresses ratios everywhere including the midtones. Gamma encoding is already the compression an 8-bit image needs.
+- **The white point is anchored on the map's median luxel**, a statistic an outlier cannot move. The 99th percentile hands a map's exposure to its brightest few luxels. The clip percentage is printed per map at import: it is the one number that says whether a map's exposure is sane.
+- **Never divide by 255.** `c * 2**e` is already the linear value; 255 is the range of the mantissa byte.
+- **A displacement's lightmap is parameterised over the flat quad**, not the terrain that came out (the luxel extents say so: 12x12 or 7x12 where the grid is always 9x9). Project the *flat* point. Projecting the displaced one parked whole hillsides on one edge luxel. **The tell: a lightmap that renders nothing like its own histogram is being sampled somewhere other than where it was written.**
+- You cannot tell "the lightmap is unlit" from "the albedo is black" by looking; `bsp_preview`'s `lm` mode shows the baked lighting alone.
+
+## Opaque unless the material says translucent
+
+**Godot decides a spatial shader is transparent by whether it writes `ALPHA`, not by what it writes.** An unconditional `ALPHA = base.a;` moved every surface of every map into the alpha pass, where depth is not written and geometry is sorted per surface: floors drew behind the terrain behind them. `g2g_bsp_translucent.gdshader` is the ALPHA write, used only on surfaces whose VMT says `$translucent` or `$alphatest` (the manifest's flag).
+
+- **Glass is a treatment, not a texture**: `glass/*`, `*glass*`, `effects/*`, `sprites/*` carry `"treatment": "glass"` in the substitutes table and draw on the translucent shader as the grid in the measured colour, lifted 20%, at 35% alpha (`G2GStockSubstitutes.is_glass`). Maps are built on seeing through glass; any opaque image made a glass spawn box a dark room.
+- **Water draws as water**: `G2GBspMap.is_water_material` (file name says `water`, not `waterfall`, and the map shipped no texture for it) gets `g2g_bsp_water.gdshader`: translucent, `cull_disabled` (a swimmer looks up at the `_beneath` faces), a slow swell, lit by the lightmap. **game-arena keeps a copy of this shader and the rule; keep the two in step.**
+
+## Textures the .bsp did not carry
+
+Most of a surf map is built from stock textures that were never in the file. In order, an imported surface draws:
+
+1. **The map's own texture**, if the pakfile packed one. Material lookups must handle a leading slash (`/SURFACE`) and a quoted `$basetexture` with a space in it; both once fell back to the grid with the texture right there.
+2. **A Kenney stand-in** (`textures/stock/`, CC0, licence beside them), from `textures/stock/substitutes.json`: globs, first match wins, with `units` (tile width, 128), `aspect` (Kenney's walls are 64x128; drawn square their courses read as planks), `mean`, and `none` entries that keep dev textures, flat colours, metal, lights and the like on the grid on purpose. The tint pulls the stand-in 60% toward the mapper's measured colour (`TINT_PULL`); pixel art is sampled nearest. **Never the original game's textures.** `tools/stock_survey.py` prints each map's textured share worst first, or with `--unmatched` the unmatched materials ranked across all maps; `headless_imported`'s `STOCK_DRAWN` holds per-map floors for maps someone has looked at.
+3. **The prototype set** (`textures/prototype/`, one PNG per `G2GTextures.Role`, chosen by what the surface is FOR), tinted with the texture's **own measured colour**: the compiler stores every texture's mean albedo in `dtexdata_t.reflectivity` (linear), so a stock texture whose pixels never shipped still has a known colour. **A measured black is only trusted when the name says black**: a self-illuminated light panel has no albedo and would vanish. The grid stays for scale.
+
+- **Flat black is a missing texture**, even when it decoded perfectly (a 1024x1024 field of zero): it goes to the prototype set. The rule is flat **and** dark: a black panel with one bright line on it is a map's look and stays.
+- **Prototype UVs come from a tangent frame in the face's own plane**, not an axis projection, which stretches the grid by √2 along exactly the direction a rider travels on a 45° ramp. The mesh carries UVs in **64-unit squares** and the material scales by the installed tile's share of that, because which image is installed is not known until load.
+- **A checker is composited onto Kenney's tiles at load, once per role.** The tile is a flat field with a one-pixel line, and ink is the only thing that survives a mipmap: a ramp seen edge-on forty metres away is the field colour. Every Kenney pixel survives; only what a mipmap keeps changes.
+- **Kenney's tile has 8 squares per side, not 4.** Its lines alternate strong (every 256 px) and faint (every 128), and a threshold chosen to ignore compression noise ignores the faint half. Getting it wrong draws every imported map at half scale on the one number that constant exists to hold.
+- **Textures need mipmaps.** Godot only generates them itself for textures it sees in a 3D material, and these are bound to shader parameters from a script, so `ask_for_mipmaps` in the importer writes each texture's `.png.import` with `mipmaps/generate=true` (lightmaps stay without: they are sampled at their own resolution).
+- **A displacement blend draws both textures**: `WorldVertexTransition` materials paint `$basetexture2` by per-vertex alpha; the surface gets `texture2` and an `alpha_offset` block, `G2GBspMap` puts the alpha in `ARRAY_COLOR`, and the shader mixes by `COLOR.a`. A blend whose first texture is stock stays on the grid.
+- **Some maps are black on purpose.** A map built from black panels with neon lines is black because it was built black; raising ambient changes nothing, which is the tell. Do not "fix" a map that is dark for a stated good reason, and do not let that explanation hide a real fault: on the same map the flat-black tool texture *was* a missing texture and the ALPHA bug was real.
+
+## Skies
+
+- **A sky the map packed is the sky drawn.** `bsp_import.packed_sky_faces` decodes all six faces (all or none: a missing face is a hole in the horizon) into the manifest's `lighting.sky_faces`, and `G2GBspMap._apply_packed_sky` puts them on `g2g_sky.gdshader`. The face layout is in the shader's header; a wrong one shows as a horizon broken at the seams.
+- **Otherwise dot-lighting draws a procedural sky from the map's own numbers**: the fog colour as the horizon, the ambient as the top, the sun at the map's angle. A named sky texture set lives in the original game and is not ours to copy.
+- **An ambient of exactly white is the editor's untouched default, not a statement about the sky**: `G2GLighting.white_sky_replacement` recolours only the procedural sky's top from `SKY_TOPS` (by sky name), falling back to `CLEAR_SKY`.
+- **The 3D skybox** is drawn as the engine draws it, `scale` times larger about the sky camera, in `Sky` instances. `sky_drawn_scale` keeps the mapper's scale unless the farthest sky vertex would pass `SKY_REACH` (3500 m, inside the camera's 4 km far plane), then takes the largest scale that fits, never one that brings the nearest sky vertex inside the map. A zones file can turn a skybox off (`"skybox": false` with a why) where drawing it is a cage round the map. Sky props are lit by the floor under their small copy and read as dark silhouettes; open.
+
+## Static props
+
+- **The leaf ambient cube is about a hundredth of the floor's light** (the compiler leaves direct light out of it; the engine adds it per prop at load), so a prop lit by the cube alone is black. `GroundLight` adds the baked luxel of the floor under the prop, fully from above, 0.7 from the sides, 0.25 from below, written into the atlas as a 6x6 octahedral tile per probe; a prop goes through the same shader and exposure as the brushes.
+- **A prop with a probe but no lit floor** (over open air or water, in the 3D skybox, on displacement terrain, which `GroundLight` cannot see) takes `open_sky()`: the 75th-percentile floor luxel's brightness in the average colour of the bright half, never one luxel's colour (one cyan neon floor turned every fallback prop navy). **A prop with no probe draws unlit, on purpose**: lighting those was rendered and rejected.
+- **An untextured prop material takes the measured colour of a brush texture** with the same last path part, else the mean of brush textures sharing its material word (`prop_colours`).
+- `clean_material` strips the compiler's cubemap `_x_y_z` suffix only from `maps/<map>/` names; a mapper's own `corals_1_5_8_9` is a name.
+- Open: a prop on displacement terrain should sample the displacement's lightmap the way `build_lightmap` parameterises it; a prop whose floor is far below in shadow takes that shadow.
+
+## Meshes over 256 surfaces
+
+Godot's per-mesh surface limit is 256 (`RenderingServer.MAX_MESH_SURFACES`); one map has 311. `G2GBspMap` starts a new `MeshInstance3D` every 256 surfaces: the first keeps the name `World`, which the suite and the probes look up, the rest are `World2`, `World3`. **Each drawn surface carries the index of the manifest surface it came from**; assigning materials by position in a second loop gives every surface after a skipped one its neighbour's texture. Collision is built from the manifest's brushes, not the drawn geometry, which is why the lost surfaces cost rendering and not play. The probes that read `World` alone see a smaller sample on that map, not a wrong one.
+
+## The preview tool must show what it says it shows
+
+`tools/bsp_preview.gd` builds its own neutral `WorldEnvironment`; it removes the map's by name and prints which it used, because **a second `WorldEnvironment` does not merge and does not warn**: one is simply used. `GAME=1 tools/bsp_preview.sh` draws the map under its own environment, `keepenv` keeps both, `lm` shows the lightmap alone, and `PREVIEW_MARK=<material>` (with `PREVIEW_MARK_CULL=1`, `PREVIEW_EYE`, `PREVIEW_YAW`) draws one material flat magenta to find it. Overrides like `ambient` and `light_boost` must be assigned before `build_from`, which builds there and then; two renders that come out byte-identical mean an override reached nothing. A preview outside the map is not a view a player has: a map with dense fog previews as one flat rectangle, correctly.

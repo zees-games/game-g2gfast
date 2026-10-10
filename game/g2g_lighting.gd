@@ -8,7 +8,7 @@ extends RefCounted
 ## authored — so it is dot-lighting now, with its own suite, and what stays here is the
 ## part that is genuinely this game's: which profile a machine gets.
 ##
-## See Decision 13 in this project's CLAUDE.md for what the lighting block is and where it
+## See docs/map-rendering.md, "Lighting: the map says how it is lit", for what the lighting block is and where it
 ## comes from.
 
 
