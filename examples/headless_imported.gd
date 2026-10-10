@@ -145,7 +145,9 @@ const STOCK_DRAWN := {
 	"surf_mai_remix": 0.67,  # 69.9% on 2026-10-10 (stand-ins from the reference sheet); 59.6% on 2026-10-09; 0%: tiles, rock, looked at from the spawn
 	"surf_grave_reloaded": 0.82,  # 84.9% on 2026-10-10 (stand-ins from the reference sheet); 73.8% on 2026-10-09; 0%: cobbles, concrete, looked at from the spawn
 	"bhop_exodus": 0.78,  # 81.3% on 2026-10-10 (stand-ins from the reference sheet); 74.7% on 2026-10-09; 10.7%: planks, concrete, looked at from the spawn
-	"surf_greatriver_xdre4m": 0.34,  # 36.2% on 2026-10-09; 0%: wood, metal, looked at from the spawn
+	"surf_greatriver_xdre4m": 0.77,  # 80.5% on 2026-10-10 (city facades as concrete); 36.2% on 2026-10-09; 0%: wood, metal, concrete kerbs, looked at from the spawn
+	"surf_thriller": 0.74,  # 77.4% on 2026-10-10; 47.8% before: the citadel panelling as dark metal plate, looked at from the spawn
+	"bunnyhop_pro": 0.63,  # 66.1% on 2026-10-10; 53.1% before: sand floor, stone walls, concrete courtyard, looked at from the spawn
 }
 
 ## The share of a map's triangles drawn in the texture its own pakfile carried, at least,

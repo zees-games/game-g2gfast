@@ -443,6 +443,311 @@
    "why": "reference: a decal-like trim strip with fur-like streaks; no stand-in reads as it (2026-10-10)"
   },
   {
+   "match": "de_aztec/stairsfake01*",
+   "none": true,
+   "why": "reference: painted stair treads on a flat face; any block or plank texture reads as the wrong thing. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_aztec/stonework05*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: rough-cut stone courses, as stonework05. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_aztec/trim*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: pale stone blocks. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_aztec/azstatc",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: a carved stone relief; stone blocks are the nearest Kenney has. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/templewall04*",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: tan sandstone courses. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/resid*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: pale plaster, weathered; smooth concrete tinted to it. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/dusandcrete",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: sandy concrete slab. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/curb04",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: a concrete kerb. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/sdwlka*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: pavement slab. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/stonework01*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: yellow rubble stone. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/trim0*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: a dressed-stone moulding; flat enough to read as concrete. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/castle0*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: dark castle stonework, as castle01. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_bigtrim",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: stone courses under a moulding. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_archt*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: smooth pale dressed stone with streaks; block textures read as too busy. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_steptop*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: a smooth grey step top. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_bigbrk*",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference sheet: big sand bricks, as pi_bigbrk. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukmetwallm",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference sheet: blue-painted concrete, not metal despite the name; the tint keeps the blue. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infflra",
+   "texture": "floor_stone_pattern_small.png",
+   "mean": [
+    0.433,
+    0.443,
+    0.49
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference sheet: red cobbled floor. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_tides/tides_ceiling*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference sheet: dark wooden ceiling boards. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/combine_citadel/*",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "no reference (a base-engine model material); name and measured colour: dark blue-grey alien metal panelling, surf_thriller's main structure. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "building_template/building_template011*",
+   "texture": "wall_brick_stone_center.png",
+   "mean": [
+    0.488,
+    0.498,
+    0.538
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "no reference (base-engine facade); measured a red-brown, which on a city facade is brick. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "building_template/building_template024*",
+   "texture": "wall_brick_stone_center.png",
+   "mean": [
+    0.488,
+    0.498,
+    0.538
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "no reference (base-engine facade); measured a red-brown, which on a city facade is brick. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "building_template/*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "no reference (base-engine city facades); measured pale greys and tans: rendered and painted concrete, tinted to each one's own colour. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "storefront_template/*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "no reference (base-engine shop fronts); measured greys: concrete. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "halflife/lab1_w*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "no reference; a lab wall, measured a pale green-grey: painted concrete. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
    "match": "stone/stonewall*",
    "texture": "wall_stone.png",
    "why": "name: stone wall",
@@ -887,6 +1192,54 @@
    "units": 128,
    "aspect": 1.0,
    "why": "name: rust. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*crate*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name and reference (cs_italy/picrate1, de_cbble/cratebig01b): wooden crate boards. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*mud*",
+   "texture": "floor_ground_dirt.png",
+   "mean": [
+    0.359,
+    0.289,
+    0.248
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name: mud floor. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*blend_rock*",
+   "texture": "wall_rock.png",
+   "mean": [
+    0.255,
+    0.21,
+    0.186
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name: a rock blend. Added 2026-10-10 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*sandrock*",
+   "texture": "wall_rock.png",
+   "mean": [
+    0.255,
+    0.21,
+    0.186
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name: sand over rock; the rock half is what a surfer's ramp shows. Added 2026-10-10 [g2g-maps-stock-1]"
   }
  ]
 }
