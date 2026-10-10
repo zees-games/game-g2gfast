@@ -220,6 +220,229 @@
    "aspect": 1.0
   },
   {
+   "match": "de_aztec/stonework05",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: small rough-cut stone courses. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_aztec/road01_cheap",
+   "texture": "floor_ground_dirt.png",
+   "mean": [
+    0.359,
+    0.289,
+    0.248
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: a muddy brown dirt road. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infwllftop",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: pale cut-stone blocks in courses. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_tides/tides_floor_stone_2",
+   "texture": "floor_stone_pattern_small.png",
+   "mean": [
+    0.433,
+    0.443,
+    0.49
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: dark flagstones. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_walloffice_01",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: a smooth painted office wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/stonewall01",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: small brown rubble stone. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/outwall02",
+   "texture": "wall_brick_stone_center.png",
+   "mean": [
+    0.488,
+    0.498,
+    0.538
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: grey cut-stone blocks. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/outwall01*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: rubble stone with moss. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/residwall02",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: pale stone blocks. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/stonewall02",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: tan rubble stone. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/templewall02",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name and de_dust family: stone wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/castle01",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: brown rubble stone. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_bigbrk",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: big pale stone blocks. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/walltrim01",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: large grey stone tiles. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukmetwallab",
+   "texture": "cc0_metal_brushed.jpg",
+   "filter": "linear",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: corrugated grey metal. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/pi_rust",
+   "texture": "cc0_metal_brushed.jpg",
+   "filter": "linear",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: rusted metal sheet (tint keeps the rust colour). Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/steel",
+   "texture": "cc0_metal_brushed.jpg",
+   "filter": "linear",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: plain grey steel. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "glass/*",
+   "none": true,
+   "why": "glass: no Kenney or CC0 stand-in reads as glass on an opaque mesh; the tinted grid stays (2026-10-10)"
+  },
+  {
+   "match": "cs_italy/yellow",
+   "none": true,
+   "why": "reference: flat yellow, the grid tinted to it is the honest stand-in (2026-10-10)"
+  },
+  {
+   "match": "de_dust/stonetrim05",
+   "none": true,
+   "why": "reference: a decal-like trim strip with fur-like streaks; no stand-in reads as it (2026-10-10)"
+  },
+  {
    "match": "stone/stonewall*",
    "texture": "wall_stone.png",
    "why": "name: stone wall",
@@ -523,6 +746,147 @@
    "units": 128,
    "aspect": 1.0,
    "why": "name: wooden shingles. Added 2026-10-09 by name, for the maps imported since 10-04 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*marble*",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name: marble floors (reference: pale square slabs). Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*plaster*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name: plaster (reference: smooth pale render). Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*pavement*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name: pavement (reference: dark smooth paving). Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*stonewall*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name: stone wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*marketwall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: rendered plaster walls. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*sitebwall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: rendered plaster wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukfloor*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: dark smooth concrete floor. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/wll*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: weathered rendered wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/wll*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: weathered rendered wall. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*/trimwall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "reference: rendered wall with a stone base. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*rust*",
+   "texture": "cc0_metal_brushed.jpg",
+   "filter": "linear",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name: rust. Added 2026-10-10 from the reference sheet [g2g-maps-stock-1]"
   }
  ]
 }
