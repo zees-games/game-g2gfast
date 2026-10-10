@@ -1,0 +1,36 @@
+{
+ "id": "kz_bhop_lucid",
+ "author": "Ghost1246511",
+ "attribution": {
+  "author": "Ghost1246511",
+  "source": "https://gamebanana.com/mods/126473 (Key Authors: Ghost1246511 (mapper); Original Authors: Aoki (once-bhop and anti-prespeed systems), Bletzkarn and TopHATTwaffle (textures), Chrazini (letters), pLANE; testers credited on the page; submitter Ghost1246511)",
+  "archive": "kz_bhop_lucid.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit and a spawn, and no start or finish, on purpose (gb-maps-2): a hub map of four coloured routes (t_r*, t_p*, t_g*, t_y*: red, purple, green, yellow), each ending at a crystal whose trigger_once adds one to `b_counter`; the way to `t_end` opens only when the counter reaches four. This game runs no counters, so a finish here would be a line on a route the map does not open, and the four routes are not one track either. Its blocks carry two of Aoki's systems: once-only blocks (filter_multi bh12..bh16 over xhop1..xhop6, as on bhop_badges2) and an anti-prespeed name `pre`; both are conditional and dropped, and the `activator` anti-standing trap becomes sinking blocks. Loads, draws and collides; zones want drawing in-game with the zone editor. Not published.",
+ "zones": [
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": [
+    1280,
+    -3584,
+    192
+   ],
+   "note": "the middle of the 33 info_player_counterterrorist (x 1216..1344, y -3904..-3264, z 176)"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "bh12",
+   "bh23",
+   "bh34",
+   "bh45",
+   "bh56",
+   "bh16",
+   "pre",
+   "filter_activator"
+  ],
+  "note": "once-only blocks, anti-prespeed and the anti-standing trap"
+ }
+}

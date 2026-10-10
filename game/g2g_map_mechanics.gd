@@ -16,8 +16,10 @@ const G2GUnits := preload("g2g_units.gd")
 ## - [b]A push[/b] (`trigger_push`) is the engine's base velocity: while the hull is
 ##   inside, the player is displaced by the push on top of their own velocity, which
 ##   gravity and friction never touch; on leaving, the push is added to the velocity, so
-##   a booster sends you on at its speed. A "once" push is added on entering. An upward
-##   push lifts a player off the ground. What the player was pushed by last tick is kept
+##   a booster sends you on at its speed. A "once" push is added on entering, and a
+##   "leave" one on leaving: the genre's jump pad, a thin trigger on a block's top whose
+##   OnEndTouch sets the player's base velocity, so jumping off it launches and standing
+##   on it does not. An upward push lifts a player off the ground. What the player was pushed by last tick is kept
 ##   per TICK rather than per call, so a client replaying a tick reads the same "last
 ##   tick" the server did.
 ## - [b]Gravity[/b] (`trigger_gravity`) scales the fall while airborne inside.
@@ -45,7 +47,7 @@ const TOUCH_BELOW := 2.0 * G2GUnits.METRES_PER_UNIT
 const HISTORY := 256
 
 var water: Array[AABB] = []
-var pushes: Array[Dictionary] = []      # {box: AABB, push: Vector3 m/s, once: bool}
+var pushes: Array[Dictionary] = []      # {box: AABB, push: Vector3 m/s, once: bool, leave: bool}
 var gravity: Array[Dictionary] = []     # {box, scale}
 var hurt: Array[Dictionary] = []        # {box, damage}
 var conveyors: Array[Dictionary] = []   # {box, push}
@@ -80,7 +82,7 @@ func read(manifest: Dictionary) -> void:
 	for v: Variant in block.get("push", []):
 		var d: Dictionary = v
 		pushes.append({"box": _box(d), "push": G2GUnits.vector_to_metres(_vec(d.get("push"))),
-			"once": bool(d.get("once", false))})
+			"once": bool(d.get("once", false)), "leave": bool(d.get("leave", false))})
 	for v: Variant in block.get("gravity", []):
 		var d: Dictionary = v
 		gravity.append({"box": _box(d), "scale": float(d.get("scale", 1.0))})
@@ -143,6 +145,12 @@ func simulate(rider: Rider, motor: DotFpsMotor, state: DotFpsState, delta: float
 	return _blocks(rider, state, r, hull, delta)
 
 
+func _impulse(motor: DotFpsMotor, state: DotFpsState, push: Vector3) -> void:
+	state.velocity += push
+	if push.y > 0.0 and state.is_grounded():
+		motor.set_mode(state, DotFpsState.Mode.AIR)
+
+
 func _pushes(rider: Rider, motor: DotFpsMotor, state: DotFpsState, hull: AABB, delta: float) -> void:
 	if pushes.is_empty():
 		return
@@ -162,10 +170,12 @@ func _pushes(rider: Rider, motor: DotFpsMotor, state: DotFpsState, hull: AABB, d
 	var was_once: PackedInt32Array = before[1]
 
 	for i in once:
-		if not was_once.has(i):
-			state.velocity += pushes[i]["push"]
-			if (pushes[i]["push"] as Vector3).y > 0.0 and state.is_grounded():
-				motor.set_mode(state, DotFpsState.Mode.AIR)
+		if not was_once.has(i) and not pushes[i]["leave"]:
+			_impulse(motor, state, pushes[i]["push"])
+	for i in was_once:
+		# The ids are the last tick's; a map change in between can leave one past the end.
+		if i < pushes.size() and not once.has(i) and pushes[i]["leave"]:
+			_impulse(motor, state, pushes[i]["push"])
 
 	if base != Vector3.ZERO:
 		if base.y > 0.0 and state.is_grounded():

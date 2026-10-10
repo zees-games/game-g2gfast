@@ -72,20 +72,20 @@ Likes are a second view, and a useful one because views accumulate with age: 35 
 | Page | Map | Category | Views | Likes | Status |
 | --- | --- | --- | ---: | ---: | --- |
 | [125285](https://gamebanana.com/mods/125285) | bhop_interloper | Bunny Hop | 16,828 | 46 | held (`bhop_interloper`) |
-| [124748](https://gamebanana.com/mods/124748) | Bhop_crash_egypt | Bunny Hop | 19,000 | 36 | not yet |
-| [125694](https://gamebanana.com/mods/125694) | bhop_overthinker | Bunny Hop | 14,881 | 34 | not yet |
-| [125409](https://gamebanana.com/mods/125409) | bhop_lego3 | Bunny Hop | 10,791 | 33 | not yet |
-| [124525](https://gamebanana.com/mods/124525) | bhop_badges2 | Bunny Hop | 26,129 | 32 | not yet |
-| [122641](https://gamebanana.com/mods/122641) | surf_ny_advance | Surf Style | 30,095 | 31 | not yet |
-| [122471](https://gamebanana.com/mods/122471) | surf_lt_unicorn | Surf Style | 26,670 | 31 | not yet |
-| [125646](https://gamebanana.com/mods/125646) | bhop_ocean | Bunny Hop | 10,933 | 30 | not yet |
-| [122711](https://gamebanana.com/mods/122711) | surf_pavilion | Surf Style | 18,078 | 29 | not yet |
-| [123157](https://gamebanana.com/mods/123157) | surf_torque2 | Surf Style | 17,330 | 27 | not yet |
-| [125089](https://gamebanana.com/mods/125089) | bhop_frotinity2 | Bunny Hop | 7,461 | 27 | not yet |
-| [125470](https://gamebanana.com/mods/125470) | bhop_lost_world | Bunny Hop | 30,011 | 26 | not yet |
-| [123224](https://gamebanana.com/mods/123224) | surf_velocity | Surf Style | 24,088 | 26 | not yet |
+| [124748](https://gamebanana.com/mods/124748) | Bhop_crash_egypt | Bunny Hop | 19,000 | 36 | imported 2026-10-10 (`bhop_crash_egypt`) |
+| [125694](https://gamebanana.com/mods/125694) | bhop_overthinker | Bunny Hop | 14,881 | 34 | imported 2026-10-10 (`bhop_overthinker`) |
+| [125409](https://gamebanana.com/mods/125409) | bhop_lego3 | Bunny Hop | 10,791 | 33 | imported 2026-10-10 (`bhop_lego3`) |
+| [124525](https://gamebanana.com/mods/124525) | bhop_badges2 | Bunny Hop | 26,129 | 32 | imported 2026-10-10 (`bhop_badges2`) |
+| [122641](https://gamebanana.com/mods/122641) | surf_ny_advance | Surf Style | 30,095 | 31 | imported 2026-10-10, not a course (`surf_ny_advance`) |
+| [122471](https://gamebanana.com/mods/122471) | surf_lt_unicorn | Surf Style | 26,670 | 31 | imported 2026-10-10 (`surf_lt_unicorn`) |
+| [125646](https://gamebanana.com/mods/125646) | bhop_ocean | Bunny Hop | 10,933 | 30 | imported 2026-10-10 (`bhop_ocean`) |
+| [122711](https://gamebanana.com/mods/122711) | surf_pavilion | Surf Style | 18,078 | 29 | imported 2026-10-10, not a course (`surf_pavilion`) |
+| [123157](https://gamebanana.com/mods/123157) | surf_torque2 | Surf Style | 17,330 | 27 | imported 2026-10-10, not a course (`surf_torque2`) |
+| [125089](https://gamebanana.com/mods/125089) | bhop_frotinity2 | Bunny Hop | 7,461 | 27 | imported 2026-10-10 (`bhop_frotinity2`) |
+| [125470](https://gamebanana.com/mods/125470) | bhop_lost_world | Bunny Hop | 30,011 | 26 | downloaded 2026-10-10, not imported (see below) |
+| [123224](https://gamebanana.com/mods/123224) | surf_velocity | Surf Style | 24,088 | 26 | imported 2026-10-10, not a course (`surf_velocity`) |
 | [125408](https://gamebanana.com/mods/125408) | bhop_lego2 | Bunny Hop | 21,756 | 26 | held, not a course (`bhop_lego2`) |
-| [126473](https://gamebanana.com/mods/126473) | kz_bhop_lucid | Bunny Hop | 14,183 | 26 | not yet |
+| [126473](https://gamebanana.com/mods/126473) | kz_bhop_lucid | Bunny Hop | 14,183 | 26 | imported 2026-10-10, not a course (`kz_bhop_lucid`) |
 
 ## What the most-viewed surf maps turned out to be
 
@@ -124,4 +124,15 @@ In `inspirations/g2gfast/pending/` with their archives in `inspirations/g2gfast/
 ## The batch imported 2026-10-09
 
 Seven courses from both lists and the last pending combat map: `bhop_japan`, `bhop_exodus`, `kz_bhop_badg3s`, `surf_omnibus`, `surf_lore` and `surf_eclipse` are timed from their own spawns and finish teleports or triggers; `kz_bhop_yonkoma` is an adventure climb map with a spawn and no finish (its logic is buttons and timed doors, and nothing in it marks the end); `surf_legends` is combat surf, credit only. Every one is a VBSP 20 file. Two importer changes came out of it: repeated output keys are kept (the trap delays on bhop_japan, bhop_interloper and bhop_arcane_v2 sat in a trigger's second `OnTrigger`), and `round_teleports` drops a race map's start-disabled jail and level-select teleports by name. `surf_lt_omnific` followed the same day: eighteen sections by three mappers in an interleaved order read from its landmark teleports, timed from the first section's start to the ending room, with no stage lines yet.
+
+## The batch imported 2026-10-10
+
+The thirteen most-liked maps outside the top 50 by views (gb-maps-2). Twelve imported, each with an attribution and what was read and why in its zones file; one left out.
+
+- **Courses, timed from the map's own start to its own finish:** `bhop_overthinker` (labels its zones `mod_zone_start` / `mod_zone_end`, plus a bonus), `surf_lt_unicorn` (labels six stages as `stage_startzone_NN`, a finish and three bonuses), `bhop_crash_egypt` (32 sections; the finish is the warp sphere past the last one), `bhop_lego3` (the end figure's finish animation), `bhop_ocean` (the spawn teleports to a start island; the finish is the island with the ending song), `bhop_badges2` (the confetti trigger), `bhop_frotinity2` (eight mappers' stages, finished at `finishend`; no stage lines yet).
+- **Combat or race rounds, credit only and `kind: arena`:** `surf_ny_advance`, `surf_pavilion`, `surf_torque2`, `surf_velocity` (team spawns, equipment, jails, scored levels).
+- **A spawn and no finish:** `kz_bhop_lucid`, a hub of four coloured routes whose finish opens when a counter reaches four, which this game does not run.
+- **Not imported:** `bhop_lost_world` (in `inspirations/g2gfast/pending/`): an adventure map whose route runs through timed doors ("You have 8 seconds before door closes"), button-enabled teleports and dream sequences, all of them the map's logic.
+
+What the importer learned from them: boosters (a thin `trigger_multiple` whose OnEndTouch sets `basevelocity`) are pushes given on leaving, which ten maps use and none was reading; `stage_startzone_NN` and the `mod_` prefix are labels; `ignore_labels` leaves a labelled zone unread with a reason (unicorn's bonus 1, a collectables challenge); and a pit trimmed back off an arrival keeps a tick's depth.
 

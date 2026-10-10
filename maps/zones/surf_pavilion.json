@@ -1,0 +1,13 @@
+{
+ "id": "surf_pavilion",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "author": "Black Sheep",
+ "attribution": {
+  "author": "Black Sheep",
+  "source": "https://gamebanana.com/mods/122711 (Key Authors: Black Sheep; submitter black sheep)",
+  "archive": "surf_pavilion.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit only, and deliberately no zones: a scored race-and-fight round. 27 and 24 team spawns, 37 game_score entities awarding points per level end and per fail (lvl_1_end_trig, lvl_2_fail_trig, ...), two jails with timers, 21 func_breakables, placed weapons (deagle, m249, grenades) and two game_player_equip. Its levels are scored against each other rather than timed from a line, and the winner's room is a kill box. gb-maps-2. Not published."
+}

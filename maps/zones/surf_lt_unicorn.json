@@ -1,0 +1,24 @@
+{
+ "id": "surf_lt_unicorn",
+ "author": "nyro",
+ "attribution": {
+  "author": "nyro",
+  "source": "https://gamebanana.com/mods/122471 (Map Author: nyro; music and testers credited on the page; submitter nyronic)",
+  "archive": "surf_lt_unicorn_3.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit, and the map's own labels (gb-maps-2): `stage_startzone_01`..`_06` (stage 1's is the start), `map_endzone`, and bonus_startzone/endzone_02..04. Read since this import: `stage_startzone_NN` used to come out as six tracks named stage_01..06. Bonus 1 is not read: see ignore_labels. Not published.",
+ "ignore_labels": {
+  "names": [
+   "bonus_startzone_01",
+   "bonus_endzone_01"
+  ],
+  "why": "bonus 1 is stage 1's collectables challenge, not a route: its start is a 32-unit trigger inside the portal (stage_dest_check_01) that drops a player into stage 1's chamber, which shows the collectable instructions, and its end is a 4224 x 5312 x 4512 box round the whole stage that the map scores with collectable filters. A spawn at its start fell 1,780 units into stage 1."
+ },
+ "conditional_teleports": {
+  "filters": [
+   "filter_b2_cp2"
+  ],
+  "note": "bonus 2's second-checkpoint pit, which fires only for a player the checkpoint trigger has named b2_cp2: it sends to bonus_dest_02_cp2, inside the portal to bonus_plat_02_cp2, which stands inside this pit's own box, so as a box it is a loop. Dropped, a fall there is caught by the unfiltered bonus 2 pit under it and goes back to the bonus start, as it does in Source for anybody who has not reached the checkpoint."
+ }
+}

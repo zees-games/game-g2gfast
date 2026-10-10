@@ -1,0 +1,55 @@
+{
+ "id": "bhop_ocean",
+ "author": "Tony Montana (tmontana)",
+ "attribution": {
+  "author": "Tony Montana (tmontana)",
+  "source": "https://gamebanana.com/mods/125646 (Key Authors: Tony Montana (creator); textures credited on the page; submitter tmontana)",
+  "archive": "bhop_ocean.zip",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic (gb-maps-2). The 64 team spawns stand on a teleport (unfiltered, under the spawn floor) to `tele_`, the start island, inside the one trigger_multiple that plays the map's opening sound and fades in; that trigger is the start line. Eight sections follow, tele_1..tele_8, each with an unfiltered water pit and a block pit behind `bhopfilter` (a name the block triggers give the player 0.09 s after they land: the anti-standing trap, imported as sinking blocks). Past tele_8's section the route ends on an island walled by four tall trigger_pushes, where a 24-unit trigger plays the ending song; the finish is a box round it. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     4028,
+     -14872,
+     192
+    ],
+    "within": 64
+   },
+   "note": "the start island's trigger (sound and fade), around the destination `tele_` the spawn teleports everybody to"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "tele_"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "around": {
+    "point": [
+     7036,
+     -1108,
+     88
+    ],
+    "extents": [
+     256,
+     256,
+     160
+    ]
+   },
+   "note": "the last island, round the trigger that plays the ending song (24 x 24 units, too small to be crossed reliably on its own)"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "bhopfilter"
+  ],
+  "note": "the anti-standing blocks: the section triggers rename a player `bhop` 0.09 s after touching a block, and these teleports fire only for that name"
+ }
+}

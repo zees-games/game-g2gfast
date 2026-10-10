@@ -1,0 +1,13 @@
+{
+ "id": "surf_velocity",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "author": "copy-mark and six others",
+ "attribution": {
+  "author": "copy-mark, jack the stripper, sangre, hellraisedsurfer, target practice, jesuswashomeless, skar",
+  "source": "https://gamebanana.com/mods/123224 (Key Authors: copy-mark, jack the stripper, sangre, hellraisedsurfer, target practice, jesuswashomeless, skar; submitter Lightning.)",
+  "archive": "surf_velocity.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit only, and deliberately no zones: a combat surf map by seven mappers, one level each. 29 team spawns a side on two facing rows, four func_buyzones, 66 placed rifles, pistols and grenades, nine game_player_equip, and an end jail with an equipment trigger per level (end_jail_equip_triggers). Its 115 trigger_teleports aim at each mapper's level start (targetpractice, sangre_spawn, jacky, hellstage, ...), a level-select and a loop rather than one route. gb-maps-2. Not published."
+}

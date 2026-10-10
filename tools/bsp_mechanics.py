@@ -218,6 +218,63 @@ def push_volumes(bsp, origin_of, inert_filters):
     return out
 
 
+# `!activator,AddOutput,basevelocity x y z,delay,times` on a trigger: a booster.
+BOOST_OUTPUT = re.compile(r"^\s*!activator\s*,\s*AddOutput\s*,\s*basevelocity\s+([-\d.eE]+)\s+([-\d.eE]+)\s+([-\d.eE]+)\s*,\s*([\d.]*)",
+                          re.IGNORECASE)
+
+
+def booster_volumes(bsp, origin_of, inert_filters):
+    """Every trigger that boosts a player by setting their `basevelocity`, as a once push.
+
+    The genre's booster is not a `trigger_push`: it is a thin `trigger_multiple` on a
+    block's top whose OnEndTouch sets `basevelocity 0 0 550` on the player leaving it,
+    which the engine turns into an impulse once (the player's PostThink adds a base
+    velocity nothing is still pushing with into the velocity and clears it). So jumping off
+    the pad launches; standing on it does nothing. Ten imported maps carry them (2026-10-10:
+    bhop_overthinker 34, bhop_frotinity2 32, bhop_lego3 22, bhop_pandora2_fix 18,
+    bhop_supernova 10, ...), and until then none was read: a launch pad was a floor.
+
+    OnEndTouch becomes `leave` (the impulse is given on the tick the hull leaves the
+    volume); OnStartTouch and OnTrigger are given on entering, as a `once` push. A filter
+    name that names no filter entity passes everybody in Source (nothing to ask), so only
+    the inert ones are left out; a booster behind a delay is read without it, because a
+    delayed impulse would need a timer per player this mechanic does not keep, and none of
+    the ten has one."""
+    filters = {e.get("targetname", "").strip().lower() for e in bsp.entities
+               if e.get("classname", "").startswith("filter_")}
+    out = []
+    for e in bsp.entities:
+        if e.get("classname") not in ("trigger_multiple", "trigger_once"):
+            continue
+        if _int(e, "StartDisabled") == 1:
+            continue
+        flags = _int(e, "spawnflags", SF_TRIGGER_CLIENTS)
+        if not flags & SF_TRIGGER_CLIENTS:
+            continue
+        name = e.get("filtername", "").strip().lower()
+        if name in inert_filters:
+            continue
+        boost = None
+        leave = False
+        for key in ("OnEndTouch", "OnStartTouch", "OnTrigger"):
+            for line in e.get(key, "").split("\n"):
+                m = BOOST_OUTPUT.match(line)
+                if m:
+                    boost = (float(m.group(1)), float(m.group(2)), float(m.group(3)))
+                    leave = key == "OnEndTouch"
+                    break
+            if boost is not None:
+                break
+        if boost is None or boost == (0.0, 0.0, 0.0):
+            continue
+        push = godot_dir(boost)
+        for _i, (lo, hi) in entity_brushes(bsp, e, origin_of):
+            g = godot_box(lo, hi)
+            out.append({"min": g[0], "max": g[1], "push": push, "once": True, "leave": leave,
+                        "filtered": bool(name) and name in filters})
+    return out
+
+
 def gravity_volumes(bsp, origin_of):
     """`trigger_gravity`: inside it a player falls at `gravity` times the server's."""
     out = []
@@ -487,7 +544,7 @@ def mechanics(bsp, origin_of, destinations, lift, yaw_to_godot, traps=()):
         blocks.append(b)
     return {
         "water": water_volumes(bsp, origin_of),
-        "push": push_volumes(bsp, origin_of, inert),
+        "push": push_volumes(bsp, origin_of, inert) + booster_volumes(bsp, origin_of, inert),
         "gravity": gravity_volumes(bsp, origin_of),
         "hurt": hurt_volumes(bsp, origin_of),
         "conveyors": conveyors(bsp, origin_of),

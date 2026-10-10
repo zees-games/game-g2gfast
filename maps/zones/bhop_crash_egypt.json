@@ -1,0 +1,55 @@
+{
+ "id": "bhop_crash_egypt",
+ "author": "FireWavezZ and Ghost1302672",
+ "attribution": {
+  "author": "FireWavezZ and Ghost1302672",
+  "source": "https://gamebanana.com/mods/124748 (Key Authors: FireWavezZ, Ghost1302672; Great Contributors: tmontana; submitter FireWavezZ)",
+  "archive": "bhop_crash_egypt.zip",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic (gb-maps-2). 32 sections, teleport_1..teleport_32: each has an unfiltered pit and one behind `bhop_filter` (the anti-standing block trap). The checkpoint_trigger_N volumes are the map's own respawn checkpoints, imported as named checkpoints, not splits. The route ends past section 32 at a plasma sphere with a tesla coil, whose trigger_teleport (unfiltered, 192 x 384 x 192) sends the player back to section 1: the level's warp out, and the finish here. The crystal at teleport_31's destination is a pickup at the start of that section, not the end. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     0,
+     -157,
+     -160
+    ],
+    "extents": [
+     256,
+     320,
+     128
+    ]
+   },
+   "note": "the spawn room around the 36 info_player_terrorist (x -128..127, y -381..66, z -192..-128), short of the `hi` trigger at its exit"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "spawn"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_teleport",
+    "point": [
+     10656,
+     5920,
+     -448
+    ],
+    "within": 64
+   },
+   "note": "the warp sphere's teleport at the end of section 32"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "bhop_filter"
+  ],
+  "note": "the anti-standing blocks"
+ }
+}

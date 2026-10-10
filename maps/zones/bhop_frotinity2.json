@@ -1,0 +1,42 @@
+{
+ "id": "bhop_frotinity2",
+ "author": "FlowBhop and seven others",
+ "attribution": {
+  "author": "FlowBhop (stages 1 and 6), Kotzilla (2), muhamadnjak (3), Sonia_ (4), Linirin (5, 7), ampbhop (8)",
+  "source": "https://gamebanana.com/mods/125089 (Creators: FlowBhop, Kotzilla, muhamadnjak, Sonia_, Linirin, ampbhop; help: Antosha, GAMMA CASE, sodawater, Serz; testers credited on the page; submitter FlowBhop)",
+  "archive": "bhop_frotinity2_2dc4c.zip",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit, and a start and finish read from the map's own spawn and end destination (gb-maps-2). A collaboration in eight mappers' stages, each with its own destination family: cp1..cp10, kotz_*, muha_*, sonia*, Linirtin_*, flow_2*, liana_*, amptele/ampfail. They are not stage lines here yet: which teleport is the door between two stages has to be read off the graph per stage. The finish is `finishend`, the destination of the teleport out of the last stage. Its boosters are trigger_multiples setting basevelocity (imported as pushes). Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     -11106,
+     -11443,
+     -3736
+    ],
+    "extents": [
+     416,
+     256,
+     160
+    ]
+   },
+   "note": "the spawn room: the one info_player_terrorist (-11332, -11441) and `cp1` (-10880, -11446), where every stage-1 pit returns"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "cp1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "finishend",
+   "all": true,
+   "note": "every teleport aimed at `finishend`, the end room"
+  }
+ ]
+}

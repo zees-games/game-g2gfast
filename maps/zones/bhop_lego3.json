@@ -1,0 +1,59 @@
+{
+ "id": "bhop_lego3",
+ "author": "tmontana",
+ "attribution": {
+  "author": "tmontana",
+  "source": "https://gamebanana.com/mods/125409 (Key Authors: tmontana (creator); Original Authors: Cabbage McGravel (Lego textures); Contributors: Antosha (models); submitter tmontana)",
+  "archive": "bhop_lego3.zip",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic (gb-maps-2). 64 team spawns in one room; the finish is the trigger that plays the end figure's `finish` animation (endguy, SetAnimation finish). Its 114 trigger_teleports aim at 45 destinations dest_1..dest_42: per-section pits, most behind `f_1` (the anti-standing filter: block triggers rename the player and these fire for that name), the rest unfiltered. Coins renamed `ng1`.. along the way are collectables, not stages. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     -1088,
+     4768,
+     128
+    ],
+    "extents": [
+     288,
+     288,
+     160
+    ]
+   },
+   "note": "the spawn room, around the 32 + 32 team spawns (x -1312..-864, y 4544..4992, z 128)"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": [
+    -1088,
+    4768,
+    144
+   ]
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     -8288,
+     -3600,
+     -608
+    ],
+    "within": 64
+   },
+   "note": "the trigger that sets the end figure's finish animation"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "f_1"
+  ],
+  "note": "the anti-standing blocks"
+ }
+}

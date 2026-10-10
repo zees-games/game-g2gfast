@@ -1,0 +1,13 @@
+{
+ "id": "surf_ny_advance",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "author": "faj",
+ "attribution": {
+  "author": "faj",
+  "source": "https://gamebanana.com/mods/122641 (Key Authors: faj; submitter FAJ)",
+  "archive": "surf_ny_advance.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit only, and deliberately no zones: a race-and-fight surf round, not a timed route. 18 team spawns a side, 6 game_player_equip, four func_rot_buttons and a cart (death_kart, deposit_cart); its 71 trigger_teleports aim at nine section starts (p1s1..p3s3) and a last room (p4), and ten start-disabled jail_dest_* teleports that the round enables over each section once somebody wins. This importer runs no outputs, so there is no route to time without inventing one. gb-maps-2. Not published."
+}

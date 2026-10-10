@@ -83,6 +83,10 @@ LM_PAD = 1
 # ceiling speed.
 MIN_ZONE_THICKNESS = 192.0
 
+# One tick of travel at the genre's ceiling, rounded up: 3500 u/s at 128 Hz is 27.3
+# units. A pit the importer could not grow to MIN_ZONE_THICKNESS is still made this deep.
+TICK_DEPTH = 32.0
+
 # Where the g2gfast roles come from: the angle of the surface, not the name on it.
 #
 # [b]The material name was a guess and the slope is a fact.[/b] This used to be a list
@@ -1618,6 +1622,15 @@ def zone_role(name):
     if m:
         return ("STAGE", int(m.group(1)), "")
 
+    # surf_lt_unicorn's `stage_startzone_01`..`_06`: the stage first, then the label.
+    # Read by the general START rule below it was a START on a track called `stage_01`,
+    # six tracks for one route. Stage 1's line is the route's start, as with
+    # `checkpoint_N` below; no map imported before 2026-10-10 carries this name.
+    m = re.match(r"^stage_?start_?zone_?(\d+)$", n)
+    if m:
+        number = int(m.group(1))
+        return ("START", 0, "") if number <= 1 else ("STAGE", number, "")
+
     m = re.match(r"^checkpoint[_-]?(\d+)$", n)
     if m:
         # A numbered checkpoint is a split, and a split opens the section after it.
@@ -1654,7 +1667,9 @@ def zone_role(name):
     # a track key and the map's main route becomes bonus 1.
     rest = n.replace("zone", "").replace("trigger", "").replace("start", "").replace("end", "")
     rest = re.sub(r"[_\s]+", "_", rest).strip("_")
-    rest = re.sub(r"^(map|the)_?", "", rest).strip("_")
+    # `mod_zone_start` / `mod_zone_end_bonus` (bhop_overthinker): a timer plugin's
+    # prefix, like `map_`, and left on it made the main route a track called `mod`.
+    rest = re.sub(r"^(map|the|mod)_?", "", rest).strip("_")
     return (kind, 0, rest)
 
 
@@ -1791,12 +1806,27 @@ class Zoner:
         return sorted({z["track"] for z in self.zones})
 
 
-def label_zones(z):
-    """The zones the map labelled itself, from `trigger_multiple` targetnames."""
+def label_zones(z, ignore=None):
+    """The zones the map labelled itself, from `trigger_multiple` targetnames.
+
+    [param ignore] is the zones file's `ignore_labels`: names the map labels as a zone
+    that are not one here, each list with a `why`. surf_lt_unicorn's `bonus_startzone_01`
+    is a 32-unit trigger inside the portal that drops a player into stage 1, and its
+    `bonus_endzone_01` a box round the whole stage: a collectables challenge the map
+    scores with logic, not a route a timer can run. A listed name that labels nothing
+    stops the import, like every other stale list in a zones file."""
+    ignore = ignore or {}
+    names = {str(n).strip().lower() for n in ignore.get("names", [])}
+    if names and not str(ignore.get("why", "")).strip():
+        raise ValueError("ignore_labels names %s without a why" % ", ".join(sorted(names)))
+    seen = set()
     found = []
     for i, e in z.entities("trigger_multiple", "trigger_once"):
         name = e.get("targetname", "")
         if not name:
+            continue
+        if name.strip().lower() in names:
+            seen.add(name.strip().lower())
             continue
         role = zone_role(name)
         box = brush_box(z.bsp, e)
@@ -1804,6 +1834,11 @@ def label_zones(z):
             continue
         found.append((i, e, name, role, box))
 
+    stale = names - seen
+    if stale:
+        raise ValueError("ignore_labels names no labelled trigger: %s" % ", ".join(sorted(stale)))
+    if names:
+        z.notes.append("labels not read (ignore_labels): %s" % ", ".join(sorted(names)))
     tracks = assign_tracks({role[2] for _, _, _, role, _ in found})
     z.track_names = {str(v): (k or "main") for k, v in tracks.items()}
 
@@ -2346,6 +2381,7 @@ def clear_arrivals(zone, arrivals):
         return
     lo, hi = zone["min"], zone["max"]
     olo, ohi = zone["original_min"], zone["original_max"]
+    under = over = False
     for p in arrivals:
         if not all(lo[a] <= p[a] < hi[a] for a in range(3)):
             continue
@@ -2353,9 +2389,28 @@ def clear_arrivals(zone, arrivals):
             continue
         if p[2] < olo[2]:
             lo[2] = max(lo[2], p[2] + 1.0)
+            under = True
         elif p[2] > ohi[2]:
             hi[2] = min(hi[2], p[2] - 1.0)
+            over = True
         zone["cleared"] = True
+    # [b]Trimmed back toward the mapper's plane, a pit can be thin again[/b], and a
+    # player falling at the genre's ceiling steps over it between two ticks
+    # (bhop_badges2: a one-unit plane, hung, then trimmed to 16 units by another pit's
+    # arrival just under it). It takes back one tick's depth on the side away from the
+    # arrival, never over another arrival: at most TICK_DEPTH units, which is less than
+    # any block is drawn over its pit.
+    if zone.get("cleared") and hi[2] - lo[2] < TICK_DEPTH and under != over:
+        want = TICK_DEPTH - (hi[2] - lo[2])
+
+        def clear_of(z0, z1):
+            return not any(all(lo[a] <= p[a] < hi[a] for a in range(2)) and z0 <= p[2] <= z1
+                           for p in arrivals)
+
+        if under and clear_of(hi[2], hi[2] + want):
+            hi[2] += want
+        elif over and clear_of(lo[2] - want, lo[2]):
+            lo[2] -= want
 
 
 def pit_tracks(z, e):
@@ -2634,7 +2689,7 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None)
             spawns.append({"origin_src": src, "origin": list(to_godot(src)),
                            "yaw": yaw_to_godot(entity_yaw(e)), "yaw_src": entity_yaw(e)})
 
-    label_zones(z)
+    label_zones(z, doc.get("ignore_labels"))
     resolve_overrides(z, doc)
     # After the overrides, which may name a filtered teleport on purpose -- bhop_pit's
     # finish is the one only a player who reached the last checkpoint is sent through.

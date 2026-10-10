@@ -83,9 +83,10 @@ func _run() -> void:
 		await _test_pit_keeps_the_run()
 		await _test_blocks()
 		await _test_pushes()
+		await _test_boosters()
 		await _test_water()
 		await _test_ladders()
-		sections += 6
+		sections += 7
 		game.queue_free()
 		game = null
 		await get_tree().process_frame
@@ -371,6 +372,79 @@ func _test_blocks() -> void:
 	_done()
 
 
+## A booster (a `leave` push: the thin trigger on a block whose OnEndTouch sets the
+## player's base velocity) does nothing to a player standing on it and launches one who
+## jumps off it. Asked both ways, because the two wrong implementations fail one each:
+## given on entering it launches the stander, and not read at all it launches nobody.
+func _test_boosters() -> void:
+	_section("boosters")
+	var m := game.mechanics
+	var boosters: Array = []
+	if m != null:
+		for p: Dictionary in m.pushes:
+			if p["leave"] and (p["push"] as Vector3).length() > G2GUnits.to_metres(50.0):
+				boosters.append(p)
+	if boosters.is_empty():
+		_planned += 1
+		_check(true, "boosters", "no boosters on this map")
+		_done()
+		return
+	var bot := _bot()
+	var stood := 0
+	var launched := 0
+	var lifted := 0
+	var sideways := 0
+	var tried := 0
+	var lame := PackedStringArray()
+	for p: Dictionary in _sample(boosters, SAMPLE):
+		var box: AABB = p["box"]
+		var push: Vector3 = p["push"]
+		var dir := push.normalized()
+		var at := Vector3(box.get_center().x, box.position.y + G2GUnits.to_metres(0.5), box.get_center().z)
+		if bot.controller.motor.would_overlap(bot.controller.state, at) or _in_pit(at):
+			continue    # a pad sunk into its block or over a pit: its neighbours answer
+		bot.teleport(at, 0.0, true)
+		bot.controller.state.velocity = Vector3.ZERO
+		for _i in range(4):
+			await get_tree().physics_frame
+		tried += 1
+		var standing := bot.controller.state.velocity.dot(dir)
+		if standing < push.length() * 0.25:
+			stood += 1
+		else:
+			lame.append("%s pushed %.0f u/s while standing" % [_u(at), G2GUnits.to_units(standing)])
+		# Jump off it and look for the tick the impulse lands: one tick's change in the
+		# velocity along it of at least half the booster (gravity takes 6 u/s a tick). Only
+		# an upward pad is left this way; a sideways booster is left along a route, which a
+		# box cannot say, and running a bot sideways out of one mostly runs it into a wall.
+		if dir.y < 0.7:
+			sideways += 1
+			continue
+		lifted += 1
+		bot.controller.state.velocity = Vector3.UP * G2GUnits.to_metres(600.0)
+		bot.controller.motor.set_mode(bot.controller.state, DotFpsState.Mode.AIR)
+		var last := bot.controller.state.velocity.dot(dir)
+		var kick := -INF
+		var out_for := 0
+		for _i in range(96):
+			await get_tree().physics_frame
+			var now := bot.controller.state.velocity.dot(dir)
+			kick = maxf(kick, now - last)
+			last = now
+			if not box.grow(G2GUnits.to_metres(2.0)).has_point(bot.global_position):
+				out_for += 1
+				if out_for > 2:
+					break
+		if kick > push.length() * 0.5:
+			launched += 1
+		else:
+			lame.append("%s gained at most %.0f u/s in a tick off a %.0f u/s booster" % [_u(at), G2GUnits.to_units(kick), G2GUnits.to_units(push.length())])
+	_planned += 2
+	_check(stood == tried, "a player standing on a booster is not launched (%d of %d)" % [stood, tried], ", ".join(lame))
+	_check(launched == lifted, "a player jumping off an upward booster is (%d of %d; %d sideways not asked)" % [launched, lifted, sideways], ", ".join(lame))
+	_done()
+
+
 ## A push moves a player along it.
 func _test_pushes() -> void:
 	_section("pushes")
@@ -378,7 +452,7 @@ func _test_pushes() -> void:
 	var pushes: Array = []
 	if m != null:
 		for p: Dictionary in m.pushes:
-			if (p["push"] as Vector3).length() > G2GUnits.to_metres(50.0):
+			if (p["push"] as Vector3).length() > G2GUnits.to_metres(50.0) and not p["leave"]:
 				pushes.append(p)
 	if pushes.is_empty():
 		_planned += 1

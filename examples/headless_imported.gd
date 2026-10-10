@@ -64,7 +64,8 @@ const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "surf_grave_reloade
 	"surf_legends", "kz_bhop_yonkoma", "surf_akai_final", "surf_bathroom_final", "surf_buck_wild",
 	"surf_forbidden_ways_2nd", "surf_greatriver", "surf_greatriver_v4", "surf_rebel_resistance_final3", "bunnyhop_pro",
 	"surf_29_12_06", "surf_dust2_2008_final", "surf_machine2", "surf_machine_remix_final", "surf_matrix_v8",
-	"surf_ski_2_source", "surf_skyworld", "surf_the_gloaming", "surf_thriller", "surf_adverse", "surf_japan_ptad", "surf_animals"]
+	"surf_ski_2_source", "surf_skyworld", "surf_the_gloaming", "surf_thriller", "surf_adverse", "surf_japan_ptad", "surf_animals",
+	"surf_ny_advance", "surf_pavilion", "surf_torque2", "surf_velocity", "kz_bhop_lucid"]
 
 ## The imported maps with no pit, which is a different question from having no finish.
 ##

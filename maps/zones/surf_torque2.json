@@ -1,0 +1,13 @@
+{
+ "id": "surf_torque2",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "author": "Sangre Nueva",
+ "attribution": {
+  "author": "Sangre Nueva",
+  "source": "https://gamebanana.com/mods/123157 (Key Authors: Sangre Nueva (levels 1-4, jail, system), Nikki (bonus level, spawn), T-R-O-N (skybox), LodyBlokady (glass textures); submitter Sangre Nueva)",
+  "archive": "surf_torque2_2.rar",
+  "recorded": "2026-10-10"
+ },
+ "notes": "Credit only, and deliberately no zones: a race round with an end jail. 35 team spawns a side, 10 game_player_equip, gun buttons per level (gun_lvl1..gun_lvlbonus), glass that breaks when the first player through reaches each level, an Endround_tele and a knife-fight end jail with saw blades and rockets. Its 114 trigger_teleports are level spawns enabled and disabled by that system (spawn_lvl3, spawn4 behind cheat_protection, lvl2_spawn behind bonus_entry_denied). gb-maps-2. Not published."
+}
