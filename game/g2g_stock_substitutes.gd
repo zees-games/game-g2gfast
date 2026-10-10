@@ -35,7 +35,13 @@ static func for_material(material: String) -> Dictionary:
 	for entry: Dictionary in _entries:
 		if not name.match(str(entry.get("match", ""))):
 			continue
-		if bool(entry.get("none", false)) or not entry.has("texture"):
+		if bool(entry.get("none", false)):
+			return {}
+		# A treatment rather than a texture: glass is drawn see-through in the map's
+		# own colour (see [method is_glass]), which needs no image at all.
+		if is_glass(entry):
+			return entry
+		if not entry.has("texture"):
 			return {}
 		return entry
 	return {}
@@ -50,6 +56,29 @@ static func tint_for(entry: Dictionary, measured: Color) -> Color:
 		var want: float = measured[i] / maxf(float(mean[i]), 0.02)
 		out[i] = clampf(lerpf(1.0, want, TINT_PULL), 0.3, 2.5)
 	return out
+
+
+## Whether [param entry] is the glass treatment rather than a texture.
+##
+## [b]Glass is not a texture problem.[/b] The stock glass materials were translucent in
+## the original (`$translucent` in every VMT the reference has), and the mapper built
+## with that: surf_greatriver_v4's spawn is a glass box with the sky behind it. Any
+## image on an opaque mesh -- Kenney's windows are framed panes, a CC0 glass photo is a
+## reflection -- turns that box into a dark room, which is what the opaque grid did too.
+## So the treatment keeps the grid (a floor or ramp made of glass still has to show it
+## is there, and the grid is what gives scale at speed) in the measured colour, lifted
+## by `lighten`, and draws it in the translucent pass at `alpha`. Chosen by rendering
+## both against the reference, 2026-10-10.
+static func is_glass(entry: Dictionary) -> bool:
+	return str(entry.get("treatment", "")) == "glass"
+
+
+## The colour a glass entry draws with: [param measured] lifted by its `lighten`, at its
+## `alpha`.
+static func glass_tint(entry: Dictionary, measured: Color) -> Color:
+	var c := measured.lightened(float(entry.get("lighten", 0.0)))
+	c.a = clampf(float(entry.get("alpha", 0.35)), 0.05, 1.0)
+	return c
 
 
 static func texture_path(entry: Dictionary) -> String:

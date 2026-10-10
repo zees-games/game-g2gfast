@@ -141,14 +141,34 @@ const STOCK_DRAWN := {
 	"bhop_monster_jam": 0.76,  # 79.3% on 2026-10-10 (stand-ins from the reference sheet); 77.5% on 2026-10-09; 1.9% before: dark rock, looked at from the finish
 	"surf_year3000": 0.81,  # 86.1% on 2026-10-09; 0.8% before: CC0 concrete and metal (2026-10-09)
 	"surf_mesa": 0.94,  # 99.9% on 2026-10-09; 91.8% before: concrete walls and ramps, against the WR run
-	"surf_10x_final": 0.71,  # 74.1% on 2026-10-10 (stand-ins from the reference sheet); 58.1% on 2026-10-09; 0% before: grass, concrete, rock by name, looked at from the spawn
+	"surf_10x_final": 0.79,  # 82.4% on 2026-10-10 (fifth batch: parquet, glass); 74.1% earlier on 2026-10-10; 58.1% on 2026-10-09; 0% before: grass, concrete, rock by name, looked at from the spawn
 	"surf_10x_reloaded_fixed": 0.80,  # 83.8% on 2026-10-10 (stand-ins from the reference sheet); 76.2% on 2026-10-09; 0%: ground as dirt, stone, looked at from the spawn
-	"surf_mai_remix": 0.67,  # 69.9% on 2026-10-10 (stand-ins from the reference sheet); 59.6% on 2026-10-09; 0%: tiles, rock, looked at from the spawn
-	"surf_grave_reloaded": 0.82,  # 84.9% on 2026-10-10 (stand-ins from the reference sheet); 73.8% on 2026-10-09; 0%: cobbles, concrete, looked at from the spawn
+	"surf_mai_remix": 0.83,  # 86.3% on 2026-10-10 (glass see-through, effects as glass); 69.9% earlier on 2026-10-10 (stand-ins from the reference sheet); 59.6% on 2026-10-09; 0%: tiles, rock, glass panes, looked at from the spawn
+	"surf_grave_reloaded": 0.91,  # 94.5% on 2026-10-10 (fifth batch: interior stone walls, glass); 84.9% earlier on 2026-10-10; 73.8% on 2026-10-09; 0%: cobbles, concrete, looked at from the spawn
 	"bhop_exodus": 0.78,  # 81.3% on 2026-10-10 (stand-ins from the reference sheet); 74.7% on 2026-10-09; 10.7%: planks, concrete, looked at from the spawn
 	"surf_greatriver_xdre4m": 0.77,  # 80.5% on 2026-10-10 (city facades as concrete); 36.2% on 2026-10-09; 0%: wood, metal, concrete kerbs, looked at from the spawn
 	"surf_thriller": 0.74,  # 77.4% on 2026-10-10; 47.8% before: the citadel panelling as dark metal plate, looked at from the spawn
-	"bunnyhop_pro": 0.63,  # 66.1% on 2026-10-10; 53.1% before: sand floor, stone walls, concrete courtyard, looked at from the spawn
+	"bunnyhop_pro": 0.66,  # 69.7% on 2026-10-10 (glass fence see-through); 66.1% before the fifth batch; 53.1% before: sand floor, stone walls, concrete courtyard, looked at from the spawn
+	"surf_rebel_resistance_final3": 0.94,  # 97.0% on 2026-10-10 (fifth batch); 96.8% before it; 0% own: white concrete and snow, looked at from the spawn
+	"surf_eclipse": 0.95,  # 98.7% on 2026-10-10 (fifth batch); 96.7% before it; 0% own: tiles, metal, glass walls over the sky, looked at from the spawn
+	"surf_ski_2": 0.93,  # 96.6% on 2026-10-10 (fifth batch); 96.4% before it; 0% own: snow ramps and pillars, looked at from the spawn
+	"surf_legends": 0.96,  # 99.1% on 2026-10-10 (fifth batch); 94.6% before it; 0.2% own: aztec sandstone courses and planks, the red lamp glass, looked at from the spawn
+	"surf_forbidden_ways_reloaded": 0.94,  # 97.7% on 2026-10-10 (fifth batch); 97.6% before it; 3.3% own: concrete floor, rock walls, glass roof, looked at from the spawn
+	"surf_forbidden_ways_2nd": 0.95,  # 98.7% on 2026-10-10 (fifth batch); 93.9% before it; 0% own: white metal and glass rails, looked at from the spawn
+	"surf_japan_ptad": 0.90,  # 93.8% on 2026-10-10 (fifth batch); 93.3% before it; 0.1% own: wooden walls and ceiling, grass, looked at from the spawn
+	"surf_beginner": 0.88,  # 91.4% on 2026-10-10 (fifth batch); 91.3% before it; 0% own: plank floor, concrete walls, looked at from the spawn
+	"surf_buck_wild": 0.89,  # 92.1% on 2026-10-10 (fifth batch); 91.8% before it; 2.0% own: grass, concrete walls, metal trim, looked at from the spawn
+	"surf_machine_remix_final": 0.92,  # 95.7% on 2026-10-10 (fifth batch); 89.2% before it; 0% own: tiles, concrete, glass, looked at from the spawn
+	"surf_skyworld": 0.85,  # 88.5% on 2026-10-10 (fifth batch); 88.5% before it; 0% own: stone walls, marble tiles, looked at from the spawn
+	"surf_xiv_v2a": 0.91,  # 94.0% on 2026-10-10 (fifth batch); 91.7% before it; 3.9% own: concrete gallery and tiles, looked at from the spawn
+	"surf_ny_advance": 0.84,  # 87.5% on 2026-10-10 (fifth batch); 87.1% before it; 0% own: concrete and dark metal panels, looked at from the spawn
+	"surf_greatriver": 0.88,  # 91.9% on 2026-10-10 (fifth batch); 86.6% before it; 0% own: tiles, stone pillars, glass roof, looked at from the spawn
+	"surf_the_gloaming": 0.91,  # 94.5% on 2026-10-10 (fifth batch); 86.2% before it; 0% own: concrete room, glass ceiling, looked at from the spawn
+	"surf_ski_2_source": 0.88,  # 91.5% on 2026-10-10 (fifth batch); 83.6% before it; 0% own: concrete, the shield as glass, looked at from the spawn
+	"surf_machine2": 0.87,  # 90.0% on 2026-10-10 (fifth batch); 83.4% before it; 0% own: concrete, glass slot windows, looked at from the spawn
+	"surf_lore": 0.83,  # 86.3% on 2026-10-10 (fifth batch); 84.5% before it; 1.5% own: metal panels, concrete, sandstone steps, looked at from the spawn
+	"surf_29_12_06": 0.79,  # 82.9% on 2026-10-10 (fifth batch); 82.4% before it; 0% own: stone walls and floor, looked at from the spawn
+	"surf_greatriver_v4": 0.91,  # 94.4% on 2026-10-10 (fifth batch); 78.6% before it; 0.6% own: the glass spawn box see-through, tiles, rock, looked at from the spawn
 }
 
 ## The share of a map's triangles drawn in the texture its own pakfile carried, at least,

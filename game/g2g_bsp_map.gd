@@ -458,6 +458,21 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 	# filtering because it is pixel art, at a tile size the table sets. Here rather than in
 	# the importer so the packs already published get it. See G2GStockSubstitutes.
 	var stand_in := G2GStockSubstitutes.for_material(str(s.get("material", "")))
+	if not stand_in.is_empty() and G2GStockSubstitutes.is_glass(stand_in):
+		# Glass: the grid in the map's colour, see-through, as the original was. A new
+		# material on the translucent twin, because the pass is the shader's, not a
+		# parameter's. See G2GStockSubstitutes.is_glass.
+		var glass := Color(0.55, 0.62, 0.66)
+		if colour is Array and (colour as Array).size() >= 3:
+			glass = Color(float(colour[0]), float(colour[1]), float(colour[2]))
+		mat.shader = load(G2GPaths.rebase("res://game/g2g_bsp_translucent.gdshader"))
+		mat.set_shader_parameter("albedo_tex", G2GTextures.grid_texture())
+		mat.set_shader_parameter("has_albedo", true)
+		mat.set_shader_parameter("tint", G2GStockSubstitutes.glass_tint(stand_in, glass))
+		mat.set_shader_parameter("uv_scale", 1.0 / float(G2GTextures.SQUARES_PER_TILE))
+		mat.set_shader_parameter("ambient", prototype_ambient)
+		mat.set_meta(&"stand_in", "glass")
+		return mat
 	if not stand_in.is_empty():
 		var kenney := _load_texture(G2GPaths.rebase(G2GStockSubstitutes.texture_path(stand_in)))
 		if kenney != null:

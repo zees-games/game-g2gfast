@@ -429,8 +429,285 @@
   },
   {
    "match": "glass/*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "glass: the original was translucent ($translucent in every glass VMT the reference has; the pictures are smudged tints of grey, brown and blue-black), and maps are built on that: surf_greatriver_v4's spawn is a glass box with the sky behind it. Any image on an opaque mesh (Kenney's framed window panes, a CC0 photo of glass) made that box a dark room, as the opaque grid did. So no texture: the grid in the measured colour, lifted 20%, drawn see-through at 35%, which keeps a glass floor or ramp visible and its scale readable. Chosen by rendering greatriver_v4, mai_remix and bunnyhop_pro both ways (2026-10-10)"
+  },
+  {
+   "match": "*glass*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "any other untextured glass (lamp covers, the mappers' own refract panes when they did not ship): the glass treatment above, so a red lamp glass is a red see-through tint (2026-10-10)"
+  },
+  {
+   "match": "cs_italy/pipe_wall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: smooth dark olive plaster, no courses. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "test_speakers/floor04",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: parquet, wood blocks. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/wallinterior01*",
+   "texture": "wall_brick_stone_center.png",
+   "mean": [
+    0.488,
+    0.498,
+    0.538
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: grey dressed stone in courses. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/outwall02*",
+   "texture": "wall_brick_stone_center.png",
+   "mean": [
+    0.488,
+    0.498,
+    0.538
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: the same cut stone blocks as outwall02. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukmetwalli",
+   "texture": "cc0_metal_brushed.jpg",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: blue corrugated sheet metal, as nukmetwallab. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukmetwallf",
+   "texture": "cc0_metal_brushed.jpg",
+   "mean": [
+    0.49,
+    0.535,
+    0.578
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: white corrugated sheet metal. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/templewall02b",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: the sand-coloured cut stone of templewall02. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_ceiling_facility_01",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: grey suspended-ceiling panels in a square grid; tiles tinted grey keep the grid. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/walltrima",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference: rubble stone in a band. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/offflrc",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: mottled grey stone floor, no joints. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/ceiling01",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: white plaster ceiling. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/flrc01",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: white square floor tiles. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/boxsides*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: a wooden crate's boards. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_prodigy/floor02",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: smooth brown floor, painted concrete in a facility. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/floor02",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: smooth brown floor, the same as de_prodigy/floor02. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infflrc",
+   "texture": "floor_stone_pattern_small.png",
+   "mean": [
+    0.433,
+    0.443,
+    0.49
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: grey cobbles. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_aztec/stn01*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "filter": "linear",
+   "why": "reference: smooth tan stone with grime at its foot, no courses (blocks read too busy). Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*gravel*",
+   "texture": "floor_ground_dirt.png",
+   "mean": [
+    0.359,
+    0.289,
+    0.248
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "reference: grey gravel (de_train/train_gravel_floor_01); Kenney's dirt tinted to it reads as loose ground. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "halflife/c3a2a_telred1d",
    "none": true,
-   "why": "glass: no Kenney or CC0 stand-in reads as glass on an opaque mesh; the tinted grid stays (2026-10-10)"
+   "why": "reference: flat orange-yellow, the grid tinted to it is the honest stand-in. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/wall03b",
+   "none": true,
+   "why": "reference: patterned wallpaper; nothing in Kenney or CC0 reads as it. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "carpet/*",
+   "none": true,
+   "why": "reference (carpet/offflra): patterned office carpet; Kenney and the CC0 set have no fabric, and every texture read as the wrong material. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*carpet*",
+   "none": true,
+   "why": "carpet, as carpet/* (props/carpetfloor*). Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cable/*",
+   "none": true,
+   "why": "a cable: a few units thick, its colour is all it shows. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/cs_assault/light_shop2_off",
+   "none": true,
+   "why": "a light fitting, as lights/*. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "effects/*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "effects (shields, lasers, overlays) were translucent or additive in the original: the glass treatment, not an opaque slab. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "sprites/*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "a sprite card, translucent in the original: the glass treatment. Added 2026-10-10 (fifth batch) [g2g-maps-stock-1]"
   },
   {
    "match": "cs_italy/yellow",

@@ -29,7 +29,12 @@ def classify(entries, material):
     name = material.lower()
     for entry in entries:
         if godot_match(name, str(entry.get("match", ""))):
-            if entry.get("none") or "texture" not in entry:
+            if entry.get("none"):
+                return "none", entry["match"]
+            if entry.get("treatment") == "glass":
+                # G2GStockSubstitutes.is_glass: drawn see-through, no texture needed.
+                return "stand-in", entry["match"]
+            if "texture" not in entry:
                 return "none", entry["match"]
             return "stand-in", entry["match"]
     return "unmatched", None
