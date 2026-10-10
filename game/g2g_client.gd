@@ -476,7 +476,13 @@ func _build_netcode() -> DotResult:
 	elif link.has_signal("spawned"):
 		link.connect("spawned", bridge.ask_ready, CONNECT_ONE_SHOT)
 
-	if link.has_method("ping_ms"):
+	# ENet's own round trip on UDP and the early heartbeats' on WebSocket (dot-server's
+	# `rtt_ms`); the plain heartbeat on a link older than that. Duck-typed, because a pack
+	# runs on whatever dot-server the shell carries.
+	if link.has_method("rtt_ms"):
+		bridge.rtt_source = func() -> float:
+			return float(link.call("rtt_ms"))
+	elif link.has_method("ping_ms"):
 		bridge.rtt_source = func() -> float:
 			return float(maxi(0, int(link.call("ping_ms"))))
 
