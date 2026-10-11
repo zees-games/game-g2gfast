@@ -27,7 +27,7 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 18
-const CHECKS := 195
+const CHECKS := 197
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -585,6 +585,19 @@ func _test_services() -> void:
 
 	_check(services.chat != null, "chat is running")
 	_check(services.voice != null, "voice is running")
+
+	# The operator's switch: registered by the module, replicated so clients hide their key,
+	# and enforced on the router. Armed by the router relaying with it on.
+	var voice_cvar: DotConVar = server.console.find_cvar("sv_voice_enable")
+	_check(voice_cvar != null and voice_cvar.has_flag(DotConVar.FLAG_REPLICATED) and DotConsole.is_replicated(voice_cvar),
+		"sv_voice_enable is registered and replicated to clients")
+	if voice_cvar != null and services.voice != null:
+		var _off := voice_cvar.set_value("0")
+		var off_enabled: bool = services.voice.enabled
+		var _on := voice_cvar.set_value("1")
+		_check(not off_enabled and services.voice.enabled, "and turns the router off and on")
+	else:
+		_check(false, "and turns the router off and on")
 	_check(services.moderation != null, "moderation is running")
 
 	_check(

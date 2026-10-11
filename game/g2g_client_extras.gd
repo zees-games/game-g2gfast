@@ -210,9 +210,19 @@ func _build_voice() -> void:
 	voice.playback_root_ref = DotNodeRef.of_self()
 	add_child(voice)
 
+	# One frame out, one call. Without it a client captured, encoded and counted every frame
+	# it sent nowhere: received voice played here, and nobody ever heard this player.
+	voice.send_fn = func(bytes: PackedByteArray) -> void:
+		if bridge != null and bridge.link != null:
+			bridge.link.send_voice_frame(bytes)
+
 	bridge.voice_in_fn = func(payload: PackedByteArray) -> void:
 		if voice != null:
 			voice.receive(payload)
+
+	# The menu's voice rows bind to this, and the server's sv_voice_enable reaches it.
+	voice.publish_as_client()
+	var _following := voice.follow_cvars(DotRegistry.get_service(&"dot_client_link"))
 
 
 ## Holds or releases the talk key.
@@ -220,24 +230,19 @@ func set_talking(pressed: bool) -> void:
 	if voice == null:
 		return
 
-	if pressed and not voice.is_capturing():
-		var started := voice.start_capture()
+	# The first press opens the microphone (dot-voice's update_talk), and only then: a
+	# browser asks for it at that moment, attached to the key the player pressed.
+	var started := voice.update_talk(pressed)
 
-		if not started.ok:
-			# Headless, no device, or the browser refused. Reported once rather than
-			# per press, and the reason it is reported at all is that
-			# [AudioServer] claims a working sound card when there is none: 44100 Hz,
-			# a "Default" input device and zero latency, with only
-			# `get_driver_name()` saying "Dummy". A capability check built on any of
-			# the others passes on a machine with no audio at all.
-			DotLog.info(CHANNEL, "voice capture is not available", {
-				"why": started.error.message
-			})
-			voice_enabled = false
-			return
+	if pressed and not started.ok:
+		# Headless, no device, or the browser refused; update_talk returns it once a press.
+		# Reported at all because [AudioServer] claims a working sound card when there is
+		# none: 44100 Hz, a "Default" input device and zero latency, with only
+		# `get_driver_name()` saying "Dummy".
+		DotLog.info(CHANNEL, "voice capture is not available", {"why": started.error.message})
+		return
 
-	_talking = pressed
-	voice.set_talking(pressed)
+	_talking = pressed and voice.server_enabled
 
 
 func is_talking() -> bool:

@@ -36,7 +36,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 198
+const CHECKS := 201
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -92,7 +92,7 @@ func _run() -> void:
 		await _test_map_straggler()
 		await _test_map_refused()
 		_test_ghost()
-		_test_voice_wire()
+		await _test_voice_wire()
 		_test_vote_wire()
 		_test_clock_wire()
 		_test_rules_wire()
@@ -1864,4 +1864,32 @@ func _test_voice_wire() -> void:
 		_server_bridge.link.voice_sent == before,
 		"and a voice frame addressed to peer 0 is refused rather than broadcast"
 	)
+
+	# [b]The client's own voice reaches the server.[/b] Armed: until 2026-10-11 the client's
+	# DotVoiceManager had no send_fn, so a player holding the talk key captured, encoded and
+	# counted frames that went nowhere, while every check above (which hands the link bytes
+	# by hand) passed.
+	relayed.clear()
+	var extras_script := preload("../game/g2g_client_extras.gd")
+	var extras: Node = extras_script.new()
+	extras.name = "VoiceExtras"
+	add_child(extras)
+	var attached: DotResult = extras.call(&"attach", _client_bridge, _client_game)
+	var voice: DotVoiceManager = extras.get(&"voice")
+	_check(attached.ok and voice != null, "the client's chat and voice attach to its bridge")
+	if voice != null:
+		var mic := DotVoiceSourceBuffer.new()
+		mic.sample_rate = voice.config.sample_rate
+		mic.write(DotVoiceSourceBuffer.tone(440.0, 0.2, mic.sample_rate, 0.4))
+		voice.source = mic
+		_check(not voice.is_capturing(), "no microphone is open before the talk key")
+		extras.call(&"set_talking", true)
+		for _i in range(4):
+			await get_tree().process_frame
+		_flush()
+		_check(voice.frames_sent > 0 and relayed.size() == voice.frames_sent,
+			"holding it sends the player's speech to the server (%d sent, %d relayed)" % [voice.frames_sent, relayed.size()])
+		extras.call(&"set_talking", false)
+	extras.queue_free()
+	await get_tree().process_frame
 	_done()

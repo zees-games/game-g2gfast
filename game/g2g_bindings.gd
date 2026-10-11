@@ -50,7 +50,10 @@ const ROWS: Array[Dictionary] = [
 
 	{"action": &"g2g_chat", "setting": &"chat_open_key", "label": "Chat", "default": "Y", "group": "Communication", "scope": ACCOUNT},
 	{"action": &"g2g_chat_team", "setting": &"chat_team_key", "label": "Team chat", "default": "U", "group": "Communication", "scope": ACCOUNT},
-	{"action": &"g2g_voice", "setting": &"bind_voice", "label": "Push to talk", "default": "K", "group": "Communication"},
+	# dot-voice's action (DotVoiceManager.TALK_ACTION), so dot-menu's table sees the game has a talk
+	# key and adds none; the setting stays bind_voice, so nobody's stored key is reset. K, because
+	# V is Go to checkpoint here.
+	{"action": &"dot_voice_talk", "setting": &"bind_voice", "label": "Push to talk", "default": "K", "group": "Communication"},
 
 	{"action": &"g2g_scoreboard", "setting": &"bind_scoreboard", "label": "Scoreboard (hold)", "default": "Tab", "group": "Interface"},
 	{"action": &"g2g_help", "setting": &"bind_help", "label": "Help", "default": "H", "group": "Interface"},

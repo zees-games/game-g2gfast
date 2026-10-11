@@ -816,7 +816,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# [b]K, not V, by default.[/b] V is this game's second checkpoint key and has been since
 	# the client was written; the genre's own voice key is unbound here because the genre
 	# binds it per player. K is what is left that nothing else claims.
-	if event.is_action(&"g2g_voice") and not event.is_echo():
+	if event.is_action(DotVoiceManager.TALK_ACTION) and not event.is_echo():
 		if extras != null:
 			extras.set_talking(event.is_pressed())
 
