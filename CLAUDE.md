@@ -134,6 +134,7 @@ Short forms; the reasoning is in the linked file.
 - One chat path: `player_chat` and `player_command` are hooked and cancelled; dot-moderation is built first. [services](docs/services.md#chat-is-the-policy-dot-server-stays-the-transport)
 - One rock-the-vote; the vote's clock is the one every screen shows; the session's clock ends no map while there is a vote. [services](docs/services.md#the-vote)
 - The fire command is a bit on the command, consumed on read, never retained over a lost packet; never `get_meta(key, null)`. [modes](docs/modes.md#the-trigger-is-one-ticks-input)
+- Weapon rows set `authored_tick_rate` to the rate their ticks are written at (128); a new row without it runs at the wrong speed off 128 Hz. [modes](docs/modes.md#deathmatch-is-a-layer)
 - Entity ids from `DotEntityTable`, never derived; the userid is a separate thing. [modes](docs/modes.md#deathmatch-is-a-layer)
 - Hunters have no navigation graph (`require_navigable_spawn` off). Practice blocks spawn frozen, `only_practice` on. [modes](docs/modes.md#a-timer-map-is-a-critical-path-so-the-hunters-have-no-navigation-graph)
 - A hunter brain seeds from `npc.seed` (per spawn), never `npc.instance_id` (an identity whose value moves with every allocation). dot-npc `docs/runtime.md`

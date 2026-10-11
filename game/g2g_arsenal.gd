@@ -82,6 +82,12 @@ static func damage_types() -> Array[DotDamageType]:
 ## Every duration on a [DotWeaponDef] is in ticks, because a weapon measured in seconds
 ## fires at two different rates on a 64 Hz server and a 128 Hz one. This server runs at
 ## 128; the conversions below are done once, here.
+##
+## [b]Every row says so ([member DotWeaponDef.authored_tick_rate]).[/b] Left at 0 a row is
+## used as written at whatever rate the server runs, so an operator setting `sv_tickrate 64`
+## got a deagle at half its rate of fire and twice its deploy time. With the rate on the
+## row the arsenal scales every count to the running rate, and a second of trigger is a
+## second at 64 Hz as at 128.
 const TICK_RATE := 128
 
 const HITSCAN := "res://addons/dot_weapon/behaviour/dot_weapon_hitscan.gd"
@@ -103,6 +109,7 @@ static func sec_ticks(seconds: float) -> int:
 static func deagle() -> DotWeaponDef:
 	var def := DotWeaponDef.new()
 	def.id = ITEM_DEAGLE
+	def.authored_tick_rate = TICK_RATE
 	def.display_name = "Deagle"
 	def.behaviour_path = HITSCAN
 	def.slot = 2
@@ -142,6 +149,7 @@ static func deagle() -> DotWeaponDef:
 static func knife() -> DotWeaponDef:
 	var def := DotWeaponDef.new()
 	def.id = ITEM_KNIFE
+	def.authored_tick_rate = TICK_RATE
 	def.display_name = "Knife"
 	def.behaviour_path = HITSCAN
 	def.slot = 1

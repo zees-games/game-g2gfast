@@ -1,5 +1,6 @@
 extends Node
 
+const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GAvatars := preload("../game/g2g_avatars.gd")
 const G2GBrowser := preload("../game/g2g_browser.gd")
 const G2GCamera := preload("../game/g2g_camera.gd")
@@ -25,8 +26,8 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## aborts that function; the section counter sees it, and the checks it never reached are
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
-const SECTIONS := 17
-const CHECKS := 190
+const SECTIONS := 18
+const CHECKS := 195
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -86,6 +87,7 @@ func _run() -> void:
 		await _test_blind_and_beacon()
 		await _test_unload()
 		_test_no_message_preloads_itself()
+		_test_weapons_keep_wall_clock_time()
 
 	if not probe.is_empty():
 		_test_exits_clean(probe)
@@ -1485,6 +1487,78 @@ func _test_unload() -> void:
 ## every loaded script alive at exit on Godot 4.7.2 (measured in mg-buses-from-hell,
 ## 8ed866c). This game's event and request both did it, for a typed `of()` factory.
 ##
+## [b]A weapon fires at the same real-time rate at 64 Hz as at 128.[/b] The rows are written
+## in 128 Hz ticks and say so (`authored_tick_rate`); without it a server set to 64 ran
+## every count as 64 Hz ticks, and the deagle fired at half its rate and deployed at half
+## its speed. Driven through the arsenal the game builds, with the trigger pressed and
+## released every 1/64 s for three seconds at both rates, from the knife to the deagle (so
+## the holster and the deploy are inside the window), and compared as seconds.
+func _test_weapons_keep_wall_clock_time() -> void:
+	_section("a weapon keeps its real-time rate at 64 Hz")
+
+	var at128 := _weapon_shots(128, true)
+	var at64 := _weapon_shots(64, true)
+	_check(at128.size() >= 6, "at 128 Hz the deagle fires on its 160 rpm after the switch", str(at128))
+	_check(at64 == at128, "and at 64 Hz at the same moments, to the second", "%s vs %s" % [at64, at128])
+
+	# What the field changes, so the check above cannot pass because both rates happen to
+	# agree for some other reason: the same rows with the rate taken off fire on raw counts.
+	var raw64 := _weapon_shots(64, false)
+	_check(raw64.size() < at128.size(), "rows naming no rate fire slower at 64 Hz", "%s vs %s" % [raw64, at128])
+
+	var deagle: DotWeaponDef = G2GArsenal.deagle()
+	var b := deagle.tuning as DotWeaponBallistics
+	_check(
+		is_equal_approx(deagle.per_tick_at(b.bloom_recovery, 64), 2.0 * deagle.per_tick_at(b.bloom_recovery, 128)),
+		"bloom recovers twice as much per tick at 64 Hz, the same per second"
+	)
+	_check(
+		G2GArsenal.knife().authored_tick_rate == G2GArsenal.TICK_RATE
+			and deagle.authored_tick_rate == G2GArsenal.TICK_RATE,
+		"every row the game builds names the rate it was written at"
+	)
+
+	_done()
+
+
+## The times, in seconds, an arsenal at [param rate] fires: knife in hand, deagle asked for,
+## the trigger pressed and released every 1/64 s for three seconds.
+func _weapon_shots(rate: int, authored: bool) -> Array[float]:
+	var catalogue := DotWeaponCatalogue.new()
+	for def: DotWeaponDef in G2GArsenal.weapons():
+		if not authored:
+			def.authored_tick_rate = 0
+		catalogue.add(def)
+
+	var arsenal := DotWeaponArsenal.new()
+	arsenal.catalogue = catalogue
+	arsenal.tick_rate = rate
+	arsenal.authority = true
+	add_child(arsenal)
+	var res := arsenal.setup()
+	if not res.ok:
+		push_error(res.error.message)
+	arsenal.give(G2GArsenal.ITEM_KNIFE)
+	arsenal.give(G2GArsenal.ITEM_DEAGLE)
+
+	var out: Array[float] = []
+	var previous: DotWeaponCommand = null
+	for t in range(3 * rate):
+		var cmd := DotWeaponCommand.new()
+		cmd.slot = 2
+		cmd.set_button(DotWeaponCommand.BUTTON_ATTACK, (t * 64 / rate) % 2 == 0)
+		var used := arsenal.simulate_tick(
+			cmd, DotWeaponContext.make(1, t, Vector3(0.0, 1.6, 0.0), Vector3.FORWARD), previous
+		)
+		if used.used:
+			out.append(float(t) / float(rate))
+		previous = cmd
+
+	remove_child(arsenal)
+	arsenal.free()
+	return out
+
+
 ## [b]Asserted on the source, because the symptom is where no check can reach.[/b] The
 ## leak is reported after `quit()`, by the engine, as warnings a CI filter already treats
 ## as noise; an assertion here runs before any of it exists. So this checks the cause
