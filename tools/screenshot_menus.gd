@@ -33,6 +33,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ## menus_help           the H screen over the menu
 ## menus_scoreboard     Tab, held, with a sample of a busy server's roster
 ## menus_help_browser   the same, as a browser player on a server sees it
+## menus_console        the console open over the game (DotConsoleKit's panel)
 ## menus_small          the menu in a 1024 x 640 window
 ## [/codeblock]
 ##
@@ -181,6 +182,13 @@ func _initialize() -> void:
 		func() -> void: _capture("menus_scoreboard"),
 		func() -> void:
 			_client.menu.scoreboard.close()
+			# `help` only: a setting typed here would be written to this machine's settings.
+			var _ran := _client.presentation.console.submit("help")
+			var _opened := _client.presentation.console.open()
+			_wait = 20,
+		func() -> void: _capture("menus_console"),
+		func() -> void:
+			_client.presentation.console.close()
 			root.size = Vector2i(1024, 640)
 			_client.open_menu(&"gameplay"),
 		func() -> void: _capture("menus_small"),

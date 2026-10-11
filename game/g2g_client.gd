@@ -1016,6 +1016,10 @@ func _build_overlays() -> void:
 	add_child(menu)
 	var _set := menu.setup()
 	G2GMenuPages.install(menu, self)
+	# The console after the menu, so DotConsoleKit registers it as one of the menu's
+	# overlays: opening it then stops the runner through `overlays_changed` below.
+	if presentation != null:
+		presentation.build_console(menu)
 
 	menu.overlays_changed.connect(func(_open: bool) -> void: _refresh_suspended())
 	menu.click_to_play.connect(func() -> void:

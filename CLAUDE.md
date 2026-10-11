@@ -126,7 +126,7 @@ Short forms; the reasoning is in the linked file.
 - The menu is dot-menu's and a view of the settings; the shell must be built with dot-menu. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
 - The flashlight is a shader default texture, never a `global uniform`. [client](docs/client.md#the-flashlight-lights-unshaded-surfaces-too)
 - Shake 0, flashes off, effect budget 24; emitters `local_coords`. [client](docs/client.md#presentation-settings-sound-and-effects)
-- Typing suspends the sampler as well as swallowing input. [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
+- Typing suspends the sampler as well as swallowing input; the console does it by being a menu overlay, so it is built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
 
 **Services and layers**
 

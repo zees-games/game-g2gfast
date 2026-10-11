@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 181
+const CHECKS := 183
 
 var _passed := 0
 var _failed := 0
@@ -101,6 +101,8 @@ func _make() -> G2GPresentation:
 	p.name = "P%d" % _entered
 	add_child(p)
 	p.setup()
+	# The client builds the console after its menu; there is no menu here.
+	p.build_console()
 	# A memory store. A suite that writes to `user://` is one whose result depends on
 	# what the last run left there -- which this family already shipped once, as a
 	# dedicated suite that began failing on its ninth run.
@@ -443,9 +445,37 @@ func _test_console_is_prefixed() -> void:
 		server_sources == 0,
 		"with no server bridged in a client-only process, which is most of them"
 	)
-
 	p.queue_free()
+
+	# A server in this process: its console is reached as `server <line>` and nothing else.
+	var fake := FakeServer.new()
+	DotRegistry.register(&"dot_server", fake)
+	var q := _make()
+	var _unknown := q.console.submit("s3")
+	_check(fake.console.ran.is_empty(),
+		"with a server in the process, `s3` does not reach it", str(fake.console.ran))
+	var _ran := q.console.submit("server s3")
+	_check(fake.console.ran == PackedStringArray(["s3"]),
+		"and `server s3` does, without the prefix", str(fake.console.ran))
+	DotRegistry.unregister(&"dot_server")
+	q.queue_free()
 	_done()
+
+
+## Stands in for a dot-server in this process: all the kit asks of one is a `console`.
+class FakeServer extends RefCounted:
+	var console := FakeConsole.new()
+
+
+class FakeConsole extends RefCounted:
+	var ran := PackedStringArray()
+
+	func execute(line: String) -> DotResult:
+		ran.append(line)
+		return DotResult.success("")
+
+	func command_names() -> PackedStringArray:
+		return PackedStringArray(["s3", "quit"])
 
 
 # --- 5 ----------------------------------------------------------------------

@@ -47,6 +47,7 @@ var bindings: DotMenuBindings = G2GBindings.make()
 var applier: DotMenuApplier = null
 var audio: DotAudioManager = null
 var fx: DotFxManager = null
+## The player's console, built by [method build_console] once the client has a menu.
 var console: DotConsoleController = null
 var console_panel: DotConsolePanel = null
 
@@ -55,7 +56,6 @@ var chat_window: DotChatWindow = null
 
 var client: Node = null
 
-var _layer: CanvasLayer = null
 var _chat_layer: CanvasLayer = null
 
 ## Whether the server said something else is carrying chat. See [method set_chat_relayed].
@@ -80,9 +80,6 @@ func setup() -> DotResult:
 	var drawn := _build_fx()
 	if not drawn.ok:
 		return drawn
-	var consoled := _build_console()
-	if not consoled.ok:
-		return consoled
 	_build_chat()
 	applier.bind_audio(audio)
 	applier.bind_fx(fx)
@@ -586,62 +583,72 @@ func _build_fx() -> DotResult:
 
 # --- Console ----------------------------------------------------------------
 
-func _build_console() -> DotResult:
-	console = DotConsoleController.new()
-	console.name = "Console"
-	console.config = DotConsoleConfig.new()
-	console.config.mirror_log = true
-	console.config.mirror_from = DotLog.Level.INFO
-	add_child(console)
+## dot-console's kit, with this game's two differences, and registered with [param menu].
+##
+## Called by [G2GClient] after its [DotMenu] exists, not from [method setup]: the menu is
+## built from this layer's settings, and the kit makes the console one of the menu's
+## overlays, which is what stops the runner. A console that is not an overlay walks the
+## player while they type: the sampler polls the keys, and a focused line edit does not
+## stop `Input.is_action_pressed`.
+##
+## [b]The server's console behind the word `server`, which is this game's own decision.[/b]
+## The kit bridges an in-process server's console unprefixed, catching whatever the client
+## did not claim. Here the two consoles share names that mean opposite things -- `!s3` on a
+## client is a local navigation and on a server is a teleport that ends a run -- and an
+## unprefixed server console is how somebody types something meant for their own client
+## and loses the run they were three stages into. So the kit's bridge is taken out and
+## [ServerPrefixed] put in: `server <line>`.
+func build_console(menu: Object = null) -> void:
+	console = DotConsoleKit.build(self, settings, menu)
 
-	var res := console.setup()
-	if not res.ok:
-		return res.wrap("g2gfast's console")
+	var bridged: DotConsoleBridge = null
+	for s in console.sources().slice(1):
+		console.remove_source(s)
+		if s is DotConsoleBridge:
+			bridged = s
+	console.add_source(_local_commands())
+	if bridged != null:
+		console.add_source(ServerPrefixed.new(bridged))
 
+	console_panel = get_node_or_null(^"ConsoleLayer/ConsolePanel") as DotConsolePanel
+
+
+## This game's own command; the kit has `help`, `clear`, `settings` and every setting.
+func _local_commands() -> DotConsoleLocal:
 	var local := DotConsoleLocal.new()
-	local.add_command(&"help", "List what this client can do", func(_a: PackedStringArray) -> Variant:
-		var lines := PackedStringArray(["Client commands:"])
-		for n in console.all_names():
-			lines.append("  %-20s %s" % [n, console.help_for(n)])
-		return lines
-	)
 	local.add_command(&"quit", "Leave", func(_a: PackedStringArray) -> Variant:
 		get_tree().quit()
 		return null
 	)
-	local.add_command(&"settings", "Show every setting", func(_a: PackedStringArray) -> Variant:
-		return settings.describe_lines()
-	)
-	local.add_command(&"clear", "Empty the scrollback", func(_a: PackedStringArray) -> Variant:
-		console.buffer.clear()
-		return null
-	)
-	for key in settings.schema.keys():
-		var def := settings.schema.find(key)
-		local.bind_setting(key, settings, def.description if def != null else "")
-	console.add_source(local)
+	return local
 
-	# [b]A remote source with a PREFIX, which is this game's own decision.[/b] Everywhere
-	# else in the family the server's console is added unprefixed and catches whatever the
-	# client did not claim. Here the two consoles share names that mean opposite things --
-	# `!s3` on a client is a local navigation and on a server is a teleport that ends a
-	# run -- and an unprefixed remote console is how somebody types something meant for
-	# their own client and loses the run they were three stages into.
-	var server: Object = DotRegistry.get_service(&"dot_server")
-	if server != null and server.get("console") != null:
-		var bridge := DotConsoleBridge.wrap(server.get("console"), "server")
-		console.add_source(bridge)
 
-	_layer = CanvasLayer.new()
-	_layer.name = "ConsoleLayer"
-	_layer.layer = 128
-	add_child(_layer)
+## An in-process server's console, reached only as `server <line>`. See [method build_console].
+class ServerPrefixed extends DotConsoleSource:
+	const PREFIX := "server"
 
-	console_panel = DotConsolePanel.new()
-	console_panel.name = "ConsolePanel"
-	console_panel.controller = console
-	_layer.add_child(console_panel)
-	return DotResult.success(null)
+	var _bridge: DotConsoleBridge = null
+
+	func _init(bridge: DotConsoleBridge) -> void:
+		_bridge = bridge
+
+	func claims(name: String) -> bool:
+		return name.to_lower() == PREFIX and _bridge != null and _bridge.valid()
+
+	func execute(line: String) -> DotResult:
+		var parts := DotConsoleLine.split_line(line)
+		if parts.size() < 2:
+			return DotResult.fail(DotError.CODE_INVALID, "usage: %s <command>" % PREFIX)
+		return _bridge.execute(line.substr(line.find(parts[1], parts[0].length())))
+
+	func names() -> PackedStringArray:
+		return PackedStringArray([PREFIX])
+
+	func help_for(name: String) -> String:
+		return "Run a line on this process's server: server <command>" if name == PREFIX else ""
+
+	func source_name() -> String:
+		return "server"
 
 
 # --- Chat -------------------------------------------------------------------
@@ -740,6 +747,8 @@ func camera_shake() -> Vector3:
 ## does not merely walk them into a wall, it ends a run they have been building for
 ## minutes. Nobody may lose a personal best by saying "gg".
 func swallows_input() -> bool:
+	if console != null and console.is_open():
+		return true
 	if console_panel != null and console_panel.has_keyboard_focus():
 		return true
 

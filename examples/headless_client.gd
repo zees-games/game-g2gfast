@@ -18,8 +18,8 @@ const G2GEvents := preload("../game/net/g2g_events.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 24
-const SECTIONS := 8
+const CHECKS := 28
+const SECTIONS := 9
 
 var _passed := 0
 var _failed := 0
@@ -61,6 +61,7 @@ func _run() -> void:
 		return
 
 	await _test_chat_stops_the_runner()
+	await _test_the_console_stops_the_runner()
 	await _test_a_new_player_starts_still()
 	await _test_spectating_holds_the_runner()
 	_test_r_once_and_twice()
@@ -114,6 +115,31 @@ func _test_chat_stops_the_runner() -> void:
 	var walked: float = await _hold_forward(40)
 	_check(not _client.player.sampler.suspended and walked > 0.1,
 		"and closing it gives the keys back", "%.3f m" % walked)
+	_done()
+
+
+## The console is the chat box's bug again, and the fix is dot-console's kit registering the
+## panel as one of the menu's overlays: the menu's "something is open" is what suspends the
+## sampler. Before the kit, nothing here did, and `noclip` typed with W held walked.
+func _test_the_console_stops_the_runner() -> void:
+	_section("Typing at the console stops the runner")
+	var console := _client.presentation.console
+	# The last section walked; let that walk coast to a stop, or its friction is measured.
+	for _i in range(90):
+		await get_tree().physics_frame
+	var _opened := console.open()
+	await get_tree().process_frame
+	_check(_client.overlay_open() and _client.player.sampler.suspended,
+		"the console opens as one of the menu's overlays and the sampler is suspended")
+	var typed: float = await _hold_forward(40)
+	_check(typed < 0.001, "W held with the console open moves nobody", "%.3f m" % typed)
+
+	console.close()
+	await get_tree().process_frame
+	_check(not _client.overlay_open(), "closing it closes the overlay")
+	var walked: float = await _hold_forward(40)
+	_check(not _client.player.sampler.suspended and walked > 0.1,
+		"and gives the keys back", "%.3f m" % walked)
 	_done()
 
 
