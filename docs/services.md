@@ -47,7 +47,7 @@ The default voice channel is **ALL**, the opposite of game-arena's, and both are
 
 ## Identity and platform
 
-dot-platform's module runs off `client_state_changed` because dot-server has no cancellable stage between authentication and content, so a player can be in the world with the platform still resolving them. `G2GModule._avatar_for` falls through to `G2GIdentity.avatar_for`, which falls through to the stock document.
+dot-platform's module holds each authenticated player in dot-server's PROFILE signon stage while the hub admits them, so a player is normally seated already resolved. Admission can still finish after the spawn (an optional player let in after `admission_timeout_sec`, or a session the module first hears of past the stage), so `G2GModule._avatar_for` falls through to `G2GIdentity.avatar_for`, which falls through to the stock document. dot-platform `docs/design.md` has the stage.
 
 ## Statistics and achievements
 

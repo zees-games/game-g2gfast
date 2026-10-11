@@ -1126,12 +1126,16 @@ func _avatar_for(session: DotClientSession) -> DotAvatar:
 
 ## The hub's own answer, when the module has not resolved one yet.
 ##
-## [b]Admission finishes AFTER a client is spawned, and this is the gap that leaves.[/b]
-## dot-platform's module runs off `client_state_changed` because dot-server has no
-## cancellable stage between authentication and content — its own notes say so — so a
-## player can be in the world with the platform still resolving them. Asking the hub
-## directly closes it: the hub answers with what it has, and `G2GIdentity.avatar_for`
-## falls back to the stock document, which is a real avatar over the same schema.
+## [b]Admission usually finishes before the spawn now; this covers when it does not.[/b]
+## dot-server's signon has a PROFILE stage between authentication and content, and
+## dot-platform's module holds every authenticated player there while the hub admits
+## them, so a player is normally seated already resolved and `player_for` answers. It
+## still lets an optional player in after `admission_timeout_sec` with admission
+## finishing behind them, and a session it first hears of past the stage (an older
+## dot-server, an adopted session, a guest who signed in after spawning) is admitted
+## after the spawn as before. For those, asking the hub directly closes the gap: it
+## answers with what it has, and `G2GIdentity.avatar_for` falls back to the stock
+## document, which is a real avatar over the same schema. dot-platform docs/design.md.
 func _identity_avatar(session: DotClientSession) -> DotAvatar:
 	if identity == null or session == null:
 		return null
