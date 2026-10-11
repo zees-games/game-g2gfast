@@ -421,6 +421,9 @@ func _module_load() -> DotResult:
 ## [G2GIdentity] registers the hub.
 const PLATFORM_MODULE_PATH := "res://addons/dot_platform/dot_platform_module.gd"
 
+## Whether this module loaded the platform module, and so must unload it. See [method _module_unload].
+var _loaded_platform := false
+
 
 func _build_identity() -> DotResult:
 	identity = G2GIdentity.new()
@@ -441,6 +444,8 @@ func _build_identity() -> DotResult:
 		var loaded: DotResult = await server.modules.load_module(
 			PLATFORM_MODULE_PATH
 		)
+
+		_loaded_platform = loaded.ok
 
 		if not loaded.ok:
 			return loaded.wrap("The platform module would not load")
@@ -858,6 +863,14 @@ func _module_unload() -> void:
 			game.maps.changed.disconnect(_report_map)
 	if net != null and is_instance_valid(net):
 		net.stop()
+	# [b]The platform module goes with the identity that loaded it[/b], as dot-game's does: it
+	# holds the hub G2GIdentity registered, which a game change frees. Left loaded, every game
+	# after this one found "platform" already there, loaded none of its own, and kept asking
+	# g2gfast's freed hub (dot-game's history: signal 11 on the next spawn).
+	if _loaded_platform and server != null and server.modules != null \
+			and server.modules.has_module("platform"):
+		server.modules.unload_module("platform")
+	_loaded_platform = false
 	_painters.clear()
 	_joined.clear()
 

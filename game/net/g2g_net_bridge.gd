@@ -339,7 +339,11 @@ func remove_player(session_id: int) -> void:
 	# _behaviours, so that handler finds nothing and this function stays the one
 	# place a leaving player is announced.
 	_release_entity(session_id)
-	game.remove_player(_player_key(session_id))
+	# The world can be gone already: a server changing to another game frees this game's
+	# scene before it unloads the module, and the module's unload is what calls this. A
+	# call on the freed G2GGame took the whole server down (signal 11).
+	if game != null and is_instance_valid(game):
+		game.remove_player(_player_key(session_id))
 	# Whoever was watching them has been moved on by now (the spectate layer answers
 	# player_removed), and whoever they were watching has one spectator fewer.
 	_send_spectator_lists()
@@ -411,9 +415,14 @@ func _build_entity(player: G2GPlayer, peer_id: int) -> DotNetIdentity:
 
 
 func _release_entity(session_id: int) -> void:
-	var behaviour: G2GPlayerNet = _behaviours.get(session_id)
+	# Untyped first: assigning a freed node to a typed variable is a script error, and the
+	# behaviour is freed with the world when a game change gets here before the module unloads.
+	var held: Variant = _behaviours.get(session_id)
 	_behaviours.erase(session_id)
-	if behaviour != null and behaviour.identity != null and net != null:
+	if held == null or not is_instance_valid(held):
+		return
+	var behaviour := held as G2GPlayerNet
+	if behaviour != null and behaviour.identity != null and is_instance_valid(behaviour.identity) and net != null:
 		net.registry.unregister(behaviour.identity.net_id)
 
 
