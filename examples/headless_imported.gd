@@ -290,7 +290,8 @@ func _imported_ids() -> Array[StringName]:
 			continue
 		if FileAccess.file_exists("res://maps/imported/%s/%s.json" % [id, id]):
 			out.append(StringName(id))
-	out.sort()
+	# By text: sort() orders StringNames by interning, so the run order changed per process.
+	out.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	return out
 
 

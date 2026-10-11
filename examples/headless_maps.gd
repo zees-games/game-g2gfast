@@ -27,17 +27,17 @@ const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 ## Checks that do not depend on how many maps are on disk. `_test_zones_have_floor`
 ## adds one per hand-written map and `_test_maps_are_surveyed` six, which is a number
 ## this file deliberately does not write down -- see [method _test_zones_have_floor].
-const EXPECTED_FIXED_CHECKS := 43
+const EXPECTED_FIXED_CHECKS := 47
 
 ## Checks each hand-written map adds: one for its zones' floor, six for its survey.
 const CHECKS_PER_MAP := 7
 
-const CHECKS := 64
+const CHECKS := 68
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 7
+const SECTIONS := 8
 
 ## Hand-written maps whose survey finds a tilted slab a player can STAND on, and how
 ## many. Asserted both ways, like `headless_imported`'s `ARRIVES_IN_PIT`: a map not
@@ -70,6 +70,7 @@ func _run() -> void:
 	print("g2gfast — map discovery")
 	print("")
 	_test_discovery()
+	_test_scan_order()
 	_test_derivations()
 	await _test_rescan()
 	_test_rotation_file()
@@ -170,6 +171,94 @@ func _test_discovery() -> void:
 	else:
 		_check(true, "an imported map uses the shared scene (none present)")
 		_check(true, "and carries its manifest path instead of a script (none present)")
+	_done()
+
+
+## scan() promises maps "sorted by id so two scans agree", and a rotation with no file
+## cycles in that order. It sorted with `a.id < b.id` on StringNames, which Godot 4.7.2
+## orders by where each name was interned, not by text, so the order differed per process.
+##
+## [b]Armed on purpose.[/b] A clean checkout has three hand-written maps, and three names
+## can fall in text order by luck. So twenty fresh random ids go into a root of their
+## own, interned in a shuffled order before the scan sees them, and the first check says
+## the StringName order of those ids really is not text order -- without it, a pass here
+## would not prove the sort compares text.
+func _test_scan_order() -> void:
+	_section("scan order")
+	var root := "user://g2g_scan_order_%d" % OS.get_process_id()
+	DirAccess.make_dir_recursive_absolute(root)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261011
+	# Which pointer a fresh name gets is the allocator's call, so a given interning order
+	# can still come out in text order (it did, once in two runs, interning in reverse).
+	# Fresh names each attempt -- one already interned keeps its place -- until the
+	# StringName order is not text order, which the first check then states.
+	var ids: Array[String] = []
+	var by_text: Array[String] = []
+	var interned: Array[StringName] = []
+	var name_order: Array[String] = []
+	for attempt in range(8):
+		ids.clear()
+		interned.clear()
+		while ids.size() < 20:
+			var id := "zz_order%d_" % attempt
+			for _i in range(6):
+				id += char(97 + rng.randi() % 26)
+			if not ids.has(id):
+				ids.append(id)
+		by_text = ids.duplicate()
+		by_text.sort()
+		var shuffled := ids.duplicate()
+		for i in range(shuffled.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var held: String = shuffled[i]
+			shuffled[i] = shuffled[j]
+			shuffled[j] = held
+		for id: String in shuffled:
+			interned.append(StringName(id))
+		var as_names := interned.duplicate()
+		as_names.sort_custom(func(a: StringName, b: StringName) -> bool: return a < b)
+		name_order.clear()
+		for id: StringName in as_names:
+			name_order.append(String(id))
+		if name_order != by_text:
+			break
+	for id in ids:
+		DirAccess.make_dir_recursive_absolute("%s/%s" % [root, id])
+		var manifest := FileAccess.open("%s/%s/%s.json" % [root, id, id], FileAccess.WRITE)
+		manifest.store_string("{\"tier\": 1}")
+		manifest.close()
+		FileAccess.open("%s/%s/%s.bin" % [root, id, id], FileAccess.WRITE).close()
+
+	_check(name_order != by_text,
+		"armed: these ids compared as StringNames are not in text order",
+		", ".join(name_order.slice(0, 4)))
+
+	var scanned: Array[String] = []
+	for map in G2GMapCatalogue.scan(PackedStringArray([root])):
+		scanned.append(String(map.id))
+	var sorted := scanned.duplicate()
+	sorted.sort()
+	_check(scanned == sorted, "scan() lists every map by id as text",
+		", ".join(scanned.slice(0, 6)))
+	var fixtures: Array[String] = []
+	for id in scanned:
+		if id.begins_with("zz_order"):
+			fixtures.append(id)
+	_check(fixtures == by_text, "and finds all twenty in a root of their own",
+		"%d found" % fixtures.size())
+
+	var listed: Array[String] = []
+	for map in G2GMapCatalogue.discover(PackedStringArray([root])).maps:
+		listed.append(String(map.id))
+	_check(listed == scanned, "and the catalogue a rotation cycles keeps that order")
+
+	for id in ids:
+		DirAccess.remove_absolute("%s/%s/%s.json" % [root, id, id])
+		DirAccess.remove_absolute("%s/%s/%s.bin" % [root, id, id])
+		DirAccess.remove_absolute("%s/%s" % [root, id])
+	DirAccess.remove_absolute(root)
+	interned.clear()
 	_done()
 
 

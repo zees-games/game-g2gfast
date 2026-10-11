@@ -171,7 +171,10 @@ static func scan(extra_roots: PackedStringArray = PackedStringArray()) -> Array[
 			if not seen.has(map.id):
 				seen[map.id] = true
 				out.append(map)
-	out.sort_custom(func(a: DotMapDef, b: DotMapDef) -> bool: return a.id < b.id)
+	# By the id's text. `a.id < b.id` compares two StringNames, which Godot orders by where
+	# each was interned rather than by text: the order differed per process, so two scans
+	# did not agree and a rotation with no file cycled maps in no stable order.
+	out.sort_custom(func(a: DotMapDef, b: DotMapDef) -> bool: return String(a.id) < String(b.id))
 	return out
 
 

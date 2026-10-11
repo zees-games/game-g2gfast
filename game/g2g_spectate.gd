@@ -95,7 +95,8 @@ func _rules() -> DotSpectatorRules:
 func _participants() -> PackedStringArray:
 	var out := PackedStringArray()
 	var ids: Array = game.players.keys()
-	ids.sort()
+	# By text: the keys are StringNames, which sort() orders by interning, not by name.
+	ids.sort_custom(func(a: Variant, b: Variant) -> bool: return str(a) < str(b))
 	for id: Variant in ids:
 		out.append(String(id))
 	return out
