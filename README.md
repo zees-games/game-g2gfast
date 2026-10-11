@@ -1,6 +1,6 @@
 This is a game to demonstrate the capabilities of the [**Dot collection**](https://moddingcommunity.com/co/4-dot-assets) built on-top of [Godot 4](https://godotengine.org/) and [TMC's gaming platform](https://moddingcommunity.com/play). In this 3D game, players *surf* and *bunny hop* on *maps* to compete for world records through a timer. This is highly inspired off of Source Engine movement and includes some classic Surf Timer and Bunny Hop maps (WIP) from the game Counter-Strike: Source!
 
-![Preview](https://github.com/gamemann/game-g2gfast/blob/main/images/preview.gif?raw=true)
+![Preview](https://github.com/zees-games/game-g2gfast/blob/main/images/preview.gif?raw=true)
 
 *Play on my test server [here](https://moddingcommunity.com/g2gfast/s/g2gfast01/play)!*
 
@@ -20,7 +20,7 @@ The movement uses the classic units and cvars (`sv_airaccelerate`, `sv_autobunny
 
 There are styles for a harder run: normal, sideways, half-sideways, backwards, low gravity and prebhop. A run made with an admin's help (noclip, a speed change and so on) is never saved.
 
-The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` and `surf_g2g_intro`. The classic maps it imports live in a separate repository, [g2gfast-maps](https://github.com/gamemann/g2gfast-maps), and a server downloads them on demand.
+The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` and `surf_g2g_intro`. The classic maps it imports live in a separate repository, [g2gfast-maps](https://github.com/zees-games/g2gfast-maps), and a server downloads them on demand.
 
 ## Controls
 
@@ -233,7 +233,7 @@ g2g_zone_save           // write them to disk
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.
 
 ## Credits
-`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The characters are from Kenney's character kits (CC0). `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete and metal, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032) and [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [g2gfast-maps](https://github.com/gamemann/g2gfast-maps).
+`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The characters are from Kenney's character kits (CC0). `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete and metal, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032) and [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [g2gfast-maps](https://github.com/zees-games/g2gfast-maps).
 
 ## License
 MIT. See [LICENSE](LICENSE). The Kenney textures are CC0, which is public domain.
