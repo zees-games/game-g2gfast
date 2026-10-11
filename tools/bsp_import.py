@@ -45,6 +45,7 @@ from bsp_read import (Bsp, SKIP_MASK, SURF_SKY, SURF_SKY2D, clean_material, to_g
                       LUMP_ENTITIES, MASK_PLAYERSOLID, CONTENTS_PLAYERCLIP,
                       SOLID_BRUSH_ENTITIES, NONSOLID_BRUSH_ENTITIES)
 import vtf  # noqa: E402
+import stock_archives  # noqa: E402
 import bsp_mechanics  # noqa: E402
 import bsp_props  # noqa: E402
 
@@ -270,6 +271,16 @@ def packed_sky_faces(bsp, pak, tex_dir, notes):
             raw = pak.get("materials/skybox/%s%s.vtf" % (sky, suffix))
         if raw is None:
             return {}
+        if stock_archives.is_stock("materials/%s.vtf" % (base or "skybox/%s%s" % (sky, suffix)), raw, vtf.decode):
+            # The source game's own sky, packed by the mapper (bhop_arcane_v2's `hav`): not
+            # ours to draw, so the sky is the procedural one from the map's own colours.
+            notes.append("sky %s is the source game's own, packed into the map; drawn as a "
+                         "colour instead" % sky)
+            for face in SKY_SUFFIXES:
+                for stale in ("sky_%s.png" % face, "sky_%s.png.import" % face):
+                    if os.path.exists(os.path.join(tex_dir, stale)):
+                        os.remove(os.path.join(tex_dir, stale))
+            return {}
         try:
             w, h, px = vtf.decode(raw)
         except ValueError as e:
@@ -356,12 +367,29 @@ def extract_textures(pak, materials, tex_dir, blends=None, notes=None):
                          "(stand-in or grid instead)" % name)
         return True
 
+    def stock(base, raw):
+        """True, and any earlier import's file removed, when [param raw] is the source game's
+        own texture packed into the map; see tools/stock_archives.py."""
+        if not stock_archives.is_stock("materials/%s.vtf" % base, raw, vtf.decode):
+            return False
+        path = os.path.join(tex_dir, png_name(base))
+        for stale in (path, path + ".import"):
+            if os.path.exists(stale):
+                os.remove(stale)
+        if notes is not None:
+            notes.append("%s is the source game's own texture packed into the map; dropped "
+                         "(stand-in or grid instead)" % base)
+        return True
+
     def decode(base):
         """png name, or None for a texture that is absent, undecodable or blank."""
         if base in written:
             return written[base]
         raw = pak.get("materials/%s.vtf" % base)
         if raw is None:
+            return None
+        if stock(base, raw):
+            written[base] = None
             return None
         try:
             w, h, px = vtf.decode(raw)
@@ -390,6 +418,10 @@ def extract_textures(pak, materials, tex_dir, blends=None, notes=None):
             continue
         raw = pak.get("materials/%s.vtf" % base)
         if raw is None:
+            out[mat] = (None, translucent)
+            continue
+        if base not in written and stock(base, raw):
+            written[base] = None
             out[mat] = (None, translucent)
             continue
         if base in written:

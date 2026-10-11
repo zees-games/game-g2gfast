@@ -170,7 +170,7 @@ const STOCK_DRAWN := {
 	"surf_29_12_06": 0.79,  # 82.9% on 2026-10-10 (fifth batch); 82.4% before it; 0% own: stone walls and floor, looked at from the spawn
 	"surf_greatriver_v4": 0.91,  # 94.4% on 2026-10-10 (fifth batch); 78.6% before it; 0.6% own: the glass spawn box see-through, tiles, rock, looked at from the spawn
 	"bhop_ananas": 0.67,  # 70.2% on 2026-10-11; 3.6% own: looked at from the spawn (sheet stock_floors_before_0)
-	"bhop_arcane_v2": 0.93,  # 96.4% on 2026-10-11; 96.3% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_arcane_v2": 0.91,  # 94.1% on 2026-10-11 after its packed copies of the source game's textures were dropped (54.2% own; 96.3% own before): dirt, plaster, stone as stand-ins, the stock trees listed; looked at from the spawn (sheet stock_packed_dropped_before_after)
 	"bhop_badges": 0.66,  # 69.6% on 2026-10-11; 68.3% own: looked at from the spawn (sheet stock_floors_before_0)
 	"bhop_badges2": 0.03,  # 6.2% on 2026-10-11; 6.2% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_0)
 	"bhop_badges_mini": 0.72,  # 75.3% on 2026-10-11; 73.9% own: looked at from the spawn (sheet stock_floors_before_0)
