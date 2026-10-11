@@ -75,13 +75,22 @@ enum Role {
 
 ## The base colour each role is tinted with. The generated grid is greyscale and is
 ## multiplied by these, so a texture set installed later is tinted the same way.
+##
+## [b]Pastels, the family's sunny look (game-arena's built-in maps)[/b]: a near-white
+## floor, sky-blue ramps, a mint start, a pink end, butter-yellow blocks and lavender
+## bonus surfaces, so a bonus route is still visibly not the main one. Bonus is the cool
+## one because bonus tracks include whole surf ramps, and a warm pastel on a ramp's shaded
+## face rendered olive where lavender stays a pastel. They were mid greys, a
+## steel blue, a grass green, a brick red, a khaki and a plum under a flat grey-blue
+## background. Only the hand-built maps draw with these; an imported map keeps its own
+## textures and light.
 const ROLE_COLOURS := {
-	Role.FLOOR: Color(0.42, 0.44, 0.48),
-	Role.RAMP: Color(0.34, 0.52, 0.66),
-	Role.START: Color(0.30, 0.62, 0.36),
-	Role.END: Color(0.70, 0.32, 0.32),
-	Role.PLATFORM: Color(0.54, 0.50, 0.42),
-	Role.BONUS: Color(0.62, 0.46, 0.68),
+	Role.FLOOR: Color(0.92, 0.93, 0.98),
+	Role.RAMP: Color(0.60, 0.82, 1.00),
+	Role.START: Color(0.58, 0.96, 0.78),
+	Role.END: Color(1.00, 0.62, 0.72),
+	Role.PLATFORM: Color(1.00, 0.88, 0.52),
+	Role.BONUS: Color(0.80, 0.72, 1.00),
 }
 
 ## The file each role loads from [constant TEXTURE_DIR], when one is installed.

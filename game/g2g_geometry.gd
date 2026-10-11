@@ -1,5 +1,6 @@
 extends RefCounted
 
+const G2GLighting := preload("g2g_lighting.gd")
 const G2GTextures := preload("g2g_textures.gd")
 const G2GUnits := preload("g2g_units.gd")
 
@@ -101,22 +102,7 @@ static func material_for(surface: Variant) -> StandardMaterial3D:
 	return G2GTextures.material_for(surface as G2GTextures.Role)
 
 
+## The hand-built maps' sun, sky and air: [constant G2GLighting.DAYLIGHT], a dot-lighting
+## document like an imported map's, through the same rig. See [method G2GLighting.builtin].
 static func sun(parent: Node3D) -> DirectionalLight3D:
-	var light := DirectionalLight3D.new()
-	light.rotation_degrees = Vector3(-55.0, -35.0, 0.0)
-	light.shadow_enabled = true
-	parent.add_child(light)
-
-	# A world environment with ambient light, so the shaded stock characters are not
-	# black on the side away from the sun.
-	var env := WorldEnvironment.new()
-	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color(0.55, 0.65, 0.80)
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.6, 0.6, 0.65)
-	environment.ambient_light_energy = 0.8
-	env.environment = environment
-	parent.add_child(env)
-
-	return light
+	return G2GLighting.builtin(parent)

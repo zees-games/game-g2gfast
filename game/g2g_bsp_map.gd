@@ -200,9 +200,9 @@ func _construct() -> void:
 
 	var solids := _build_collision(drawn, blob)
 
-	# [b]The map's own lighting, not this game's.[/b] `G2GGeometry.sun` puts one
-	# hardcoded sun at (-55, -35) over a flat blue-grey background, which is right for the
-	# hand-built maps it was written for and wrong for every imported one — each of those
+	# [b]The map's own lighting, not this game's.[/b] `G2GGeometry.sun` puts the
+	# hand-built maps' one daylight over them, which is right for the maps it was written
+	# for and wrong for every imported one — each of those
 	# carries its own sun angle, sun colour, ambient colour, fog range and sky name, and
 	# not one of them had ever been read. See [G2GLighting].
 	G2GLighting.apply(self, manifest.get("lighting", {}))

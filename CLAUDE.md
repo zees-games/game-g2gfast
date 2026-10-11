@@ -95,6 +95,7 @@ Short forms; the reasoning is in the linked file.
 
 **Rendering**
 
+- Hand-built maps: pastel `G2GTextures.ROLE_COLOURS` and `G2GLighting.DAYLIGHT` via `builtin()`, turned down under Compatibility; imported maps keep their own. [map-rendering](docs/map-rendering.md#the-hand-built-maps-pastel-grid-daylight-document)
 - A new drawing rule goes in `G2GBspMap._material_for` / `G2GLighting`, so published packs get it without a republish. [map-rendering](docs/map-rendering.md#a-rule-that-applies-at-build-time-reaches-published-packs)
 - Never write `ALPHA` unconditionally. The water shader is copied in game-arena; keep the two in step. [map-rendering](docs/map-rendering.md#opaque-unless-the-material-says-translucent)
 - The atlas is expose-clip-gamma from the median luxel; never /255, never a tone map; displacements sample over the flat quad. [map-rendering](docs/map-rendering.md#the-lightmap-atlas-keeps-the-maps-contrast)

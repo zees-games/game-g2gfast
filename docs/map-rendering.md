@@ -16,6 +16,10 @@ Every `.bsp` carries its own lighting in the entity lump: `light_environment` (s
 - **`_light`'s fourth number is not a multiplier.** It is the compiler's intensity, 20 to 600 across the held maps; it is used as a soft-curved ratio against a reference.
 - `G2GLighting.profile()` sets `sky_below_horizon`: the maps float in their skybox, and a dark procedural "ground" made every look down between two ramps a floor that is not there.
 
+## The hand-built maps: pastel grid, daylight document
+
+`surf_g2g_intro`, `bhop_g2g_intro` and `bhop_g2g_stages` take the family's sunny look (game-arena's built-in maps). Their roles tint the generated grid in pastels (`G2GTextures.ROLE_COLOURS`: near-white floor, sky-blue ramps, mint start, pink end, butter blocks, lavender bonus; bonus is the cool one because bonus tracks include whole ramps and a warm pastel went olive on a shaded face). Their light is `G2GLighting.DAYLIGHT`, a dot-lighting document through the same rig as an imported map, applied by `G2GLighting.builtin` (called from `G2GGeometry.sun`): a warm sun behind the start (the routes run toward -Z, so the faces a player runs at are lit), a pale cool fill, a blue sky continued under the horizon, light haze, filmic and glow; under `gl_compatibility` the sun is divided by 700 and the fill is 0.62 (Compatibility clips a sunlit pastel to white), game-arena's numbers. A repaint never moves geometry or zones. Imported maps keep their own textures and light (`G2GLighting.apply`).
+
 ## The lightmap atlas keeps the map's contrast
 
 The measure is the linear luminance ratio between a frame's 5th and 95th percentile pixels. A reference frame of one of these maps in its own engine spans about 300:1; the import once spanned 8:1, which is the whole of "why does theirs look better". Three things compressed it:

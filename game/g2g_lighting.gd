@@ -22,6 +22,62 @@ static func apply(parent: Node3D, lighting: Dictionary) -> DirectionalLight3D:
 	return sun
 
 
+## The hand-built maps' light: a clear afternoon, the family's look (game-arena's built-in
+## maps). A warm sun high and behind the start (every hand-built route runs toward -Z, so
+## the faces a player runs at are the lit ones; from the other side the start block's face
+## rendered olive), a pale cool fill (a blue fill at its strength
+## turns every shaded face navy), a little haze far off, and `sky_top`, this game's key,
+## because the rig draws the zenith in the ambient colour and here that is the shade's
+## grey. Distances are source units, which on these maps are the units the map is in.
+const DAYLIGHT := {
+	"sun": {
+		"pitch_src": -50.0,
+		"yaw_src": 145.0,
+		"colour": [1.0, 0.93, 0.80],
+		"brightness": 380.0,
+		"spread_degrees": 1.0,
+		"ambient_colour": [0.74, 0.78, 0.92],
+	},
+	"fog": {
+		"enabled": true,
+		"colour": [0.80, 0.89, 1.0],
+		"start": 4000.0,
+		"end": 30000.0,
+		"max_density": 0.3,
+	},
+	"sky_top": [0.30, 0.56, 0.96],
+}
+
+
+## Lights a hand-built map with [constant DAYLIGHT] and returns the sun.
+##
+## [b]Turned down under Compatibility[/b], which the client shell draws with: it has no
+## headroom above white, and at Forward+'s numbers the pastel blocks clip to flat white
+## and the grid, which is what a jump is judged by, goes with them. Under
+## `gl_compatibility` the sun is divided by 700 instead of 200 and the fill is 0.62
+## (game-arena's numbers, rendered side by side here too); at Forward+ the fill is full.
+## Only the hand-built maps: an imported map's light is its own manifest's ([method apply]).
+static func builtin(parent: Node3D) -> DirectionalLight3D:
+	var p := profile()
+	p.ambient_energy = 1.0
+	if RenderingServer.get_current_rendering_method() == "gl_compatibility":
+		p.brightness_reference = 700.0
+		p.ambient_energy = 0.62
+	var sun := DotLightRig.apply(parent, DotLightDocument.from_dictionary(DAYLIGHT), p)
+	var top: Array = DAYLIGHT["sky_top"]
+	for child in parent.get_children():
+		var world := child as WorldEnvironment
+		if world == null or world.environment == null or world.environment.sky == null:
+			continue
+		var mat := world.environment.sky.sky_material as ProceduralSkyMaterial
+		if mat != null:
+			mat.sky_top_color = Color(float(top[0]), float(top[1]), float(top[2]))
+			mat.ground_bottom_color = mat.sky_top_color
+	if sun != null and sun.shadow_enabled:
+		sun.shadow_blur = 1.5
+	return sun
+
+
 ## A clear day's zenith, for a sky this table does not know.
 const CLEAR_SKY := Color(0.36, 0.55, 0.82)
 
