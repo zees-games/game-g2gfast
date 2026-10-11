@@ -183,9 +183,14 @@ def read_pak(bsp, notes):
                      "prototype grid" % e)
         return {}
     pak, bad = {}, []
-    for n in z.namelist():
+    for info in z.infolist():
+        n = info.filename
+        # [b]A name the zip did not flag as UTF-8 is decoded by Python as cp437[/b], which
+        # turns the mapper's codepage byte for ü into `ⁿ` (and Ü into `▄`), so it never
+        # matched the material name. Re-read those bytes as Latin-1, as Bsp.texnames is.
+        key = n if info.flag_bits & 0x800 else n.encode("cp437").decode("latin-1")
         try:
-            pak[n.lower()] = z.read(n)
+            pak[key.lower()] = z.read(info)
         except (zipfile.BadZipFile, EOFError, OSError) as e:
             bad.append("%s (%s)" % (n, e.__class__.__name__))
     if bad:
@@ -202,7 +207,7 @@ def vmt_basetexture(src):
     base inside a nested block, so a first-match regex over the whole file is right
     and walking only the top level is not.
     """
-    txt = src.decode("ascii", "replace")
+    txt = src.decode("latin-1")  # the codepage the names are in; see Bsp.texnames
     txt = re.sub(r"//[^\n]*", "", txt)
     # [b]A quoted value runs to the closing quote, spaces and all.[/b] Matching up to the
     # first space read `"hammer textures/bhop_eazy/31_e_brick_blue"` as `hammer`, found no
@@ -224,7 +229,7 @@ def vmt_blend(src):
     Only that shader blends. bhop_supernova's rock is `LightmappedGeneric` with a
     `$basetexture2` in it, which that shader never reads, so naming one is not enough.
     """
-    txt = re.sub(r"//[^\n]*", "", src.decode("ascii", "replace")).strip()
+    txt = re.sub(r"//[^\n]*", "", src.decode("latin-1")).strip()
     shader = txt.split(None, 1)[0].strip('"').lower() if txt else ""
     if shader != "worldvertextransition":
         return None
@@ -276,6 +281,17 @@ def packed_sky_faces(bsp, pak, tex_dir, notes):
     return out
 
 
+def png_name(base):
+    """The file a decoded texture is written to: the path flattened, and ASCII.
+
+    A non-ASCII name (`customs/früchte/...`) is spelled out as `_xx` hex, because the
+    file travels in a pack through a URL, a zip and a browser's IndexedDB, and an ASCII
+    path is one fewer encoding for each of them to disagree about.
+    """
+    flat = base.replace("/", "_")
+    return "".join(c if ord(c) < 128 else "_%02x" % ord(c) for c in flat) + ".png"
+
+
 def extract_textures(pak, materials, tex_dir, blends=None):
     """Decode every referenced texture the map carried with it.
 
@@ -312,7 +328,7 @@ def extract_textures(pak, materials, tex_dir, blends=None):
         if vtf.is_blank(px):
             written[base] = None
             return None
-        name = base.replace("/", "_") + ".png"
+        name = png_name(base)
         vtf.write_png(os.path.join(tex_dir, name), w, h, px, opaque=vtf.is_opaque(px))
         ask_for_mipmaps(os.path.join(tex_dir, name))
         written[base] = name
@@ -337,7 +353,7 @@ def extract_textures(pak, materials, tex_dir, blends=None):
             # same blank one has to reach the same answer, translucency included.
             out[mat] = (written[base], translucent if written[base] else False)
             continue
-        name = base.replace("/", "_") + ".png"
+        name = png_name(base)
         try:
             w, h, px = vtf.decode(raw)
         except ValueError:

@@ -40,6 +40,7 @@ Kept where the bug could come back and the story says how to recognise it. Each 
 - **`bsp_preview`'s overrides never changed a pixel** (assigned after `build_from` had built), and it rendered under the map's own environment while saying it was neutral (a second `WorldEnvironment` is ignored without a warning). The one tool for looking was not showing what it said.
 - **A map black on purpose hid two real faults** (a flat-black missing texture and the ALPHA pass): the explanation arrived before the question did.
 - **The texture lookup missed two spellings** (a leading slash, a quoted name with a space) and drew the grid with the texture right there. Found by asking every untextured material *why*.
+- **A third spelling, 2026-10-11: an umlaut.** surf_vegetables keeps its textures under `Customs/Früchte/`. The string table was decoded as ASCII (ü became U+FFFD) and Python's zipfile decoded the pakfile names as cp437 (ü became ⁿ), so neither matched and 15% of the map drew the grid. Found by opening the pakfile of every mapper-custom material still unmatched.
 - **Static props were missing on most maps**; then lit by the leaf cube alone (black); then a cubemap-suffix strip renamed a mapper's own model; then a flat collision piece killed the process inside Godot's convex hull builder.
 - **311 surfaces, a 256 limit**: the last 55 never drew and the engine said so 55 times at every load. Collision was unaffected, so every play check passed.
 - **The entity parser kept the first of a repeated key**, losing the second `OnTrigger` that carried a trap's delay.

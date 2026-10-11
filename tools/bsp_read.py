@@ -156,7 +156,12 @@ class Bsp:
         self.dispverts = self._array(LUMP_DISP_VERTS, FMT_DISPVERT)
         table = [x[0] for x in self._array(LUMP_TEXDATA_STRING_TABLE, "<i")]
         data = self._lump(LUMP_TEXDATA_STRING_DATA)
-        self.texnames = [data[o:data.index(b"\0", o)].decode("ascii", "replace") for o in table]
+        # [b]Latin-1, not ASCII.[/b] The string table is the mapper's Windows codepage, and
+        # surf_vegetables names its own textures `customs/Früchte/...`: decoded as ASCII the
+        # ü became U+FFFD, no pakfile entry matched, and 15% of the map drew the grid with
+        # its textures in the pakfile (2026-10-11). Latin-1 maps every byte, and agrees with
+        # cp1252 on every letter a material name uses; `read_pak` decodes entry names to match.
+        self.texnames = [data[o:data.index(b"\0", o)].decode("latin-1") for o in table]
         self.entities = parse_entities(self._lump(LUMP_ENTITIES).decode("ascii", "replace"))
         self.brushes = self._array(LUMP_BRUSHES, FMT_BRUSH)
         self.brushsides = self._array(LUMP_BRUSHSIDES, FMT_BRUSHSIDE)
