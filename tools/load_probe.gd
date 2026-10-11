@@ -4,7 +4,7 @@ extends Node
 ##
 ##     godot --headless --path . tools/load_probe.tscn                      # surf_mesa, 1 8 16 32 64
 ##     godot --headless --path . tools/load_probe.tscn -- surf_mesa 32 64 100
-##     LOAD_TICKRATE=64 / LOAD_STAGGER=1 / LOAD_PHASES=1 godot ... -- surf_mesa 32
+##     LOAD_TICKRATE=64 / LOAD_STAGGER=1 / LOAD_PHASES=1 / LOAD_ACKS=1 godot ... -- surf_mesa 32
 ##
 ## [b]Nothing in this repository had ever put more than two players on a server.[/b]
 ## Every suite is one client and one server, so a cost that grows with the square of
@@ -16,6 +16,13 @@ extends Node
 ## a real peer is (`add_player`, then `_admit`) and holds a command every tick, running
 ## and turning, so the motor, the zones and the replication all do the work they would.
 ## The budget is one tick at the server's own rate: 7.8 ms at 128.
+##
+## [b]LOAD_ACKS=1 is the shape a real server has.[/b] A real g2gfast client acknowledges
+## every snapshot it applies (`encode_ack` -> the bridge -> `receive_ack_payload`), and an
+## acknowledging peer changes what a snapshot costs: `sync_peer_acks` retires what landed
+## and `trim_pending` has nothing left to age out. Without it every peer is the no-ack
+## host, which is a real shape too (an old client) but not the usual one. With it each
+## peer acks the snapshot ACK_LAG before the newest, as a client ~60 ms away does at 32/s.
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -24,10 +31,14 @@ const G2GNetBridge := preload("../game/net/g2g_net_bridge.gd")
 const WARMUP_TICKS := 128
 const MEASURED_TICKS := 640
 const SNAPSHOT_RATE := 32
+const ACK_LAG := 2                ## LOAD_ACKS=1: snapshots a peer is behind when it acks
 
 var _bytes: Dictionary = {}       ## method -> bytes sent to one watched peer
 var phase: Dictionary = {}        ## LOAD_PHASES=1: microseconds per step of a snapshot
 var _watched_peer := 2
+var _acking := false              ## LOAD_ACKS=1
+var _net: DotNetManager           ## the row's server, for the acks
+var _sent_ticks: Dictionary = {}  ## peer -> ticks of snapshots sent and not yet acked
 
 
 func _ready() -> void:
@@ -40,7 +51,9 @@ func _ready() -> void:
 	if counts.is_empty():
 		counts = [1, 8, 16, 32, 64]
 
-	print("[load] %s, %d measured ticks per row" % [map_id, MEASURED_TICKS])
+	_acking = OS.get_environment("LOAD_ACKS") == "1"
+	print("[load] %s, %d measured ticks per row, %s" % [map_id, MEASURED_TICKS,
+		"peers ack (LOAD_ACKS=1)" if _acking else "no acks (the no-ack host)"])
 	print("[load]  players  tick mean   p99    worst  budget  snap B/s/peer  (mean split)")
 	for n in counts:
 		await _measure(map_id, n)
@@ -104,6 +117,8 @@ func _measure(map_id: StringName, players: int) -> void:
 		return
 	net.messages.seal()
 	_bytes = {}
+	_net = net
+	_sent_ticks = {}
 	bridge.link.loopback = _on_send
 
 	for i in range(players):
@@ -165,7 +180,8 @@ func _measure(map_id: StringName, players: int) -> void:
 			net._ticks_since_snapshot = 0
 			var h0 := Time.get_ticks_usec()
 			net.history.record(identities, tick)
-			phase["history"] = float(phase.get("history", 0.0)) + float(Time.get_ticks_usec() - h0)
+			if OS.get_environment("LOAD_PHASES") != "":
+				phase["history"] = float(phase.get("history", 0.0)) + float(Time.get_ticks_usec() - h0)
 			if OS.get_environment("LOAD_PHASES") == "":
 				net._send_snapshots(tick, identities)
 			else:
@@ -193,6 +209,15 @@ func _measure(map_id: StringName, players: int) -> void:
 		players, mean, p99, worst, 1000.0 / float(game.tick_rate), int(snap),
 		game_ms / float(MEASURED_TICKS), net_ms / float(MEASURED_TICKS)])
 
+	if _acking:
+		# Proof the row is the acked shape: a peer the server never heard from is still
+		# the no-ack host, whatever this flag says.
+		var wired := 0
+		for i in range(players):
+			if net.peer_acks_wired(i + 2):
+				wired += 1
+		print("[load]           acks wired for %d of %d peers" % [wired, players])
+
 	if not phase.is_empty():
 		var parts := PackedStringArray()
 		for k in phase:
@@ -200,6 +225,7 @@ func _measure(map_id: StringName, players: int) -> void:
 		print("[load]           per tick, ms: ", ", ".join(parts))
 		phase = {}
 
+	_net = null
 	side.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -275,3 +301,22 @@ func _lap(name: String, since: int) -> int:
 func _on_send(method: StringName, peer_id: int, payload: PackedByteArray) -> void:
 	if peer_id == _watched_peer or peer_id == 0:
 		_bytes[method] = int(_bytes.get(method, 0)) + payload.size()
+	if _acking and method == &"snapshot" and peer_id >= 2 and _net != null:
+		_ack_later(peer_id, payload)
+
+
+## What a client does with a snapshot, ACK_LAG snapshots late: read its tick the way
+## `receive_snapshot` does, and hand the server the payload `encode_ack` would have
+## built, through the entry point the bridge calls on a real server.
+func _ack_later(peer_id: int, payload: PackedByteArray) -> void:
+	var tick := DotNetReader.new(payload).read_uint(32)
+	var list: Array = _sent_ticks.get(peer_id, [])
+	list.append(tick)
+	_sent_ticks[peer_id] = list
+	if list.size() <= ACK_LAG:
+		return
+	var ack := DotNetWriter.new()
+	ack.write_uint(int(list.pop_front()), 32)
+	var taken := _net.receive_ack_payload(peer_id, ack.to_bytes())
+	if not taken.ok:
+		push_error("ack refused for peer %d: %s" % [peer_id, taken.error])
