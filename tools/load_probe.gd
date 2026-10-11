@@ -4,6 +4,7 @@ extends Node
 ##
 ##     godot --headless --path . tools/load_probe.tscn                      # surf_mesa, 1 8 16 32 64
 ##     godot --headless --path . tools/load_probe.tscn -- surf_mesa 32 64 100
+##     LOAD_TICKRATE=64 / LOAD_STAGGER=1 / LOAD_PHASES=1 godot ... -- surf_mesa 32
 ##
 ## [b]Nothing in this repository had ever put more than two players on a server.[/b]
 ## Every suite is one client and one server, so a cost that grows with the square of
@@ -47,6 +48,12 @@ func _ready() -> void:
 
 
 func _measure(map_id: StringName, players: int) -> void:
+	# LOAD_TICKRATE=64: the row at another server tick rate. The game takes its rate from
+	# the engine (as sv_tickrate does on a real server) and puts the engine back on its own
+	# when it is built, so this is set before every row.
+	var rate := OS.get_environment("LOAD_TICKRATE")
+	if rate.is_valid_int() and int(rate) > 0:
+		Engine.physics_ticks_per_second = int(rate)
 	var side := Node.new()
 	add_child(side)
 
