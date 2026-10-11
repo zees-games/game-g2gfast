@@ -30,6 +30,7 @@ this repository already has: geometry made in code.
 import argparse
 import collections
 import fnmatch
+import hashlib
 import io
 import json
 import math
@@ -281,6 +282,34 @@ def packed_sky_faces(bsp, pak, tex_dir, notes):
     return out
 
 
+PRIVATE_REFERENCE = "/extra/g2g-ref/materials"
+_private_hashes = None
+
+
+def is_private_copy(png_path):
+    """Whether a decoded texture is byte for byte one of the private reference copies.
+
+    [b]A mapper can pack the source game's own texture into the .bsp[/b] (bhop_arcane_v2's
+    number decals, a river sheet four maps copied), and then it decodes like the map's
+    own. Christian's rule is that the source game's textures are never used, and
+    publish_maps.gd refuses a map holding one, so the importer drops it here and the
+    surface goes to a stand-in or the grid like any texture that did not ship. Only
+    where `/extra/g2g-ref` exists, which is the machine maps are imported on; the
+    reference copies are written by the same decoder, so equal bytes mean the same image.
+    """
+    global _private_hashes
+    if _private_hashes is None:
+        _private_hashes = set()
+        for root, _, files in os.walk(PRIVATE_REFERENCE):
+            for f in files:
+                with open(os.path.join(root, f), "rb") as fh:
+                    _private_hashes.add(hashlib.sha256(fh.read()).hexdigest())
+    if not _private_hashes:
+        return False
+    with open(png_path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest() in _private_hashes
+
+
 def png_name(base):
     """The file a decoded texture is written to: the path flattened, and ASCII.
 
@@ -292,7 +321,7 @@ def png_name(base):
     return "".join(c if ord(c) < 128 else "_%02x" % ord(c) for c in flat) + ".png"
 
 
-def extract_textures(pak, materials, tex_dir, blends=None):
+def extract_textures(pak, materials, tex_dir, blends=None, notes=None):
     """Decode every referenced texture the map carried with it.
 
     Returns {material: (png filename or None, translucent)}. A material whose texture
@@ -314,6 +343,19 @@ def extract_textures(pak, materials, tex_dir, blends=None):
     os.makedirs(tex_dir, exist_ok=True)
     out, written = {}, {}
 
+    def dropped_private(name):
+        """Remove [param name] again when it is a private reference copy; see is_private_copy."""
+        path = os.path.join(tex_dir, name)
+        if not is_private_copy(path):
+            return False
+        for stale in (path, path + ".import"):
+            if os.path.exists(stale):
+                os.remove(stale)
+        if notes is not None:
+            notes.append("%s is the source game's own texture packed into the map; dropped "
+                         "(stand-in or grid instead)" % name)
+        return True
+
     def decode(base):
         """png name, or None for a texture that is absent, undecodable or blank."""
         if base in written:
@@ -330,6 +372,9 @@ def extract_textures(pak, materials, tex_dir, blends=None):
             return None
         name = png_name(base)
         vtf.write_png(os.path.join(tex_dir, name), w, h, px, opaque=vtf.is_opaque(px))
+        if dropped_private(name):
+            written[base] = None
+            return None
         ask_for_mipmaps(os.path.join(tex_dir, name))
         written[base] = name
         return name
@@ -365,6 +410,10 @@ def extract_textures(pak, materials, tex_dir, blends=None):
             continue
         opaque = not translucent and vtf.is_opaque(px)
         vtf.write_png(os.path.join(tex_dir, name), w, h, px, opaque=opaque)
+        if dropped_private(name):
+            written[base] = None
+            out[mat] = (None, translucent)
+            continue
         ask_for_mipmaps(os.path.join(tex_dir, name))
         written[base] = name
         out[mat] = (name, translucent and not opaque)
@@ -3267,7 +3316,7 @@ def main(argv=None):
     materials = sorted({clean_material(bsp.face_material(f)[0]) for f in faces}
                        | set(prop_mats.values()))
     blends = {}
-    tex = extract_textures(pak, materials, os.path.join(d, "textures"), blends)
+    tex = extract_textures(pak, materials, os.path.join(d, "textures"), blends, notes)
     packed_sky = packed_sky_faces(bsp, pak, os.path.join(d, "textures"), notes)
     textured = {m for m, (png, _) in tex.items() if png}
 
