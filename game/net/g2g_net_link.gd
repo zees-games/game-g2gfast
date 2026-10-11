@@ -41,10 +41,11 @@ const CHANNEL_STATE := 1
 ## [b]UDP on a desktop and TCP in a browser, and neither is chosen here.[/b] The calls
 ## below are declared `unreliable`, which is what voice wants: a lost frame is 20 ms of
 ## silence a jitter buffer conceals, and a resent one arrives after the frames either
-## side of it have already played. What that becomes on the wire is
-## `DotTransportAuto`'s decision and it has one sensible answer either way — ENet
-## honours the unreliable channel as UDP; a browser has no UDP at all, so WebSocket
-## delivers it reliably and in order over TCP whatever anybody asks for.
+## side of it have already played. What that becomes on the wire is the transport's
+## decision (dot-server's default is `DotTransportDual`: native clients on ENet,
+## browsers on WebSocket, behind one peer) and it has one sensible answer either way —
+## ENet honours the unreliable channel as UDP; a browser has no UDP at all, so
+## WebSocket delivers it reliably and in order over TCP whatever anybody asks for.
 ##
 ## So the platform rule falls out rather than being written, and this file names
 ## neither transport.
