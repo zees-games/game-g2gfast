@@ -54,7 +54,7 @@ func _npc_ready() -> void:
 
 func _build() -> void:
 	_patrol_flow = DotNpcAiNode.deterministic_unit(
-		npc.instance_id if npc != null else 0, 5501
+		npc.seed if npc != null else 0, 5501
 	)
 
 	# Two hunters on a runner at once and the rest close behind them on a ring. On a
