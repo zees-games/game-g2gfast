@@ -676,11 +676,54 @@ func _build_chat() -> void:
 	# outlines rather than panels on purpose (see `DotFeedView`): a backing box is a grey
 	# rectangle in the corner of the view even when nobody is talking.
 	chat_window.outline_size = 5
+	chat_window.width = CHAT_WIDTH
 	chat_window.channels = [
 		{"id": &"all", "label": "Say", "colour": Color(0.88, 0.90, 0.94)},
 		{"id": &"team", "label": "Say (TEAM)", "colour": Color(0.55, 0.85, 0.60), "team": true},
 	]
 	_chat_layer.add_child(chat_window)
+
+
+## The box's width when nothing is beside it, the narrowest it is squeezed to, and the gap
+## it keeps from the timer's plate.
+const CHAT_WIDTH := 460.0
+const CHAT_MIN_WIDTH := 240.0
+const CHAT_GAP := 12.0
+
+
+## Narrows the box so a full log stays left of the timer's plate.
+##
+## [b]Bottom left is not free at every width.[/b] The plate is bottom CENTRE, 428 wide at
+## 1280, so its left edge is at 426 and a 460-wide box from 16 drew its wrapped lines over
+## "0 u/s" (seen in a game-ballot frame). Called every frame with [method G2GHud.timer_rect]:
+## the plate moves with the player's placement setting and the interface scale.
+func fit_chat_beside(plate: Rect2) -> void:
+	if chat_window == null or not chat_window.is_inside_tree():
+		return
+
+	var w := chat_width_beside(plate, chat_window, chat_window.get_viewport_rect().size.y)
+
+	if not is_equal_approx(w, chat_window.width):
+		chat_window.width = w
+		chat_window.offset_right = chat_window.margin_left + w
+
+
+## The width a box may have beside [param plate] on a screen [param screen_height] tall.
+## Snapped to 16 pixels, so a plate that grows a digit does not re-wrap the log every frame.
+static func chat_width_beside(plate: Rect2, window: DotChatWindow, screen_height: float) -> float:
+	if plate.size.x <= 0.0:
+		return CHAT_WIDTH
+
+	var log_top := screen_height - (
+		window.margin_bottom + window.entry_height
+		+ float(window.max_lines) * (window.line_height + window.line_gap)
+	)
+
+	if plate.end.y <= log_top or plate.position.x <= window.margin_left:
+		return CHAT_WIDTH
+
+	var room := floorf((plate.position.x - window.margin_left - CHAT_GAP) / 16.0) * 16.0
+	return clampf(room, CHAT_MIN_WIDTH, CHAT_WIDTH)
 
 
 ## Puts one binding from the settings document onto its action.

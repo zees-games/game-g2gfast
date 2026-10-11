@@ -528,10 +528,12 @@ func _on_chat_submitted(text: String, channel: StringName) -> void:
 
 ## A line somebody said, in the chat box, with the name drawn apart from the text.
 func _on_said(speaker: String, text: String, kind: String) -> void:
-	# The server's own lines (a vote, a record, a map change) also go on the HUD's centre
-	# notice. Only those: every line used to, which put whatever anybody typed over the
-	# timer.
-	if kind == "system" and hud != null:
+	# The server's own lines (a vote, a record, a map change) go on the HUD's centre notice
+	# only when there is no box to read them in. Every line used to, which put whatever
+	# anybody typed over the timer; then every system line did, so a vote was written three
+	# times (notice, box, and the drawn ballot). The box draws even when a relay hides its
+	# entry field, so it is always the place. hungario 5bfb319 and playground 532b7ca agree.
+	if kind == "system" and hud != null and (presentation == null or presentation.chat_window == null):
 		hud.notice(text)
 
 	if presentation == null or presentation.chat_window == null:
@@ -620,6 +622,9 @@ func _process(delta: float) -> void:
 		var eye := camera.global_position if camera != null else Vector3.ZERO
 		var forward := -camera.global_transform.basis.z if camera != null else Vector3.FORWARD
 		presentation.present(delta, eye, forward)
+
+		if hud != null:
+			presentation.fit_chat_beside(hud.timer_rect())
 
 		# Watched rather than listened for. A landing fires on the authority, which on a
 		# netted client is somewhere else -- so a client that hooked a signal would be

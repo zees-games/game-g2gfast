@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 183
+const CHECKS := 184
 
 var _passed := 0
 var _failed := 0
@@ -810,6 +810,26 @@ func _test_blind_and_beacon() -> void:
 		hud.blind_overlay != null and hud.blind_overlay.get_index() == 0,
 		"the blind is the HUD's first child, so every widget draws over it"
 	)
+
+	# The chat box beside the timer's plate, at the 1280 x 720 a client draws: a 460-wide box
+	# from 16 wrapped its lines over "0 u/s" (the plate's left edge is near 426).
+	hud.timer_hud.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	hud.timer_hud.position = Vector2.ZERO
+	hud.timer_hud.size = Vector2(1280.0, 720.0)
+	# One HUD frame, so the plate carries what a client's does: speed, style and stats.
+	hud._process(1.0 / 60.0)
+	hud.timer_hud.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	hud.timer_hud.position = Vector2.ZERO
+	hud.timer_hud.size = Vector2(1280.0, 720.0)
+	var plate := hud.timer_rect()
+	var box := _make()
+	var fitted := G2GPresentation.chat_width_beside(plate, box.chat_window, 720.0)
+	_check(
+		plate.size.x > 0.0 and box.chat_window.margin_left + fitted <= plate.position.x,
+		"a full chat log stays left of the timer's plate (%.0f wide at x %.0f)" % [plate.size.x, plate.position.x],
+		"box ends at %.0f, plate %s" % [box.chat_window.margin_left + fitted, plate]
+	)
+	box.queue_free()
 
 	ada.blinded = true
 	hud.present_blind(G2GHud.BLIND_FADE_SEC * 0.5)

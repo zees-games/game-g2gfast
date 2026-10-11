@@ -742,6 +742,24 @@ func show_loading(text: String) -> void:
 ## Read off the player rather than pushed by anybody, because the flag arrives in a
 ## snapshot on a networked client and is set directly offline, and a HUD that had to be
 ## told would need telling from two places. Public so a check can step it.
+## Where the timer's plate is drawn, in screen pixels, or an empty rect while it draws none.
+##
+## For the chat box, which sits on its own unscaled layer bottom-left and has to stay out of
+## a plate that this HUD's scale and the player's placement decide.
+func timer_rect() -> Rect2:
+	if timer_hud == null or not timer_hud.is_visible_in_tree():
+		return Rect2()
+
+	var plate := timer_hud.block_size()
+
+	if plate == Vector2.ZERO:
+		return Rect2()
+
+	var origin: Vector2 = timer_hud.call("_plate_origin", plate)
+	var xf := timer_hud.get_global_transform_with_canvas()
+	return Rect2(xf * origin, xf.basis_xform(plate))
+
+
 func present_blind(delta: float) -> void:
 	if blind_overlay == null:
 		return
