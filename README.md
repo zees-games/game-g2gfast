@@ -233,7 +233,7 @@ g2g_zone_save           // write them to disk
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.
 
 ## Credits
-`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The characters are from Kenney's character kits (CC0). `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete and metal, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032) and [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [g2gfast-maps](https://github.com/zees-games/g2gfast-maps).
+`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The characters are from Kenney's character kits (CC0). `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete, metal and snow, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032), [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) and [Snow010A](https://ambientcg.com/view?id=Snow010A) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [g2gfast-maps](https://github.com/zees-games/g2gfast-maps).
 
 ## License
 MIT. See [LICENSE](LICENSE). The Kenney textures are CC0, which is public domain.

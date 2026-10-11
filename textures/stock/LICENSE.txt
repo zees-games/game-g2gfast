@@ -5,10 +5,11 @@ http://creativecommons.org/publicdomain/zero/1.0/
 They stand in for the source game's own textures on imported maps; see substitutes.json
 and game/g2g_stock_substitutes.gd. Nothing from the source game is in this directory.
 
-The three JPEGs (cc0_concrete_smooth.jpg, cc0_metal_brushed.jpg, cc0_metal_plates.jpg) are
+The four JPEGs (cc0_concrete_smooth.jpg, cc0_metal_brushed.jpg, cc0_metal_plates.jpg, cc0_snow.jpg) are
 from ambientCG (https://ambientcg.com), by Lennart Demes, licensed CC0 1.0:
   cc0_concrete_smooth.jpg  Concrete034     https://ambientcg.com/view?id=Concrete034
   cc0_metal_brushed.jpg    Metal032        https://ambientcg.com/view?id=Metal032
   cc0_metal_plates.jpg     MetalPlates006  https://ambientcg.com/view?id=MetalPlates006
-Each is the 1K colour map, scaled to 512 px. Kenney has no concrete or metal; the family
+  cc0_snow.jpg             Snow010A        https://ambientcg.com/view?id=Snow010A
+Each is the 1K colour map, scaled to 512 px. Kenney has no concrete, metal or snow; the family
 rule is Kenney first, then free CC0/MIT art from elsewhere.
