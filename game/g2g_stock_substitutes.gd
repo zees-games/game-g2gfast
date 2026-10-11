@@ -47,6 +47,19 @@ static func for_material(material: String) -> Dictionary:
 	return {}
 
 
+## Whether [param material]'s first matching entry is a `none`: a surface left on the
+## grid on purpose, with the table's `why` (developer and tool textures, flat black and
+## white, materials nothing in the set reads as). The done-when of `[g2g-maps-stock-1]`
+## counts these apart from a material nobody has looked at yet.
+static func is_listed(material: String) -> bool:
+	_load()
+	var name := material.to_lower()
+	for entry: Dictionary in _entries:
+		if name.match(str(entry.get("match", ""))):
+			return bool(entry.get("none", false))
+	return false
+
+
 ## The tint that pulls [param entry]'s texture toward [param measured], the map's own
 ## average colour for the original.
 static func tint_for(entry: Dictionary, measured: Color) -> Color:

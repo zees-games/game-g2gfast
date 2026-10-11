@@ -145,7 +145,7 @@ const STOCK_DRAWN := {
 	"surf_10x_reloaded_fixed": 0.80,  # 83.8% on 2026-10-10 (stand-ins from the reference sheet); 76.2% on 2026-10-09; 0%: ground as dirt, stone, looked at from the spawn
 	"surf_mai_remix": 0.83,  # 86.3% on 2026-10-10 (glass see-through, effects as glass); 69.9% earlier on 2026-10-10 (stand-ins from the reference sheet); 59.6% on 2026-10-09; 0%: tiles, rock, glass panes, looked at from the spawn
 	"surf_grave_reloaded": 0.91,  # 94.5% on 2026-10-10 (fifth batch: interior stone walls, glass); 84.9% earlier on 2026-10-10; 73.8% on 2026-10-09; 0%: cobbles, concrete, looked at from the spawn
-	"bhop_exodus": 0.78,  # 81.3% on 2026-10-10 (stand-ins from the reference sheet); 74.7% on 2026-10-09; 10.7%: planks, concrete, looked at from the spawn
+	"bhop_exodus": 0.84,  # 87.5% on 2026-10-11 (sixth batch: its aoki dev blends listed, stone floors); 81.3% on 2026-10-10 (stand-ins from the reference sheet); 74.7% on 2026-10-09; 10.7%: planks, concrete, looked at from the spawn
 	"surf_greatriver_xdre4m": 0.77,  # 80.5% on 2026-10-10 (city facades as concrete); 36.2% on 2026-10-09; 0%: wood, metal, concrete kerbs, looked at from the spawn
 	"surf_thriller": 0.74,  # 77.4% on 2026-10-10; 47.8% before: the citadel panelling as dark metal plate, looked at from the spawn
 	"bunnyhop_pro": 0.66,  # 69.7% on 2026-10-10 (glass fence see-through); 66.1% before the fifth batch; 53.1% before: sand floor, stone walls, concrete courtyard, looked at from the spawn
@@ -169,7 +169,64 @@ const STOCK_DRAWN := {
 	"surf_lore": 0.83,  # 86.3% on 2026-10-10 (fifth batch); 84.5% before it; 1.5% own: metal panels, concrete, sandstone steps, looked at from the spawn
 	"surf_29_12_06": 0.79,  # 82.9% on 2026-10-10 (fifth batch); 82.4% before it; 0% own: stone walls and floor, looked at from the spawn
 	"surf_greatriver_v4": 0.91,  # 94.4% on 2026-10-10 (fifth batch); 78.6% before it; 0.6% own: the glass spawn box see-through, tiles, rock, looked at from the spawn
+	"bhop_ananas": 0.67,  # 70.2% on 2026-10-11; 3.6% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_arcane_v2": 0.93,  # 96.4% on 2026-10-11; 96.3% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_badges": 0.66,  # 69.6% on 2026-10-11; 68.3% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_badges2": 0.03,  # 6.2% on 2026-10-11; 6.2% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_0)
+	"bhop_badges_mini": 0.72,  # 75.3% on 2026-10-11; 73.9% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_crash_egypt": 0.93,  # 96.7% on 2026-10-11; 96.7% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_eazy": 0.97,  # 100.0% on 2026-10-11; 100.0% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_eazy_v2": 0.97,  # 100.0% on 2026-10-11; 100.0% own: looked at from the spawn (sheet stock_floors_before_0)
+	"bhop_evolve": 0.96,  # 99.9% on 2026-10-11; 99.9% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_frotinity2": 0.92,  # 95.7% on 2026-10-11; 62.8% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_fur": 0.86,  # 89.4% on 2026-10-11; 89.4% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_fury_2": 0.97,  # 100.0% on 2026-10-11; 99.9% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_grove": 0.97,  # 100.0% on 2026-10-11 (sixth batch: the forest floor as dirt from its own VMT); 17.9% before it; 0.0% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_japan": 0.94,  # 97.4% on 2026-10-11; 55.9% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_lego2": 0.96,  # 99.0% on 2026-10-11; 99.0% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_lego3": 0.91,  # 94.7% on 2026-10-11; 94.7% own: looked at from the spawn (sheet stock_floors_before_1)
+	"bhop_mario_fxd": 0.89,  # 92.9% on 2026-10-11; 87.5% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_ocean": 0.96,  # 99.2% on 2026-10-11; 31.1% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_overthinker": 0.88,  # 91.2% on 2026-10-11; 91.2% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_pandora2_fix": 0.96,  # 99.4% on 2026-10-11; 99.3% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_pit": 0.97,  # 100.0% on 2026-10-11; 100.0% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_sqee": 0.97,  # 100.0% on 2026-10-11; 98.0% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_supernova": 0.95,  # 98.9% on 2026-10-11; 98.9% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_tesquo_v2": 0.92,  # 95.2% on 2026-10-11; 55.5% own: looked at from the spawn (sheet stock_floors_before_2)
+	"kz_bhop_badg3s": 0.88,  # 91.3% on 2026-10-11; 83.8% own: looked at from the spawn (sheet stock_floors_before_3)
+	"kz_bhop_lucid": 0.88,  # 91.8% on 2026-10-11; 57.5% own: looked at from the spawn (sheet stock_floors_before_3)
+	"kz_bhop_yonkoma": 0.08,  # 11.2% on 2026-10-11; 11.2% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_3)
+	"surf_110b_austinpowers": 0.95,  # 98.9% on 2026-10-11; 52.8% own: looked at from the spawn (sheet stock_floors_before_3)
+	"surf_adverse": 0.67,  # 70.2% on 2026-10-11; 0.1% own: looked at from the spawn (sheet stock_floors_before_3)
+	"surf_akai_final": 0.00,  # 0.5% on 2026-10-11; 0.0% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_3)
+	"surf_animals": 0.95,  # 98.0% on 2026-10-11; 2.2% own: looked at from the spawn (sheet stock_floors_before_3)
+	"surf_aquaflow": 0.95,  # 98.6% on 2026-10-11; 97.8% own: looked at from the spawn (sheet stock_floors_before_3)
+	"surf_arcade": 0.56,  # 59.1% on 2026-10-11; 55.1% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_bathroom_final": 0.89,  # 92.0% on 2026-10-11; 50.3% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_dust2_2008_final": 0.96,  # 99.2% on 2026-10-11; 59.3% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_fruits": 0.82,  # 85.0% on 2026-10-11 (sixth batch: its own Früchte texture read); 83.2% before it; 24.8% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_greensway": 0.95,  # 98.5% on 2026-10-11; 98.5% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_interference": 0.97,  # 100.0% on 2026-10-11 (sixth batch: boundary wall and crystals as glass); 100.0% before it; 99.7% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_kitsune": 0.59,  # 62.4% on 2026-10-11; 47.8% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_life_of_duck": 0.96,  # 99.4% on 2026-10-11; 64.8% own: looked at from the spawn (sheet stock_floors_before_4)
+	"surf_lt_omnific": 0.94,  # 97.8% on 2026-10-11; 97.8% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_lt_unicorn": 0.93,  # 96.1% on 2026-10-11; 96.1% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_matrix_v8": 0.32,  # 35.4% on 2026-10-11; 4.0% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_omnibus": 0.92,  # 95.9% on 2026-10-11; 16.5% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_pavilion": 0.68,  # 71.5% on 2026-10-11; 3.7% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_quilavar": 0.93,  # 96.8% on 2026-10-11; 38.5% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_rookie": 0.93,  # 96.9% on 2026-10-11 (sixth batch: waterfall sheets see-through); 95.7% before it; 27.7% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_stonework3": 0.96,  # 99.9% on 2026-10-11; 56.8% own: looked at from the spawn (sheet stock_floors_before_5)
+	"surf_summit": 0.95,  # 98.9% on 2026-10-11; 93.8% own: looked at from the spawn (sheet stock_floors_before_6)
+	"surf_torque2": 0.75,  # 78.6% on 2026-10-11; 51.4% own: looked at from the spawn (sheet stock_floors_before_6)
+	"surf_vegetables": 0.85,  # 88.5% on 2026-10-11 (sixth batch: its own Früchte textures read); 75.3% before it; 30.7% own: looked at from the spawn (sheet stock_floors_before_6)
+	"surf_velocity": 0.80,  # 83.9% on 2026-10-11; 0.7% own: looked at from the spawn (sheet stock_floors_before_6)
 }
+
+## The most of a map, by triangles, that may draw the prototype grid with neither a
+## stand-in nor a `none` entry saying why (g2g-maps-stock-1's done-when). Every map was
+## under 3% when it was set (2026-10-11); armed by setting it to 0.1%: bhop_lego3, at 0.5%, failed.
+const UNLISTED_LIMIT := 0.10
 
 ## The share of a map's triangles drawn in the texture its own pakfile carried, at least,
 ## for the maps where a parsing bug was measured taking it away (2026-09-27): a leading
@@ -187,7 +244,7 @@ const OWN_TEXTURES := {
 const BLENDED := ["surf_mesa", "surf_summit", "surf_greensway", "bhop_evolve", "surf_aquaflow"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 49
+const CHECKS_PER_MAP := 50
 
 ## Sections every map runs, entered against run to their last line. A runtime error inside
 ## a section aborts that function and nothing says so; a section that bailed out after a
@@ -552,6 +609,33 @@ func _test_lighting() -> void:
 	_check(drawn >= drawn_floor,
 		"and a stock texture it did not carry has its Kenney stand-in",
 		"%.1f%% drawn textured, %.0f%% expected" % [drawn * 100.0, drawn_floor * 100.0])
+	# [b]And what is still on the grid is there for a written reason.[/b] Every triangle,
+	# props included, that shipped no texture, is not water, has no stand-in and no `none`
+	# entry in textures/stock/substitutes.json is a material nobody has looked at: under
+	# [constant UNLISTED_LIMIT] of the map, which is the done-when of g2g-maps-stock-1. A
+	# new import with an unknown material family fails here, not on somebody's screen.
+	var all_tris := 0
+	var unlisted := 0
+	var worst := {}
+	for entry: Dictionary in node.manifest.get("surfaces", []):
+		var n := int(entry.get("index_count", 0)) / 3
+		all_tris += n
+		if entry.get("texture", null) is String and not str(entry["texture"]).is_empty():
+			continue
+		var material := str(entry.get("material", ""))
+		if G2GBspMap.is_water_material(material) \
+				or not G2GStockSubstitutes.for_material(material).is_empty() \
+				or G2GStockSubstitutes.is_listed(material):
+			continue
+		unlisted += n
+		worst[material] = int(worst.get(material, 0)) + n
+	var unlisted_share := float(unlisted) / float(maxi(all_tris, 1))
+	var names := worst.keys()
+	names.sort_custom(func(a: String, b: String) -> bool: return int(worst[a]) > int(worst[b]))
+	_check(unlisted_share < UNLISTED_LIMIT,
+		"and nothing it did not carry is on the grid without a reason",
+		"%.1f%% of triangles unlisted, under %.0f%% wanted; most: %s"
+			% [unlisted_share * 100.0, UNLISTED_LIMIT * 100.0, names.slice(0, 4)])
 	# [b]Water that shipped no texture is drawn as water[/b], see g2g_bsp_water.gdshader:
 	# every such surface in the manifest has the water material on the mesh, and nothing
 	# else does. Armed by skipping the water branch in G2GBspMap._material_for.
