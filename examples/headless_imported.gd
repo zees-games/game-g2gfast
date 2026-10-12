@@ -258,8 +258,8 @@ const DARK_SPAWNS := {
 	"bhop_fury_2": "dark rooms lit by green and cyan neon, as its screenshots are (rendered 2026-10-11)",
 	"surf_kitsune": "black panels with neon lines under a sky named blacksky (map-rendering.md, black on purpose)",
 	"surf_stonework3": "a torch-lit stone hall, as dim as its screenshots (rendered 2026-10-11)",
-	"bhop_monster_jam": "OPEN, not design: darker than its screenshot of the same platform (g2g-dark-spawn-2)",
-	"kz_bhop_badg3s": "OPEN, not design: black walls at checkpoint `1` where its screenshots show lit concrete (g2g-dark-spawn-2)",
+	"bhop_monster_jam": "the 24 spawns hang in a black void 2700 units over the lit platform and a player falls onto it (the map filters fall damage); looking down from there is the map's own first screenshot, spotlight pools and red carpet included, and only its tower, a stock building model, is not drawn (rendered 2026-10-11)",
+	"kz_bhop_badg3s": "checkpoint `1`, where the spawn room sends you, is walled in stock cs_italy/black (reflectivity 0 in the .bsp, black in the source archive) round a lit concrete floor and unlit orange hologram blocks; the lightmap there is lit, and its screenshots are of the later concrete rooms (rendered 2026-10-11)",
 }
 
 ## The maps with `$additive` surfaces the importer must find, asserted both ways (a map

@@ -111,6 +111,10 @@ func _ready() -> void:
 		if not keep_env:
 			found.get_parent().remove_child(found)
 			found.queue_free()
+		# PREVIEW_NOGLOW=1 turns the map's glow off, to tell a surface that is bright from
+		# one the bloom made bright (surf_lt_unicorn's white portal discs, 2026-10-11).
+		elif OS.get_environment("PREVIEW_NOGLOW") != "" and found.environment != null:
+			found.environment.glow_enabled = false
 
 	if not keep_env:
 		var env := WorldEnvironment.new()
