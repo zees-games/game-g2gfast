@@ -357,6 +357,7 @@ func _watch(id: StringName) -> void:
 		hud = G2GHud.new()
 		hud.name = "Hud"
 		add_child(hud)
+		_follow_hud()
 	hud.bind(game, id)
 	# The server's time left, which may well have arrived before there was a HUD: HELLO
 	# and the admit's CLOCK come together, and JOIN is what makes the player watched.
@@ -995,6 +996,16 @@ func _restart_key(now_msec: int = -1) -> int:
 ## The theme the menu just changed to, onto the HUD and the zone editor. The menus restyle
 ## themselves (dot-menu rebuilds them rather than recolouring, for the reason its CLAUDE.md
 ## gives); this is the half that is this game's.
+## dot-ui's pieces on the HUD (the hit marker, the damage numbers) in the menu's theme too,
+## live: the menu sets the theme on the HUD's root (dot-menu's `follow_hud`, by name for a
+## shell older than it). Not scaled by the HUD size setting: this HUD is laid out by the
+## player's own zone editor (`hud_positions`), in the frame's pixels. Whichever of the HUD and
+## the menu comes second calls it.
+func _follow_hud() -> void:
+	if hud != null and menu != null and menu.has_method(&"follow_hud"):
+		menu.call(&"follow_hud", hud, null, false)
+
+
 func apply_theme(palette: DotMenuPalette) -> void:
 	if hud != null:
 		hud.apply_theme(palette)
@@ -1109,6 +1120,7 @@ func _build_overlays() -> void:
 	add_child(menu)
 	var _set := menu.setup()
 	G2GMenuPages.install(menu, self)
+	_follow_hud()
 	# The console after the menu, so DotConsoleKit registers it as one of the menu's
 	# overlays: opening it then stops the runner through `overlays_changed` below.
 	if presentation != null:

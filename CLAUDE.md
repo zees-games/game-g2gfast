@@ -126,6 +126,7 @@ Short forms; the reasoning is in the linked file.
 - Pointer lock only on a click; Escape releases, never toggles. [client](docs/client.md#the-pointer-asked-for-never-told)
 - The rig's layers: set only the one `visible_to_owner` asks for. [client](docs/client.md#the-camera-the-rig-and-the-players-own-body)
 - The menu is dot-menu's and a view of the settings; the shell must be built with dot-menu. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
+- The HUD is in the menu's theme twice over: `G2GHud.apply_theme` (the timer, the lines, outlined in the theme's ink) on `theme_changed`, and dot-menu's `follow_hud(hud, null, false)` for dot-ui's pieces on it (hit marker, damage numbers). Not scaled by `hud_scale`: the zone editor lays this HUD out in frame pixels. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
 - The flashlight is a shader default texture, never a `global uniform`. [client](docs/client.md#the-flashlight-lights-unshaded-surfaces-too)
 - Shake 0, flashes off, effect budget 24; emitters `local_coords`. [client](docs/client.md#presentation-settings-sound-and-effects)
 - Typing suspends the sampler as well as swallowing input; the console is a menu overlay, built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)

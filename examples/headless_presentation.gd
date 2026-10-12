@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 194
+const CHECKS := 195
 
 var _passed := 0
 var _failed := 0
@@ -1519,9 +1519,9 @@ func _test_a_theme_is_every_screen() -> void:
 
 	var s := G2GPresentation.schema()
 	var themes := DotMenuThemes.stock()
-	_check(themes.size() == 6 and s.find(&"ui_theme") != null
+	_check(themes.size() == 7 and s.find(&"ui_theme") != null
 		and StringName(str(s.find(&"ui_theme").default_value)) == &"midnight",
-		"six themes, offered by a setting whose default is the palette the menus always had")
+		"seven themes, offered by a setting whose default is the palette the menus always had")
 	var row := G2GBindings.make().row_for_action(&"g2g_theme_next")
 	_check(not row.is_empty() and str(row["default"]) == "P", "and a key that cycles them, P unless rebound")
 
@@ -1549,6 +1549,9 @@ func _test_a_theme_is_every_screen() -> void:
 	hud.apply_theme(seen[0] if not seen.is_empty() else null)
 	_check(hud.timer_hud.panel_colour == ember.hud_plate and hud.timer_hud.neutral_colour == ember.hud_text,
 		"and the clock's plate and text are the theme's")
+	menu.follow_hud(hud, null, false)
+	_check(hud.hit_marker.colour(&"plate") == ember.hud_plate and hud.damage_numbers.colour(&"text") == ember.hud_text,
+		"and dot-ui's pieces on it (the hit marker, the damage numbers) are in the theme too")
 
 	p.settings.set_value(&"ui_theme", &"midnight")
 	menu.queue_free()

@@ -174,7 +174,9 @@ func _ready() -> void:
 	_status.offset_right = 0.0
 	_status.offset_top = 14.0
 	_status.offset_bottom = 40.0
-	_status.modulate = Color(1.0, 1.0, 1.0, 0.62)
+	# Quieter than the timer, but not see-through: at 0.62 it vanished over a pale sky
+	# (rendered for the dark HUD, 2026-10-12).
+	_status.modulate = Color(1.0, 1.0, 1.0, 0.88)
 
 	# A crosshair, which this game did not have.
 	#
@@ -371,15 +373,15 @@ func apply_theme(palette: DotMenuPalette = null) -> void:
 		timer_hud.behind_colour = p.hud_behind
 		timer_hud.queue_redraw()
 
-	# Text drawn straight over the world gets an outline in the plate's colour: the keys
-	# and the status line have no plate of their own, and a light theme's dark text over a
-	# dark corridor is otherwise not there.
+	# Text drawn straight over the world gets an outline in the theme's ink: the keys and
+	# the status line have no plate of their own, and white text over a pale sky, or a light
+	# theme's dark text over a dark corridor, is otherwise not there.
 	for label in [_keys, _status, _notice, _spectating, _loading_label]:
 		if label == null:
 			continue
 		(label as Label).add_theme_color_override(&"font_color", p.hud_text)
-		(label as Label).add_theme_color_override(&"font_outline_color", Color(p.hud_plate, 0.55))
-		(label as Label).add_theme_constant_override(&"outline_size", 3)
+		(label as Label).add_theme_color_override(&"font_outline_color", p.hud_ink)
+		(label as Label).add_theme_constant_override(&"outline_size", 4)
 
 	if _spectators != null:
 		_spectators.add_theme_stylebox_override(&"panel",
