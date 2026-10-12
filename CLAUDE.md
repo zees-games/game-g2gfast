@@ -4,28 +4,27 @@ A bunny-hop and surf timer server in the competitive-shooter shape: the genre's 
 
 It ships as a signed dot-cloud pack (`game.yml`) into dot-server-deploy's client shell; the imported maps are their own packs from `../g2gfast-maps`. **Movement and the timer are the core and have the most precise rules**: read [movement](docs/movement.md) and [timer](docs/timer.md) before touching either.
 
-Read the family [CLAUDE.md](../../CLAUDE.md) first, and each addon's own `CLAUDE.md` before working in it. **The detail is in [docs/](docs/README.md)**: open the file for what you are touching.
+Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first. **The detail is in [docs/](docs/README.md)**.
 
 ## Read before
 
 | Read | Before |
 | --- | --- |
-| [docs/README.md](docs/README.md) | the index |
 | [docs/movement.md](docs/movement.md) | units, cvars, auto-bhop, styles, spawns, third person, ladders, water, ramps |
 | [docs/timer.md](docs/timer.md) | taint, the ghost, stages and R, records, statistics |
 | [docs/maps.md](docs/maps.md) | a hand-built map, its zones, `export_zones`, the survey |
 | [docs/routes.md](docs/routes.md) | a bonus route, reach, the bots, the replay follower |
-| [docs/imported-maps.md](docs/imported-maps.md) | the importer, a zones file, pits, spawns, collision, mechanics, props |
+| [docs/imported-maps.md](docs/imported-maps.md) | the importer, zones files, pits, spawns, collision, props |
 | [docs/brush-entities.md](docs/brush-entities.md) | handling a brush entity class |
 | [docs/map-rendering.md](docs/map-rendering.md) | lighting, shaders, textures, skies, `bsp_preview` |
 | [docs/map-delivery.md](docs/map-delivery.md) | the catalogue, owners, pack versions, map changes, rotation |
-| [docs/netcode.md](docs/netcode.md) | `game/net/`, the tick rate, interpolation, wire rules, server cost |
-| [docs/client.md](docs/client.md) | camera, avatars, keys, pointer, menus, HUD, sound, chat box |
+| [docs/netcode.md](docs/netcode.md) | `game/net/`, the tick rate, interpolation, wire rules |
+| [docs/client.md](docs/client.md) | camera, avatars, keys, menus, HUD, sound, chat |
 | [docs/services.md](docs/services.md) | admin tools, chat, voice, the vote, the browser |
 | [docs/modes.md](docs/modes.md) | deathmatch, the fire bit, hunters, practice blocks, effects, spectating |
 | [docs/testing.md](docs/testing.md) | adding a check, or believing a green run |
 | [docs/history.md](docs/history.md) | a bug that "cannot be happening" |
-| [docs/gamebanana-ranking.md](docs/gamebanana-ranking.md) | choosing the next maps to import |
+| [docs/gamebanana-ranking.md](docs/gamebanana-ranking.md) | the next maps to import |
 
 ## Layout
 
@@ -129,7 +128,7 @@ Short forms; the reasoning is in the linked file.
 - The menu is dot-menu's and a view of the settings; the shell must be built with dot-menu. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
 - The flashlight is a shader default texture, never a `global uniform`. [client](docs/client.md#the-flashlight-lights-unshaded-surfaces-too)
 - Shake 0, flashes off, effect budget 24; emitters `local_coords`. [client](docs/client.md#presentation-settings-sound-and-effects)
-- Typing suspends the sampler as well as swallowing input; the console does it by being a menu overlay, so it is built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
+- Typing suspends the sampler as well as swallowing input; the console is a menu overlay, built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
 
 **Services and layers**
 
@@ -139,20 +138,9 @@ Short forms; the reasoning is in the linked file.
 - Weapon rows set `authored_tick_rate` to the rate their ticks are written at (128); a new row without it runs at the wrong speed off 128 Hz. [modes](docs/modes.md#deathmatch-is-a-layer)
 - Entity ids from `DotEntityTable`, never derived; the userid is a separate thing. [modes](docs/modes.md#deathmatch-is-a-layer)
 - Hunters have no navigation graph (`require_navigable_spawn` off). Practice blocks spawn frozen, `only_practice` on. [modes](docs/modes.md#a-timer-map-is-a-critical-path-so-the-hunters-have-no-navigation-graph)
-- A hunter brain seeds from `npc.seed` (per spawn), never `npc.instance_id` (an identity whose value moves with every allocation). dot-npc `docs/runtime.md`
+- A hunter brain seeds from `npc.seed`, never `npc.instance_id` (moves with every allocation). dot-npc `docs/runtime.md`
 - Spectating: `force_camera` 0 unless deathmatch; `sv_spec_list` gated on the server. [modes](docs/modes.md#spectating)
 
 ## Not here yet
 
-- **A server browser screen**: deliberately a chat listing (`!servers`, F3); a master server is the family's gap. [services](docs/services.md#the-server-browser-from-the-other-end)
-- **Kicking a client that missed a map change**: deliberate. [map-delivery](docs/map-delivery.md#a-map-change-is-announced-and-then-made)
-- **`max_players: 32` at 128 ticks is not holdable**; snapshot encoding per peer is the cost. [netcode](docs/netcode.md#what-a-full-server-costs)
-- **Ramp stalls** (the duplicate-plane early-out, the crease hang) and **displacement collision** catching a sliding hull: dot-player-controller's and the importer's, open. [movement](docs/movement.md#ramps-and-the-motor)
-- **`!s2`/`!s3` on `bhop_g2g_intro` cannot be continued from**; `surf_g2g_intro` bonus 1's finish only catches a slow rider. Scored tracks: Christian's call. [routes](docs/routes.md#what-a-jump-reaches)
-- **A route file for imported maps beyond bhop_grove**, and a person's recorded run to follow. [routes](docs/routes.md#imported-maps-a-route-written-as-data)
-- **Lifting spawns buried in displacement terrain.** [imported-maps](docs/imported-maps.md#spawns)
-- **Moving doors, brush-entity `angles`.** [imported-maps](docs/imported-maps.md#what-a-maps-brush-entities-do)
-- **The survey's declarations on the maps** rather than in `headless_maps`. [maps](docs/maps.md#every-hand-built-map-is-surveyed)
-- **The online zone editor, end to end.** [client](docs/client.md#zones-drawn-and-the-zone-editor)
-- **The exit leak** in `dedicated`. [netcode](docs/netcode.md#wire-rules)
-- **Replay playback** of runs other than the record. Deliberate for now. [timer](docs/timer.md#the-records-ghost-is-a-player)
+The open gaps, each with its reason, are in [docs/README.md](docs/README.md#not-here-yet).
