@@ -523,6 +523,9 @@ func _build_netcode() -> DotResult:
 	# say, and the rules keep their defaults.
 	if link != null:
 		var _bodies := game.ragdoll_rules.follow_cvars(link)
+		# The server's mp_forceview: this end places its own camera (G2GGame keeps every
+		# camera under it).
+		var _view := game.view_rules.follow_cvars(link)
 	# The map's time left, from the server's vote. The bridge holds it; the HUD draws it.
 	bridge.clock_received.connect(func(_state: Dictionary) -> void:
 		if hud != null:
@@ -921,7 +924,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		show_servers()
 	elif event.is_action_pressed(&"g2g_third_person"):
 		if player.camera != null and not player.camera.toggle():
-			hud.notice("Third person is not allowed on this server.")
+			hud.notice(game.view_rules.refusal() if game.view_rules.refusal() != "" else "Third person is not allowed on this server.")
 	elif event.is_action_pressed(&"g2g_flashlight"):
 		toggle_flashlight()
 	elif event.is_action_pressed(&"g2g_hide_others"):
@@ -1429,7 +1432,10 @@ func _on_rules(new_rules: Dictionary) -> void:
 func _apply_rules_to_player() -> void:
 	if player == null or player.camera == null:
 		return
-	player.camera.allow_third_person = bool(rules.get("thirdperson", true))
+	# RULES' `thirdperson` is an older server's word; mp_forceview, followed through the link,
+	# is a newer one's. Both have to allow it.
+	player.camera.follow_view_rules(game.view_rules)
+	player.camera.allow_third_person = bool(rules.get("thirdperson", true)) and game.view_rules.allows_third()
 	if not player.camera.allow_third_person and player.camera.is_third_person():
 		var _first := player.camera.set_mode(G2GCamera.Mode.FIRST_PERSON)
 

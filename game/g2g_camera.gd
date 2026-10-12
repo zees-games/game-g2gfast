@@ -7,8 +7,9 @@ const G2GUnits := preload("g2g_units.gd")
 ##
 ## [b]Two cameras, one active, and the switch is a cull mask.[/b] The first-person
 ## camera sits at the eye and culls the local rig's layer so the player does not see
-## the inside of their own head; the third-person camera sits on a [SpringArm3D]
-## behind and above and draws everything. Both are always present, so switching is a
+## the inside of their own head; the third-person camera sits on a dot-core
+## [DotCameraBoom] (it was a SpringArm3D, which cast a ray and snapped to its hit; the boom
+## sweeps a sphere and eases in ahead of a wall) behind and above and draws everything. Both are always present, so switching is a
 ## `current` flip and not a rebuild — which matters because a player toggles it
 ## mid-run and a rebuilt camera would drop a frame at the worst moment.
 ##
@@ -38,11 +39,18 @@ enum Mode {
 ## Whether the third-person view is permitted at all. Server-decided.
 var allow_third_person: bool = true
 
+## Whether first person is refused: the server's `mp_forceview 2`.
+var forced_third: bool = false
+
+## [code]() -> Array[/code] of other players' bodies, for the fades on both cameras: a body
+## at the lens is hidden, and in third person one between the camera and the player fades.
+var others_fn: Callable = Callable()
+
 var mode: Mode = Mode.FIRST_PERSON
 
 var first: Camera3D = null
 var third: Camera3D = null
-var arm: SpringArm3D = null
+var arm: DotCameraBoom = null
 
 ## The familiar fov_desired. Applied to both cameras through the conversion.
 var fov_desired: float = 90.0:
@@ -60,8 +68,12 @@ func _ready() -> void:
 	# Everything except the local rig's layer.
 	first.cull_mask = ~(1 << (G2GRig.LAYER_LOCAL_BODY - 1)) & 0xFFFFF
 	add_child(first)
+	var near_fade := DotCameraFade.new()
+	near_fade.name = "Fade"
+	near_fade.bodies_fn = _others
+	first.add_child(near_fade)
 
-	arm = SpringArm3D.new()
+	arm = DotCameraBoom.new()
 	arm.name = "Arm"
 	arm.spring_length = third_person_distance
 	arm.margin = 0.15
@@ -75,6 +87,11 @@ func _ready() -> void:
 	third.name = "ThirdPerson"
 	third.cull_mask = 0xFFFFF
 	arm.add_child(third)
+	var line_fade := DotCameraFade.new()
+	line_fade.name = "Fade"
+	line_fade.bodies_fn = _others
+	line_fade.focus = self
+	third.add_child(line_fade)
 
 	_apply_fov()
 	set_mode(mode)
@@ -94,6 +111,8 @@ func _apply_fov() -> void:
 func set_mode(new_mode: Mode) -> bool:
 	if new_mode == Mode.THIRD_PERSON and not allow_third_person:
 		return false
+	if new_mode == Mode.FIRST_PERSON and forced_third:
+		return false
 
 	mode = new_mode
 
@@ -105,6 +124,26 @@ func set_mode(new_mode: Mode) -> bool:
 	mode_changed.emit(mode)
 
 	return true
+
+
+func _others() -> Array:
+	return others_fn.call() if others_fn.is_valid() else []
+
+
+## Takes the server's `mp_forceview` ([DotPlayerViewRules]): which views are allowed, and
+## the one the camera has to be in now.
+func follow_view_rules(rules: DotPlayerViewRules) -> void:
+	if rules == null:
+		return
+	allow_third_person = rules.allows_third()
+	forced_third = not rules.allows_first()
+	var wanted := rules.resolve(mode == Mode.THIRD_PERSON)
+	mode = Mode.THIRD_PERSON if wanted else Mode.FIRST_PERSON
+	if first != null:
+		first.current = mode == Mode.FIRST_PERSON
+	if third != null:
+		third.current = mode == Mode.THIRD_PERSON
+	mode_changed.emit(mode)
 
 
 func toggle() -> bool:

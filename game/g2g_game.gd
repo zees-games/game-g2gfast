@@ -245,9 +245,27 @@ var _accumulator: float = 0.0
 var external_tick: bool = false
 
 
+## dot-player-controller's `mp_forceview`: whether a player may switch to third person
+## (0), or is held in first (1) or third (2). `sv_allow_thirdperson`, this game's own older
+## switch, writes it (0 is first only); bound REPLICATED by the module and followed by a
+## client through its link, on top of RULES' `thirdperson` for an older server.
+var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
+
+
+## Every camera under the view rules now, and the config's switch kept in step.
+func _on_view_rules_changed() -> void:
+	config.allow_thirdperson = view_rules.allows_third()
+	for id in players:
+		var p: G2GPlayer = players[id]
+		if p.camera != null:
+			p.camera.follow_view_rules(view_rules)
+
+
 func _ready() -> void:
 	if config == null:
 		config = G2GConfig.new()
+	if not view_rules.changed.is_connected(_on_view_rules_changed):
+		view_rules.changed.connect(_on_view_rules_changed)
 
 	var loaded := config.load_layered(config_file)
 
@@ -995,7 +1013,14 @@ func add_player(
 
 	if player.camera != null:
 		player.camera.fov_desired = config.fov_desired
-		player.camera.allow_third_person = config.allow_thirdperson
+		player.camera.others_fn = func() -> Array:
+			var out: Array = []
+			for other_id in players:
+				if players[other_id] != player and is_instance_valid(players[other_id]):
+					out.append(players[other_id])
+			return out
+		player.camera.allow_third_person = config.allow_thirdperson and view_rules.allows_third()
+		player.camera.forced_third = not view_rules.allows_first()
 		player.camera.set_mode(
 			G2GCamera.Mode.THIRD_PERSON if config.default_thirdperson and config.allow_thirdperson
 			else G2GCamera.Mode.FIRST_PERSON

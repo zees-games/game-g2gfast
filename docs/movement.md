@@ -48,7 +48,9 @@ Everything in this game exists to make a run comparable with one somebody else s
 
 ## Third person is cosmetic, and stays `G2GCamera`'s
 
-`G2GCamera` flips between two cameras over **one motor**, so a run set in third person is comparable with one set in first. game-playground runs dot-player-controller's third-person controller over a `DotPlayerControllerSwitch`; **this game deliberately does not.** `DotTpsController` is a different motor (camera-relative input, its own acceleration, coyote time, a jump buffer), and a player who could switch to it mid-run would be setting a time on movement nobody else was using. `sv_allow_thirdperson 0` is server-side because third person sees over ledges first person cannot, and it puts anybody already in it back.
+`G2GCamera` flips between two cameras over **one motor**, so a run set in third person is comparable with one set in first. game-playground runs dot-player-controller's third-person controller over a `DotPlayerControllerSwitch`; **this game deliberately does not.** `DotTpsController` is a different motor (camera-relative input, its own acceleration, coyote time, a jump buffer), and a player who could switch to it mid-run would be setting a time on movement nobody else was using. `sv_allow_thirdperson 0` is server-side because third person sees over ledges first person cannot, and it puts anybody already in it back. It now writes the family's `mp_forceview` (dot-player-controller's `DotPlayerViewRules`: 0 the player's choice, 1 first person only, 2 third person only), which `G2GGame` keeps every camera under (`G2GCamera.follow_view_rules`) and which is bound REPLICATED and followed through the link, on top of RULES' `thirdperson` for an older server.
+
+The third-person camera hangs on dot-core's `DotCameraBoom` (it was a `SpringArm3D`, which cast a ray and snapped); a `DotCameraFade` on each camera is handed the other players, hiding one at the lens and fading one between the third-person camera and you. `tools/camera_check.gd` flies the camera round the start map's walls (armed) and checks the rule both ways; under xvfb it draws both views.
 
 ## Ladders and water
 

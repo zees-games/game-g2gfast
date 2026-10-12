@@ -62,7 +62,7 @@ Short forms; the reasoning is in the linked file.
 - A movement change abandons every run; styles' `auto_hop`/`easy_bhop` are `INHERIT` (except `prebhop`); validate a cvar on a copy before writing it. [movement](docs/movement.md#auto-bhop-is-the-servers-and-the-styles-defer-to-it)
 - A bot walks before it hops: a held jump from standstill creeps at 30 u/s, faithfully. [movement](docs/movement.md#a-held-jump-from-a-standstill-creeps-at-30-us-and-that-is-faithful)
 - A movement effect is refused during a ranked run, classified by what the definition changes, never by id. [movement](docs/movement.md#a-movement-effect-is-a-style-and-a-style-you-did-not-choose-is-a-record-you-did-not-set)
-- Third person is `G2GCamera` over one motor, never `DotTpsController`. [movement](docs/movement.md#third-person-is-cosmetic-and-stays-g2gcameras)
+- Third person is `G2GCamera` over one motor, never `DotTpsController`; its arm is dot-core's `DotCameraBoom` and `mp_forceview` decides it (`sv_allow_thirdperson` writes it); `tools/camera_check.gd` after touching either. [movement](docs/movement.md#third-person-is-cosmetic-and-stays-g2gcameras)
 - A ladder wins over water; the ladder mode never calls `categorise_ground`. [movement](docs/movement.md#ladders-and-water)
 
 **Timer**
