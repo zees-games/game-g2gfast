@@ -421,14 +421,29 @@ def bhop_blocks(bsp, origin_of, destinations, inert_filters):
     return out
 
 
-def assignable_names(bsp, key="targetname"):
+# Entities a player has to press or shoot to fire. Nothing in this game presses or shoots
+# a map's button (it runs none of a map's outputs), so a name only a button gives is a
+# name no player here ever has.
+BUTTON_CLASSES = ("func_button", "func_rot_button", "momentary_rot_button")
+
+
+def assignable_names(bsp, key="targetname", buttons=True):
     """Every name (or with [param key] `classname`, every class) the map's own logic can
     give a player: `AddOutput <key> X` in any output, lower-cased. A player has no name of
     its own and is class `player`, so with that this is everything a filter can ever see
-    on one."""
+    on one.
+
+    With [param buttons] false, a button's outputs are not read (see `BUTTON_CLASSES`):
+    bhop_badges gives the name `sideboost` for 0.3 s to whoever SHOOTS one of 23 buttons,
+    and a `trigger_push` behind that name at each section's start shoves the shooter
+    sideways over a gap. Read as live, the push shoved everybody, and section 8's start
+    (`8.8`) pushed every arrival into the pit that sends to it, for ever (headless_mechanics:
+    "pit destination loops", 2026-10-11)."""
     names = set()
     rx = re.compile(key + r"[\s:]+([^,\s\x1b]+)", re.IGNORECASE)
     for e in bsp.entities:
+        if not buttons and e.get("classname", "") in BUTTON_CLASSES:
+            continue
         for k, v in e.items():
             if k in ("targetname", "classname", "model", "origin", "filtername", "filterclass"):
                 continue
@@ -446,8 +461,9 @@ def inert_filters(bsp, names_too=True):
     - with [param names_too], a non-negated `filter_activator_name` whose name nothing in
       the map ever assigns (bhop_badges_mini's `upboost_filter`: three boosters behind a
       name no output sets, which in Source push nobody, and imported unfiltered launched a
-      player who landed beside one up a shaft for ever). An empty name passes everybody
-      (a player has none), so it is never inert.
+      player who landed beside one up a shaft for ever), or only a button does (bhop_badges'
+      `sideboost_filter`, see `assignable_names`). An empty name passes everybody (a player
+      has none), so it is never inert.
 
     `bsp_import.dead_teleports` asks the class half only: a teleport behind a dead name is
     the map's own mistake as often as its intent (surf_summit's sixteen `filter_fail` pits),
@@ -473,7 +489,7 @@ def inert_filters(bsp, names_too=True):
             if want == "":
                 continue
             if names is None:
-                names = assignable_names(bsp)
+                names = assignable_names(bsp, buttons=False)
             if want not in names:
                 dead.add(e.get("targetname", "").strip().lower())
     dead.discard("")
