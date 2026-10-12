@@ -132,8 +132,17 @@ func move(state: DotFpsState, delta: float) -> void:
 		"on_floor": state.is_grounded(),
 		"vertical": v.y,
 		"crouched": _crouch > 0.5,
+		# The view's pitch: the upper body and the head follow it, so anybody watching reads
+		# where this player is looking.
+		"aim": deg_to_rad(state.pitch),
 	})
 	person.animate(Vector2(v.x, v.z).length(), delta)
+	# The hat rides the person's crown (a mount on the head bone), so it goes down with a
+	# crouch and nods with the head; it stood still at standing height before, over a
+	# crouched player's head.
+	var crown := person.attachment(&"hat")
+	if crown != null and crown.is_inside_tree() and hat_mount != null:
+		hat_mount.global_transform = crown.global_transform * Transform3D(Basis.IDENTITY, Vector3(0.0, -HAT_DROP, 0.0))
 
 
 ## Records the crouch for the person, who crouches with its clip ([method move]).

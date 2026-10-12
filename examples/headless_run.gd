@@ -1430,6 +1430,13 @@ func _test_ridge_bonus() -> void:
 ## surf bonus is driven here, and since `[stages-slabs-1]` asserted: its slabs stand at
 ## `BONUS_RAMP_PITCH` (50°), past the 45.57° a player can stand on, so a bot that holds into
 ## the west face rides it to the finish (at 45 it landed on the slope and stopped).
+##
+## [b]Still timing-dependent, and the cause is not here[/b] (2026-10-12): the rider hangs in
+## the crease between the slabs at x 6144 with 11.5 m/s along it and its position frozen
+## (dot-player-controller's surf-crease hang), and when it lets go depends on the tick the ride
+## starts on. Started 0 to 100 physics frames later it finishes in 1243 to 1288 ticks; 300
+## later, it never lets go. In the full run that start tick moves with the machine's load, which
+## is the flake. Queue item `g2gfast-surf-crease-hang-1`.
 ## How far west of the crease between the stages bonus's slabs the descent's bot lets go of
 ## the face, in units.
 const CREASE_RELEASE := 48.0
@@ -1467,6 +1474,11 @@ func _test_stages_descent() -> void:
 	var surf := DotTimerTrack.of_bonus(1)
 	_check(game.timers.set_player_track(&"bot", surf), "a player can switch to the surf bonus")
 	game.spawn_player(&"bot")
+	# A command of nothing for the tick after the spawn. Without it the controller repeats the
+	# last command it was given (a starved tick does), which is the previous section's: in the
+	# full run the bot began the ride turned to -81.6 degrees and already moving, so where it
+	# went depended on which sections ran before this one and how they ended.
+	bot.controller.apply_command(DotFpsCommand.new())
 	await get_tree().physics_frame
 
 	var reset: Array[bool] = [false]
