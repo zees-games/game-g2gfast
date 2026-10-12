@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 189
+const CHECKS := 194
 
 var _passed := 0
 var _failed := 0
@@ -1486,6 +1486,27 @@ func _test_help_lists_what_it_is_told() -> void:
 	await get_tree().process_frame
 	shown = texts.call()
 	_check(not shown.has("!spec"), "offline there is no server, so no commands are offered")
+	menu.help.close()
+
+	# The family's rule since the first play test: H is help, nothing else is on H, the help
+	# says what the game is, and the Escape menu has Help & commands and Leave.
+	_check(p.bindings.key_for(&"g2g_help") == "H" and p.bindings.defaults_on("H").size() == 1,
+		"help is on H, and nothing else in the table is",
+		str(p.bindings.defaults_on("H").map(func(r: Dictionary) -> String: return str(r["label"]))))
+	var h := InputEventKey.new()
+	h.physical_keycode = KEY_H
+	h.keycode = KEY_H
+	h.pressed = true
+	_check(menu.handle_event(h) and menu.help.is_open(), "H opens the help screen")
+	await get_tree().process_frame
+	_check(menu.help.about != "" and texts.call().has("How to play g2g fast") and texts.call().has("RUNS"),
+		"which says what the game is before the keys")
+	menu.help.close()
+	menu.open()
+	var leave := menu.screen.find_child("Action_leave", true, false) as Button
+	_check(menu.screen.find_child("Action_help", true, false) != null, "the Escape menu has Help & commands")
+	_check(leave != null and leave.visible, "and Leave")
+	menu.close()
 
 	menu.queue_free()
 	host.queue_free()

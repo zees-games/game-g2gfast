@@ -132,6 +132,24 @@ static func install(menu: DotMenu, client: Node) -> void:
 		sensitivity.description = "The genre's own number: 0.022 degrees per count times this. Bring yours with you."
 
 	menu.config.page_order = PackedStringArray(PAGE_ORDER)
+	fill_help(menu.help, client, key_for)
+
+
+## The help screen's goal, styles and the timer's rules; the keys come from [G2GBindings].
+## The styles are read from the client's timer, so a style a server adds is on it as well.
+static func fill_help(help: DotMenuHelp, client: Node, key_for: Callable) -> void:
+	if help == null:
+		return
+	help.title_text = "How to play g2g fast"
+	help.about = "Get from the start zone to the end zone as fast as you can. Hop by jumping as you land and steering with the mouse while you hold a strafe key; surf by holding into a ramp. The timer starts when you leave the start and stops in the end zone."
+	help.add_text("Runs", "%s restarts your run. Stages and bonuses have zones of their own, and every stage is timed against your best and the record. %s saves a checkpoint and %s goes back to it; a run that used one is practice, not a record." % [
+		key_for.call(&"g2g_restart"), key_for.call(&"g2g_checkpoint_save"), key_for.call(&"g2g_checkpoint_load")])
+	var names: Array = []
+	if client != null and client.has_method(&"menu_styles"):
+		for style in (client.call(&"menu_styles") as Array):
+			names.append(str(style["name"]))
+	if not names.is_empty():
+		help.add_text("Styles", "%s. A style changes the rules of a run (which keys count, the gravity, a hop before the start) and keeps its own records; %s picks the next one." % [", ".join(names), key_for.call(&"g2g_style_next")])
 
 
 ## The style list, as an option button that asks the client for the style it picks. Built
