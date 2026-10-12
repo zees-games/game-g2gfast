@@ -14,7 +14,7 @@
 | `headless_mechanics` | What imported brush entities do: pit destinations, pits keeping the run, sinking blocks, pushes, boosters, water, ladders. Samples at most twelve per map per kind. |
 | `headless_presentation` | dot-menu with this game's pages against a fake client, settings migrations, the scoreboard columns, the layer mask, the blind overlay, the beacon's rate, gate effects. |
 | `headless_client` | The real offline `G2GClient`: typing does not move the runner (it holds W with the chat box open), the double-tap R, the spectator's drawn camera. |
-| `headless_feel` | The real client over a real lossy socket at several display rates (see [netcode.md](netcode.md#what-a-connected-player-sees)); `-- --ws` for a browser's link. Prints measurements; asserts the view and the correction fixes. |
+| `headless_feel` | The real client over a real lossy socket at several display rates (see [netcode.md](netcode.md#what-a-connected-player-sees)); `-- --ws` for a browser's link. Prints measurements; asserts the view, the correction and the clock-slip fixes (the slip against a control). |
 | `headless_stack` | The player stack's joins. |
 | `jitter_probe` | **Not in `SUITES`**; run it by hand after touching rendering or the tick rate. The only check that samples a rendered frame: four configurations, fails unless exactly the shipped one is smooth. |
 

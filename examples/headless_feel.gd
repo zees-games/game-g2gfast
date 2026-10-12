@@ -108,6 +108,12 @@ var _physics_frames_since_render := 0
 ## Called with the frame's delta after everything has drawn, while a section records.
 var _frame_hook := Callable()
 
+## Ticks to add to the client clock's accumulator before its next physics pass (-1 runs
+## none, +1 two), and whether the clock's slip is forgotten after each pass (the control).
+## See [method _test_a_clock_slip].
+var _force_slip := 0
+var _forget_slip := false
+
 
 class Early extends Node:
 	var probe = null
@@ -161,6 +167,7 @@ func _run() -> void:
 		_driving = true
 		await _test_key_to_motion()
 		await _test_a_correction_is_eased()
+		await _test_a_clock_slip()
 		for window in (WS_WINDOWS if _ws else WINDOWS):
 			if _only != "" and not str(window[0]).contains(_only):
 				continue
@@ -171,12 +178,12 @@ func _run() -> void:
 
 	# The total the section counter cannot be: a script error aborts the rest of a section
 	# after it announced itself. Boot 4 (+1 for the proxy), connect 4, the key 1, the
-	# correction 3, and 2 a window that ran.
+	# correction 3, the slip 2, and 2 a window that ran.
 	var windows := 0
 	for window in (WS_WINDOWS if _ws else WINDOWS):
 		if _only == "" or str(window[0]).contains(_only):
 			windows += 1
-	var expected := (5 if _ws else 4) + 4 + 1 + 3 + 2 * windows
+	var expected := (5 if _ws else 4) + 4 + 1 + 3 + 2 + 2 * windows
 	if _completed == _entered and _entered > 2:
 		_check(_passed + _failed + 1 == expected + 1, "every check ran (%d of %d)" % [_passed + _failed, expected])
 
@@ -402,10 +409,20 @@ func _early_physics() -> void:
 		move.yaw = wrapf(float(_game.current_tick()) * BOT_TURN, -180.0, 180.0)
 		_bot.controller.apply_command(move)
 	if _client != null and _client.net != null:
+		# A forced slip: a tick's time taken from or given to the clock's accumulator, so
+		# this physics frame runs none or two, exactly as the drift does now and then.
+		if _force_slip != 0:
+			_client.net.clock.set(&"_accumulator",
+				float(_client.net.clock.get(&"_accumulator")) + float(_force_slip) * _client.net.clock.tick_duration())
+			_force_slip = 0
 		_tick_before = _client.net.clock.tick
 
 
 func _late_physics() -> void:
+	# The control: the slip forgotten as soon as the clock counts it, which is the engine's
+	# fraction alone -- how every game but arena drew its own player before render_alpha.
+	if _forget_slip and _client != null and _client.net != null:
+		_client.net.clock.set(&"_slip", 0.0)
 	if not _driving:
 		return
 	var server_tick: int = _game.current_tick()
@@ -528,8 +545,15 @@ func _sample_remote() -> void:
 	if seen == null:
 		return
 	var net: DotNetManager = _client.net
-	var render_tick := float(net.clock.received_tick()) \
-		+ clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0) \
+	# What `interpolate_frame` draws at: the clock's render alpha (the engine's fraction
+	# plus what is left of a slip) and the receive timeline's re-anchoring not followed
+	# yet. Recomputed with the engine's fraction alone, this measured the drawing against
+	# a render time a slip away from the one it was drawn at. By name, for an older shell.
+	var alpha := clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)
+	if net.clock.has_method(&"render_alpha"):
+		alpha = float(net.clock.call(&"render_alpha"))
+	var slip := float(net.clock.call(&"receive_slip")) if net.clock.has_method(&"receive_slip") else 0.0
+	var render_tick := float(net.clock.received_tick()) + alpha + slip \
 		- net.interpolator.delay_ticks()
 	var last_render: Variant = _w.get("last_render")
 	if last_render != null:
@@ -672,6 +696,82 @@ func _test_a_correction_is_eased() -> void:
 	_check(settled < 0.05,
 		"and the prediction agrees with the server again, tick for tick", "%.3f m apart" % settled)
 	_done()
+
+
+## The clock is made to run a physics frame with no tick, and later one with two, as its
+## drift does now and then while it settles on the server (dot-net's `MAX_DRIFT_RATE`, and
+## the input lead's steering at up to 12%), and the eye is watched frame by frame while the
+## player runs. First the control, with the clock's slip forgotten as soon as it is counted
+## (the engine's fraction alone, how the eye was drawn before `G2GClient._fold_clock`), then
+## as the client draws it. A stalled frame moved under half of what its time asked, a
+## doubled one over one and a half.
+func _test_a_clock_slip() -> void:
+	_section("a physics frame with no tick, or two, is drawn through, not stalled or doubled")
+	_set_link(WINDOWS[1])
+	Engine.max_fps = 144
+	Input.action_press(&"dot_fps_forward")
+	_turning = false
+	await _until(func() -> bool: return false, 1.0)
+
+	var control := await _slip_frames(true)
+	var drawn := await _slip_frames(false)
+	Input.action_release(&"dot_fps_forward")
+	print("    12 forced slips each: control %d stalled, %d doubled, worst %.1f cm off; drawn %d stalled, %d doubled, worst %.1f cm off" % [
+		control[0], control[1], control[2] * 100.0, drawn[0], drawn[1], drawn[2] * 100.0])
+	_check(control[0] + control[1] >= 6,
+		"the control (the engine's fraction alone) stalls or doubles the eye after the slips",
+		"%d stalled, %d doubled" % [control[0], control[1]])
+	_check(drawn[0] == 0 and drawn[1] == 0 and drawn[2] < 0.02,
+		"drawn at the clock's render alpha, no frame stalls, doubles, or lands 2 cm off its motion",
+		"%d stalled, %d doubled, worst %.1f cm" % [drawn[0], drawn[1], drawn[2] * 100.0])
+	_done()
+
+
+## Twelve forced slips, alternately none and two ticks, 24 frames apart; what the eye did on
+## the frames after each: [stalled, doubled, worst metres off steady motion].
+func _slip_frames(forget: bool) -> Array:
+	_forget_slip = forget
+	var eyes: Array[Vector3] = []
+	var velocities: Array[Vector3] = []
+	var deltas: Array[float] = []
+	_frame_hook = func(delta: float) -> void:
+		eyes.append(_client.player.camera.active().global_position)
+		velocities.append(_client.player.controller.state.velocity)
+		deltas.append(delta)
+	var forced_at: Array[int] = []
+	for i in range(12):
+		for _f in range(24):
+			await get_tree().process_frame
+		forced_at.append(eyes.size())
+		_force_slip = -1 if i % 2 == 0 else 1
+	for _f in range(24):
+		await get_tree().process_frame
+	_frame_hook = Callable()
+	_forget_slip = false
+
+	var stalled := 0
+	var doubled := 0
+	var worst := 0.0
+	var corrections := int(_client.net.predictor.get("_corrections_applied"))
+	for at in forced_at:
+		for i in range(at, mini(at + 20, eyes.size())):
+			if i == 0:
+				continue
+			var step := eyes[i] - eyes[i - 1]
+			var flat := Vector3(velocities[i].x, 0.0, velocities[i].z)
+			var speed := flat.length()
+			if speed < 1.0 or step.length() > 0.5:
+				continue
+			var expected := speed * deltas[i]
+			var along := Vector3(step.x, 0.0, step.z).dot(flat / speed)
+			if along < expected * 0.5:
+				stalled += 1
+			elif along > expected * 1.5:
+				doubled += 1
+			worst = maxf(worst, (Vector3(step.x, 0.0, step.z) - flat / speed * expected).length())
+	if _verbose:
+		print("      %s: %d corrections so far" % ["control" if forget else "drawn", corrections])
+	return [stalled, doubled, worst]
 
 
 func _play_window(window: Array) -> void:

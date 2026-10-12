@@ -606,6 +606,7 @@ func _process(delta: float) -> void:
 
 	_fold_look()
 	_fold_correction()
+	_fold_clock()
 
 	for id in (game.players if game != null else {}):
 		(game.players[id] as G2GPlayer).present(delta)
@@ -689,6 +690,23 @@ func _fold_correction() -> void:
 	var mine := bridge.behaviour_for(bridge.local_player_id)
 	if mine != null and mine.identity != null and mine.player == player:
 		player.drawn_offset = net.predictor.visual_offset(mine.identity.net_id)
+
+
+## Hands the local player's controller the clock its ticks are counted on, so its
+## `render_state` draws at `DotNetClock.render_alpha` (dot-net) rather than the engine's
+## physics fraction: the clock stretches and shrinks its ticks while it settles on the
+## server, a physics frame now and then runs no tick or two, and drawn at the engine's
+## fraction the eye stood still on one frame and moved double on the next.
+## `headless_feel`'s *a clock slip* section measures it beside its control.
+##
+## By name both ways: `set` on a shell's older `DotFpsController` is a no-op, and the
+## controller asks the clock for `render_alpha` by name, so a shell older than either draws
+## exactly as before. Null offline, where every physics frame is one tick.
+func _fold_clock() -> void:
+	if player == null or player.controller == null:
+		return
+	var connected := not _offline and net != null and net.is_running() and net.clock != null
+	player.controller.set(&"render_clock", net.clock if connected else null)
 
 
 ## Where a spectator looks.
