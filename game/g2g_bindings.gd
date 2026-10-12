@@ -41,7 +41,9 @@ const ROWS: Array[Dictionary] = [
 	{"action": &"g2g_checkpoint_save", "setting": &"bind_checkpoint_save", "label": "Save checkpoint", "default": "C", "group": "Running"},
 	{"action": &"g2g_checkpoint_load", "setting": &"bind_checkpoint_load", "label": "Go to checkpoint", "default": "V", "group": "Running"},
 	{"action": &"g2g_style_next", "setting": &"bind_style_next", "label": "Next style", "default": "N", "group": "Running"},
-	{"action": &"g2g_map_next", "setting": &"bind_map_next", "label": "Map list (offline, or an admin)", "default": "M", "group": "Running"},
+	# M is dot-menu's map menu (`dot_menu_maps`), still stored as `bind_map_next` so a key a
+	# player moved stays moved.
+	{"action": &"dot_menu_maps", "setting": &"bind_map_next", "label": "Change map", "default": "M", "group": "Running"},
 	{"action": &"g2g_zones", "setting": &"bind_zones", "label": "Zone editor (offline, or an admin)", "default": "Z", "group": "Running"},
 
 	{"action": &"g2g_flashlight", "setting": &"bind_flashlight", "label": "Flashlight", "default": "F", "group": "View"},

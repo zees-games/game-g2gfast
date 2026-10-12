@@ -495,7 +495,6 @@ func _build_netcode() -> DotResult:
 		spectator_lists[target] = names
 		_show_spectator_list()
 	)
-	bridge.maps_received.connect(func(rows: Array) -> void: _open_map_menu(rows, "this server"))
 	bridge.map_refused.connect(_on_map_refused)
 	bridge.finish_received.connect(func(pid: int, time: float, rank: int) -> void:
 		if hud != null and pid == bridge.local_player_id:
@@ -933,16 +932,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		menu_choose_style(styles[_style_index].id)
 	elif event.is_action_pressed(&"g2g_restart"):
 		_restart_key()
-	# [b]Offline only.[/b] Online this changed THIS client's world and nobody else's:
-	# the server went on simulating the player on its own map, and every tick's
-	# correction put them back in a place their screen no longer had. A client's map
-	# is the server's to announce; `!rtv` is how a player asks for another.
-	#
-	# It used to change to the rotation's next map; it is the map LIST now, every map the
-	# game has, and online it is the server's list, which the server only sends to a
-	# player holding the changemap flag (it says no to anybody else, with !rtv).
-	elif event.is_action_pressed(&"g2g_map_next"):
-		open_map_list()
 	elif event.is_action_pressed(&"g2g_zones"):
 		if zone_editor != null:
 			zone_editor.toggle()
@@ -1103,7 +1092,6 @@ func _build_overlays() -> void:
 	menu.config = config
 	menu.help_action = &"g2g_help"
 	menu.theme_action = &"g2g_theme_next"
-	menu.picker_action = &"g2g_map_next"
 	menu.scoreboard_action = &"g2g_scoreboard"
 	# The console has the keyboard while it is open, and so does the zone editor's Escape.
 	menu.busy = func() -> bool:
@@ -1124,7 +1112,15 @@ func _build_overlays() -> void:
 	menu.action_requested.connect(func(id: StringName) -> void:
 		if id == &"leave":
 			_leave())
-	menu.picked.connect(_on_map_chosen)
+	# M: the map list (dot-menu's map menu). Solo a choice changes the map here; connected the
+	# server decides, by the owner's `sv_map_menu_flag`, and anybody without it gets a vote
+	# (dot-vote's map menu, wired in [G2GModule]). By name, so a client shell older than the
+	# map menu still runs the game without it.
+	if menu.has_method(&"use_maps"):
+		var maps: Variant = menu.call(&"use_maps", func() -> Array: return G2GGame.menu_rows(game.map_rows()) if game != null else [],
+			change_from_menu)
+		if maps is Object:
+			(maps as Object).set(&"title", "Change map")
 	menu.layout_editor.saved.connect(func(text: String) -> void:
 		if presentation != null and presentation.settings != null:
 			var _saved := presentation.settings.set_value(&"hud_positions", text)
@@ -1216,52 +1212,21 @@ func overlay_open() -> bool:
 	return menu != null and menu.any_open()
 
 
-## M: the map list. Offline it is this game's catalogue; online it is asked of the server,
-## which answers only an admin, and [method _open_map_menu] opens it when it arrives.
+## M, as the key does: dot-menu's map menu. Solo it is this game's catalogue (every map, not
+## the rotation); connected the server's list, which a player without the owner's flag sees as
+## a vote. For the menu screenshots.
 func open_map_list() -> void:
-	if _offline:
-		_open_map_menu(game.map_rows(), "offline")
-	elif bridge != null:
-		bridge.ask_maps()
+	if menu != null and menu.has_method(&"open_maps"):
+		menu.call(&"open_maps")
 
 
-func _open_map_menu(rows: Array, where: String) -> void:
-	if menu == null:
-		return
-	# Every map, not the rotation: an operator keeps maps installed that the rotation does
-	# not play, and "which maps does this box have" is a different question from "which
-	# come round on their own". A combat map is one for the deathmatch layer.
-	var items: Array = []
-	var out_of := 0
-	for m: Dictionary in rows:
-		var tags: Array = []
-		var current := bool(m.get("current", false))
-		var rotating := bool(m.get("rotation", true))
-		if current:
-			tags.append("playing")
-		if str(m.get("kind", "")) == "arena":
-			tags.append("combat")
-		if not rotating:
-			tags.append("not in rotation")
-			out_of += 1
-		if int(m.get("tier", 0)) > 0:
-			tags.append("tier %d" % int(m["tier"]))
-		items.append({"id": m.get("id", ""), "name": m.get("name", m.get("id", "?")), "tags": tags,
-			"current": current, "warn": not rotating})
-	menu.picker.noun = "maps"
-	menu.picker.instructions = "1–7 or click to change to it. 8 and 9 turn the page. 0, %s or Esc closes." % \
-		menu.bindings.key_for(&"g2g_map_next")
-	menu.picker.footer_extra = func(_all: Array) -> String: return "%d not in rotation" % out_of
-	menu.open_picker(items, "Change map — %s" % where)
-
-
-func _on_map_chosen(id: StringName) -> void:
-	if _offline:
-		var changed: DotResult = await game.change_map(id)
-		if not changed.ok and hud != null:
-			hud.notice(changed.error.message)
-	elif bridge != null:
-		bridge.ask_maps(String(id))
+## Solo: [param id] now, fetched first when it is delivered content. Connected a client never
+## changes its own world (the server would correct it back every tick); the server's map menu
+## decides there.
+func change_from_menu(id: StringName) -> DotResult:
+	if not _offline:
+		return DotResult.fail(DotError.CODE_STATE, "The server changes the map.")
+	return await game.change_map(id)
 
 
 func open_menu(page: StringName = &"") -> void:

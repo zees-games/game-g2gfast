@@ -595,6 +595,14 @@ func _add_server_commands() -> void:
 		# operator's four, on the one director. See `G2GVote.install_commands`.
 		var commanded := vote.install_commands(self)
 		DotLog.result(CHANNEL, "the vote's commands", commanded)
+		# The map menu (M), dot-vote's: every map this server has, as the solo list shows them,
+		# changed now through the game's own change (which fetches delivered content first) for
+		# a player holding the owner's `sv_map_menu_flag`; anybody else gets a vote. Read by
+		# name, because a server on a dot-vote older than the menu has no `map_menu`.
+		var menu_half: Variant = vote.commands.get(&"map_menu") if vote.commands != null else null
+		if menu_half is Object:
+			(menu_half as Object).set(&"change_fn", game.change_map)
+			(menu_half as Object).set(&"rows_fn", func(_rows: Array) -> Array: return G2GGame.menu_rows(game.map_rows()))
 		add_command("g2g_vote", _cmd_open_vote, "Open a vote now", DotAdminFlags.VOTE)
 	else:
 		# No ballot, so `rtv` is the map session's own tally — the one rock-the-vote this
@@ -931,10 +939,16 @@ func _build_netcode() -> DotResult:
 		return attached
 
 	bridge.commands_fn = chat_commands
-	# The M screen asks the same question `g2g_map` does: the changemap flag.
+	# The older client's map list (its own wire, before dot-menu's map menu) asks the same
+	# question the map menu does: the flag the owner named in `sv_map_menu_flag` (staff by
+	# default), or `changemap` on a server whose dot-vote has no such cvar.
 	bridge.may_change_map_fn = func(session_id: int) -> bool:
 		var session := server.session_by_userid(session_id)
-		return session != null and session.permissions.has(DotAdminFlags.CHANGEMAP)
+		if session == null:
+			return false
+		var named := console.find_cvar("sv_map_menu_flag") if console != null else null
+		var flag := named.get_string().strip_edges().to_lower() if named != null else DotAdminFlags.CHANGEMAP
+		return flag == "" or DotAdminFlags.granted(session.permissions, flag)
 
 	net.messages.seal()
 	# [b]A client whose game messages cannot work with this server's is dropped, in words.[/b]

@@ -27,7 +27,7 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 18
-const CHECKS := 204
+const CHECKS := 205
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -407,6 +407,23 @@ func _test_stagger_cvar() -> void:
 func _test_commands() -> void:
 	_section("commands")
 	_check(_said(_run_command("g2g_map"), "bhop_g2g_intro"), "g2g_map lists the maps")
+	# The map menu's server half (M): every map this server has, a player offered a vote, staff
+	# (the default sv_map_menu_flag) the change; and the older client's own map list answers
+	# to the same flag. The change itself is game.change_map, which `g2g_map` drives above.
+	var g2g := server.modules.get_module("g2gfast")
+	var vote_node: Object = g2g.get("vote") if g2g != null else null
+	var menu_half: Object = vote_node.get("commands").get("map_menu") if vote_node != null and vote_node.get("commands") != null else null
+	var player := DotCmdContext.new()
+	player.source = DotCmdContext.Source.CHAT
+	var staff := DotCmdContext.new()
+	staff.source = DotCmdContext.Source.CHAT
+	staff.permissions = PackedStringArray(["generic"])
+	var offer: Dictionary = menu_half.call("offer", player) if menu_half != null else {"maps": []}
+	_check(menu_half != null and (offer["maps"] as Array).size() == game.map_rows().size() and (offer["maps"] as Array).size() > 1
+		and not bool(offer.get("allowed", true)) and bool(offer.get("vote", false))
+		and bool((menu_half.call("offer", staff) as Dictionary)["allowed"]),
+		"M lists every map; a player is offered a vote and staff the change",
+		str((offer["maps"] as Array).size()))
 	_check(_said(_run_command("g2g_style"), "sideways"), "g2g_style lists the styles")
 	_check(_said(_run_command("g2g_top"), "nobody"), "g2g_top answers with no records")
 	_check(_said(_run_command("thirdperson"), "only a player"), "thirdperson needs a player")

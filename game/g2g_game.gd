@@ -845,6 +845,24 @@ static func user_zones_path(id: StringName) -> String:
 	return "user://zones/%s.json" % String(id)
 
 
+## [method map_rows] as dot-menu's map menu draws them: the kind as the mode, the tier under
+## it, "combat" for a map for the deathmatch layer, and "not in rotation" in the warning colour
+## (every map, not the rotation: an operator keeps maps installed the rotation does not play).
+static func menu_rows(rows: Array) -> Array:
+	var out: Array = []
+	for m: Dictionary in rows:
+		var tags: Array = []
+		if str(m.get("kind", "")) == "arena":
+			tags.append("combat")
+		var rotating := bool(m.get("rotation", true))
+		if not rotating:
+			tags.append("not in rotation")
+		out.append({"id": str(m.get("id", "")), "name": str(m.get("name", m.get("id", "?"))),
+			"mode": str(m.get("kind", "")).capitalize(), "detail": "tier %d" % int(m["tier"]) if int(m.get("tier", 0)) > 0 else "",
+			"tags": tags, "current": bool(m.get("current", false)), "warn": not rotating})
+	return out
+
+
 ## Every map in the catalogue as the M screen shows it, by id: `{id, name, tier, kind,
 ## rotation, current}`. The offline client reads it directly; a server sends it.
 func map_rows() -> Array:

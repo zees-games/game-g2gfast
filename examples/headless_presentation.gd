@@ -1490,8 +1490,9 @@ func _test_help_lists_what_it_is_told() -> void:
 
 	# The family's rule since the first play test: H is help, nothing else is on H, the help
 	# says what the game is, and the Escape menu has Help & commands and Leave.
-	_check(p.bindings.key_for(&"g2g_help") == "H" and p.bindings.defaults_on("H").size() == 1,
-		"help is on H, and nothing else in the table is",
+	_check(p.bindings.key_for(&"g2g_help") == "H" and p.bindings.defaults_on("H").size() == 1
+		and p.bindings.key_for(DotMenuBindings.MAPS_ACTION) == "M" and p.bindings.defaults_on("M").size() == 1,
+		"help is on H and the map menu on M, and nothing else in the table is on either",
 		str(p.bindings.defaults_on("H").map(func(r: Dictionary) -> String: return str(r["label"]))))
 	var h := InputEventKey.new()
 	h.physical_keycode = KEY_H

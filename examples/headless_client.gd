@@ -19,8 +19,8 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 33
-const SECTIONS := 10
+const CHECKS := 36
+const SECTIONS := 11
 
 var _passed := 0
 var _failed := 0
@@ -71,6 +71,7 @@ func _run() -> void:
 	await _test_the_layout_editor_is_an_overlay()
 	await _test_the_camera_is_the_watched_players()
 	await _test_a_dead_body_falls()
+	await _test_the_map_menu()
 
 	print("")
 	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
@@ -314,6 +315,53 @@ func _test_a_dead_body_falls() -> void:
 		"no ragdoll of your own body in first person: the camera is inside its head")
 	game.remove_player(&"u91")
 	await get_tree().process_frame
+	_done()
+
+
+## The family's rule since the first play test: M opens the map list (every map, not the
+## rotation), and solo a choice changes the map now. The server's half is dot-vote's map menu
+## (`dedicated`, dot-vote's suite).
+func _test_the_map_menu() -> void:
+	_section("M opens the map list, and solo a choice changes the map")
+	var menu: DotMenu = _client.menu
+	var keys: DotMenuBindings = menu.bindings
+
+	# M, the family's rule since the first play test: the map list, and solo a choice
+	# changes it now. The server's half (the owner's flag, the vote) is in `dedicated`.
+	_check(keys.key_for(DotMenuBindings.MAPS_ACTION) == "M" and keys.defaults_on("M").size() == 1,
+		"the map menu is on M, and nothing else in the table is",
+		str(keys.defaults_on("M").map(func(r: Dictionary) -> String: return str(r["label"]))))
+	# Closed right before the key: an offline client with no captured pointer (headless) may
+	# have put its menu back up, and while anything is open every key is the menu's.
+	menu.close_all()
+	var map_before: StringName = _client.game.maps.current.id
+	var m_key := InputEventKey.new()
+	m_key.physical_keycode = KEY_M
+	m_key.keycode = KEY_M
+	m_key.pressed = true
+	_check(menu.handle_event(m_key) and menu.picker.is_open() and menu.picker.items.size() > 1,
+		"M opens the map list, more than one to choose", str(menu.picker.items.size()))
+	var wanted_map: StringName = &""
+	var map_key := KEY_NONE
+	for row in range(1, DotMenuPicker.PAGE_SIZE + 1):
+		var it: Variant = menu.picker.at_row(row)
+		if it is Dictionary and not bool((it as Dictionary)["current"]):
+			wanted_map = StringName(str((it as Dictionary)["id"]))
+			map_key = KEY_0 + row
+			break
+	var digit_key := InputEventKey.new()
+	digit_key.physical_keycode = map_key
+	digit_key.keycode = map_key
+	digit_key.pressed = true
+	var _picked := menu.handle_event(digit_key)
+	for _i in 90:
+		await get_tree().physics_frame
+	_check(wanted_map != &"" and _client.game.maps.current.id == wanted_map and not menu.picker.is_open(),
+		"choosing one changes the map now", "%s, now %s" % [wanted_map, _client.game.maps.current.id])
+	# Back where it was, for the checks after this one.
+	var _back_map: Variant = await menu.maps.change_fn.call(map_before)
+	for _i in 90:
+		await get_tree().physics_frame
 	_done()
 
 
