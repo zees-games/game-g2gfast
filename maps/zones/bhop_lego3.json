@@ -13,27 +13,20 @@
    "kind": "START",
    "track": 0,
    "around": {
-    "point": [
-     -1088,
-     4768,
-     128
-    ],
+    "point": "start",
     "extents": [
-     288,
-     288,
-     160
+     128,
+     128,
+     96
     ]
    },
-   "note": "the spawn room, around the 32 + 32 team spawns (x -1312..-864, y 4544..4992, z 128)"
+   "note": "round `start`, where the spawn room sends you (2026-10-11): 64 team spawns stand in a holding room whose floor is a teleport to `start`, so a player is there a second after appearing. The start was the spawn room until then, and the importer had that floor send back to the spawn, which held every player in the room"
   },
   {
    "kind": "SPAWN",
    "track": 0,
-   "destination": [
-    -1088,
-    4768,
-    144
-   ]
+   "destination": "start",
+   "note": "`start`, where the spawn room's floor sends you; see the start's note"
   },
   {
    "kind": "END",

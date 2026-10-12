@@ -9,7 +9,7 @@
   "archive": "bhop_badges.rar",
   "recorded": "2026-09-27"
  },
- "notes": "Exactly one of the map's 285 trigger_teleports is aimed at the destination named `end`, and it is a 64x64x16 pad -- a thing you land on, against 284 pits and section returns. That is the finish. The start is unlabelled and is the spawn platform: 16 info_player_* entities on a 1024x1024 square at z -3984, which is the only place in the map they are. STAGES (2026-10-08): the sections are the destinations named N.1 (1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1, 12.1, 13.1, 14.1); each is entered through a gate from the one before (measured: 12 of 12), so a box round each is crossed on arrival. Numbered in that order, stage 1 being the start; section 11 has no N.1 destination and is part of stage 10 (the stage numbers are 1-13, not the section numbers).",
+ "notes": "Exactly one of the map's 285 trigger_teleports is aimed at the destination named `end`, and it is a 64x64x16 pad -- a thing you land on, against 284 pits and section returns. That is the finish. The start is unlabelled. The 16 info_player_* entities stand on a 1024x1024 square at z -3984 in a dark sealed room whose only exit is the 64x64 pad at its centre, aimed at `1.1`; the start is a box round `1.1`, where that pad lands you (2026-10-11). STAGES (2026-10-08): the sections are the destinations named N.1 (1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1, 12.1, 13.1, 14.1); each is entered through a gate from the one before (measured: 12 of 12), so a box round each is crossed on arrival. Numbered in that order, stage 1 being the start; section 11 has no N.1 destination and is part of stage 10 (the stage numbers are 1-13, not the section numbers).",
  "conditional_teleports": {
   "filters": [
    "filter_activator"
@@ -21,27 +21,20 @@
    "kind": "START",
    "track": 0,
    "around": {
-    "point": [
-     -9376,
-     12160,
-     -3984
-    ],
+    "point": "1.1",
     "extents": [
-     640,
-     640,
-     180
+     96,
+     96,
+     64
     ]
    },
-   "note": "the 1024-unit spawn platform, plus margin"
+   "note": "section 1's start, `1.1`, where the spawn room's pad sends you: the map spawns its players in a dark sealed room (black walls, a dim floor) whose only way out is a 64x64 teleport pad at its centre, right under the middle spawn. Until 2026-10-11 the start was the spawn platform and the pad sent back to the spawn, so a player was held in that room for ever; now the spawn follows the pad, as the original does on the first touch"
   },
   {
    "kind": "SPAWN",
    "track": 0,
-   "destination": [
-    -9376,
-    12160,
-    -3984
-   ]
+   "destination": "1.1",
+   "note": "where the spawn room's pad sends you (tools/bsp_import.py spawn_through_pits would find it too; named here because the start is built round it)"
   },
   {
    "kind": "END",

@@ -13,27 +13,20 @@
    "kind": "START",
    "track": 0,
    "around": {
-    "point": [
-     -2368,
-     448,
-     3544
-    ],
+    "point": "1",
     "extents": [
-     256,
-     256,
-     200
+     128,
+     128,
+     96
     ]
    },
-   "note": "the spawn, around the 10 info_player_counterterrorist (x -2400..-2336, y 384..512, z 3544)"
+   "note": "round `1`, where the spawn room sends you (2026-10-11): 10 team spawns stand in a holding room whose floor is a teleport to checkpoint `1`, so a player is there a second after appearing. The start was the spawn room until then, and the importer had that floor send back to the spawn, which held every player in the room"
   },
   {
    "kind": "SPAWN",
    "track": 0,
-   "destination": [
-    -2368,
-    448,
-    3560
-   ]
+   "destination": "1",
+   "note": "`1`, where the spawn room's floor sends you; see the start's note"
   },
   {
    "kind": "END",

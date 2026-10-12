@@ -225,6 +225,23 @@ def vmt_basetexture(src):
     return base, translucent
 
 
+def vmt_additive(src):
+    """Whether a VMT draws ADDED to what is behind it (`$additive 1`), and whether it is
+    two-sided (`$nocull 1`).
+
+    [b]An additive texture is drawn on black, and the black is the transparent part.[/b]
+    surf_lt_unicorn rings its spawn with rainbow bands and tubes that are white streaks on
+    black in `unlitgeneric $additive` materials: added, the black adds nothing and the
+    streaks glow; drawn opaque, as every one of them was until 2026-10-11, they are black
+    sheets with white blobs on them, wrapped round the camera. Read with comments stripped,
+    because mappers comment `$nocull` out and leave it in the file.
+    """
+    txt = re.sub(r"//[^\n]*", "", src.decode("latin-1"))
+    additive = bool(re.search(r'"?\$additive"?\s+"?1', txt, re.I))
+    nocull = bool(re.search(r'"?\$nocull"?\s+"?1', txt, re.I))
+    return additive, nocull
+
+
 def vmt_blend(src):
     """The `$basetexture2` of a `WorldVertexTransition` VMT, or None.
 
@@ -2764,7 +2781,29 @@ def round_teleports(z, rule):
     return dropped
 
 
-def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None):
+def floor_boxes(bsp, solids, props):
+    """Everything a player can stand on, as boxes: the brushes, the solid props' hulls and
+    each displacement triangle.
+
+    [b]Only for asking whether a spawn has a floor under it[/b] (`pit_catches`). The zone
+    rules that grow pits were measured against the brushes alone and keep `solids`; a
+    spawn is a different question, and surf_lt_unicorn's bonus starts stand on cloud
+    props over open sky, which the brushes say is a drop into the pit far below.
+    """
+    out = list(solids)
+    for pts in props:
+        out.append(([min(p[a] for p in pts) for a in range(3)],
+                    [max(p[a] for p in pts) for a in range(3)]))
+    for f in bsp.faces:
+        if f[6] < 0 or bsp.face_material(f)[1] & SKIP_MASK:
+            continue
+        for t in bsp.displacement_tris(f):
+            out.append(([min(p[a] for p in t) for a in range(3)],
+                        [max(p[a] for p in t) for a in range(3)]))
+    return out
+
+
+def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None, floors=None):
     """Spawns, and every volume a timer cares about.
 
     Three passes, in the order of how much they know: what the map labelled, what a
@@ -2773,6 +2812,7 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None)
     """
     doc = doc or {}
     z = Zoner(bsp, min_thickness, solids)
+    z.floors = floors if floors is not None else z.solids
 
     spawns = []
     for e in bsp.entities:
@@ -2904,18 +2944,22 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None)
                 return o
         return None
 
-    # A pit around a spawn, or in the drop right under one, keeps sending to the spawn.
-    # Several maps stand their spawns in (or over) a teleport that moves you on the
-    # moment you appear -- bhop_lego2's spawn room, surf_fruits', bhop_badges' pad -- and
-    # their start zones were drawn around where the player appears. Followed faithfully,
-    # the first tick takes the player out of their own start; sending to the spawn is what
-    # every pit did before 2026-10-08, and here it is still the right answer.
-    spawn_points = [zz["destination"] for zz in z.zones
-                    if zz["kind"] == "SPAWN" and zz.get("destination") is not None]
+    # A pit around a team spawn, or in the drop right under one, keeps sending to the
+    # spawn -- unless a SPAWN zone stands in it, when the spawn follows it instead
+    # (spawn_through_pits, below). What stays here is the maps with no SPAWN zone, the
+    # combat maps, whose spawn rooms lead into the round's own logic (a random stage, a
+    # jail; followed, players fell 80 to 500 m), and pits under a spawn that stands on a
+    # floor. Sending to the spawn is what every pit did before 2026-10-08.
+    spawn_zones_now = [zz for zz in z.zones
+                       if zz["kind"] == "SPAWN" and zz.get("destination") is not None]
+    followed = {id(p) for p in pits for sz in spawn_zones_now
+                if p.get("destination") is not None and p["track"] == sz["track"]
+                and pit_catches(z, p, sz["destination"])}
+    spawn_points = [zz["destination"] for zz in spawn_zones_now]
     spawn_points += [sp["origin_src"] for sp in spawns if "origin_src" in sp]
     held = 0
     for zz in pits:
-        if zz.get("destination") is None:
+        if zz.get("destination") is None or id(zz) in followed:
             continue
         for sp in spawn_points:
             inside_xy = all(zz["min"][a] - 16.0 <= sp[a] <= zz["max"][a] + 16.0 for a in (0, 1))
@@ -2926,7 +2970,7 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None)
                 held += 1
                 break
     if held:
-        z.notes.append("%d pits around or under a spawn send to the spawn" % held)
+        z.notes.append("%d pits around or under a team spawn send to the spawn" % held)
 
     looped = chained = 0
     for zz in pits:
@@ -2959,7 +3003,76 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None)
     if looped:
         z.notes.append("%d pits send round a loop; they send to the spawn instead" % looped)
 
+    moved = spawn_through_pits(z, pits)
+    if moved:
+        z.notes.append("%d spawns stand in or over a teleport; they spawn where it sends" % moved)
+
     return z, spawns, respawn, push, other, dropped
+
+
+def pit_catches(z, pit, at):
+    """Whether a player put at [param at] (feet, Hammer axes) is taken by [param pit] at once.
+
+    Inside the zone as the game will test it (grown, hung and trimmed off the arrivals),
+    or over it with nothing to stand on in between: a player who appears there falls into
+    it on the first ticks. A spawn on a platform with a pit under the platform is neither,
+    which is what the floor test is for -- every start pad over a canyon has a pit
+    somewhere below. Not the trigger as the mapper drew it: surf_lt_unicorn's bonus 3
+    starts inside a 32,000-unit teleport the importer has already cut back off that start.
+    """
+    lo, hi = pit["min"], pit["max"]
+    if not all(lo[a] - 16.0 <= at[a] <= hi[a] + 16.0 for a in (0, 1)):
+        return False
+    # Touching: the feet inside the trigger's height, or within the two units under the feet
+    # that G2GMapMechanics.TOUCH_BELOW also gives (a trigger sheet lying on the floor). Not
+    # sixteen: bhop_badges' `1.1` stands nine units over its own section's fail sheet.
+    if lo[2] - 16.0 <= at[2] <= hi[2] + 2.0:
+        return True
+    if not hi[2] < at[2] <= hi[2] + 512.0:
+        return False
+    feet = ([at[0] - 16.0, at[1] - 16.0, 0.0], [at[0] + 16.0, at[1] + 16.0, 0.0])
+    return not stands_between(getattr(z, "floors", z.solids), feet, hi[2], at[2] + 1.0)
+
+
+def spawn_through_pits(z, pits):
+    """Move every spawn that stands in or over a teleport to where that teleport sends.
+
+    [b]A spawn room is how some maps start, and the room is not where you play.[/b]
+    bhop_lego2, kz_bhop_yonkoma's `map0stato` and bhop_badges put the player in a sealed box
+    -- `tools/toolsblack` or `cs_italy/black` walls, which the original engine draws black
+    too -- whose floor is a `trigger_teleport`: you appear, you drop, and the first touch
+    sends you to the course. From 2026-10-08 to 2026-10-11 such a pit sent to the spawn
+    instead (so a start zone drawn round the spawn kept its player), and three maps held
+    every player in a black box for ever, which is how it was found: "renders black from
+    spawn". The spawn goes where the map sends it, as the original does, and a start zone
+    belongs round where the player lands (bhop_badges' zones file).
+
+    Followed through a chain (a spawn room into a hub into the course), at most eight
+    hops, never round a loop. Only SPAWN zones move: a map with none (no start, no zones
+    file saying where) keeps the picked team spawn, because those are the combat maps,
+    whose spawn rooms lead into the map's own round logic (a random stage, a jail) and
+    not to a course; bhop_lego2's zones file names its `spawn_tele`.
+    """
+    targets = [zz for zz in z.zones if zz["kind"] == "SPAWN" and zz.get("destination") is not None]
+    moved = 0
+    for zz in targets:
+        seen = []
+        for _hop in range(8):
+            # Only the spawn's own track's pits: the timer acts on no other, so a pit of the
+            # main track around a bonus start (surf_lt_unicorn's 32,000-unit cheater
+            # teleport round bonus 3) moves nobody who spawns there.
+            pit = next((p for p in pits if p.get("destination") is not None and p is not zz
+                        and p["track"] == zz["track"] and pit_catches(z, p, zz["destination"])),
+                       None)
+            if pit is None or any(pit is q for q in seen):
+                break
+            seen.append(pit)
+            zz["destination"] = list(pit["destination"])
+            zz["destination_yaw"] = pit.get("destination_yaw", 0.0)
+        if seen:
+            zz["comment"] = (zz.get("comment", "") + "; through the teleport it stands in").lstrip("; ")
+            moved += 1
+    return moved
 
 
 def emit_zones(z):
@@ -3366,9 +3479,19 @@ def main(argv=None):
         if "alpha_offset" in s:
             s["texture2"] = blends[s["material"]]
         s["translucent"] = translucent and not s["prototype"]
+        # Drawn added, not over: see vmt_additive. Only a surface that has its own texture --
+        # an additive material whose picture did not ship has nothing to add, and the grid
+        # in its measured colour is the honest stand-in. Written only when true, so the
+        # thousands of ordinary surfaces do not each carry two falses.
+        vmt = pak.get("materials/%s.vmt" % s["material"]) if s["texture"] else None
+        additive, nocull = vmt_additive(vmt) if vmt is not None else (False, False)
+        if additive:
+            s["additive"] = True
+            if nocull:
+                s["two_sided"] = True
 
-    collision_blob, collision, skipped_entities, solids = build_collision(
-        bsp, notes, prop_hulls(pak, props_drawn))
+    solid_props = prop_hulls(pak, props_drawn)
+    collision_blob, collision, skipped_entities, solids = build_collision(bsp, notes, solid_props)
     # The collision block lives in the same .bin, after the mesh, so a map is still the
     # four files it was. Its offsets are written relative to its own block and shifted
     # here, which keeps build_collision independent of what precedes it.
@@ -3379,7 +3502,7 @@ def main(argv=None):
         fh.write(collision_blob)
 
     z, spawns, respawn, push, other, dropped = classify_zones(
-        bsp, a.min_zone_thickness, doc, solids)
+        bsp, a.min_zone_thickness, doc, solids, floor_boxes(bsp, solids, solid_props))
     zones = emit_zones(z)
     mech = bsp_mechanics.mechanics(bsp, entity_origin, z.destinations, DESTINATION_LIFT,
                                    yaw_to_godot, z.traps)

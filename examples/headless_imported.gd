@@ -243,8 +243,33 @@ const OWN_TEXTURES := {
 ## any of them can have, and it fails nothing else.
 const BLENDED := ["surf_mesa", "surf_summit", "surf_greensway", "bhop_evolve", "surf_aquaflow"]
 
+## The least estimated linear luminance the view from a map's main spawn may have
+## (`_spawn_view_luminance`), about 30 of 255 on screen. Set from the spread of all 87 maps
+## on 2026-10-11: the black holding rooms that prompted it measured 0.000 (bhop_lego2,
+## bhop_lego3, kz_bhop_yonkoma), the lit maps 0.014 and up.
+const SPAWN_VIEW_FLOOR := 0.012
+
+## Maps whose spawn view is dark on purpose, each with why, asserted both ways: a listed map
+## whose spawn view clears [constant SPAWN_VIEW_FLOOR] fails, so the entry goes when the
+## reason does. A dark spawn is listed only after it was rendered and compared with the
+## map's own screenshots; "the importer drew it wrong" is never a reason.
+const DARK_SPAWNS := {
+	"kz_bhop_lucid": "the hub is a tools/toolsblack box round a lit floor with neon route markers; the map's own screenshots are neon on dark brick (rendered 2026-10-11)",
+	"bhop_fury_2": "dark rooms lit by green and cyan neon, as its screenshots are (rendered 2026-10-11)",
+	"surf_kitsune": "black panels with neon lines under a sky named blacksky (map-rendering.md, black on purpose)",
+	"surf_stonework3": "a torch-lit stone hall, as dim as its screenshots (rendered 2026-10-11)",
+	"bhop_monster_jam": "OPEN, not design: darker than its screenshot of the same platform (g2g-dark-spawn-2)",
+	"kz_bhop_badg3s": "OPEN, not design: black walls at checkpoint `1` where its screenshots show lit concrete (g2g-dark-spawn-2)",
+}
+
+## The maps with `$additive` surfaces the importer must find, asserted both ways (a map
+## that loses them, or one not listed that gains them, fails). 2026-10-11's re-import.
+const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_ocean", "bhop_overthinker",
+	"bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference", "surf_lt_omnific",
+	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
+
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 50
+const CHECKS_PER_MAP := 53
 
 ## Sections every map runs, entered against run to their last line. A runtime error inside
 ## a section aborts that function and nothing says so; a section that bailed out after a
@@ -695,6 +720,29 @@ func _test_lighting() -> void:
 		"and a material that blends two textures draws both",
 		"%d listed, %d drawn with a varying alpha, broken: %s" % [listed, drawn_ok, drawn_bad])
 
+	# [b]An `$additive` surface is drawn added (2026-10-11).[/b] surf_lt_unicorn's spawn is
+	# inside rainbow bands whose black is see-through; drawn opaque they were black sheets
+	# round the camera, and every value involved was correct. Every surface the manifest
+	# marks `additive` is on the additive shader, and [constant ADDITIVE] names maps that
+	# must have some, which catches an importer that stopped reading `$additive`. Armed by
+	# taking the additive branch out of G2GBspMap._material_for, and the flag out of the
+	# importer.
+	var additive_wanted := 0
+	for entry: Dictionary in node.manifest.get("surfaces", []):
+		if bool(entry.get("additive", false)):
+			additive_wanted += 1
+	var additive_drawn := 0
+	for drawn_node: Node in node.find_children("*", "MeshInstance3D", true, false):
+		var each_mi := drawn_node as MeshInstance3D
+		for i in range(each_mi.get_surface_override_material_count()):
+			var am := each_mi.get_surface_override_material(i) as ShaderMaterial
+			if am != null and am.shader != null and am.shader.resource_path.contains("additive"):
+				additive_drawn += 1
+	_check(additive_drawn == additive_wanted and (additive_wanted > 0) == ADDITIVE.has(String(_map_id)),
+		"and its additive surfaces are drawn added",
+		"%d drawn added, %d marked additive, listed in ADDITIVE: %s"
+			% [additive_drawn, additive_wanted, ADDITIVE.has(String(_map_id))])
+
 	# [b]No sky is a blank white dome.[/b] The procedural sky's top is the map's `_ambient`,
 	# and four maps never set theirs and carry the editor's default 255 255 255 (surf_beginner2,
 	# bhop_aztec, bhop_mario_fxd, bhop_evolve); G2GLighting looks those up by sky name.
@@ -748,7 +796,205 @@ func _test_lighting() -> void:
 			dark = dark and c.get_luminance() < 0.02
 	_check(dark, "and a sky named black is drawn black",
 		"sky name '%s': %s" % [lit.get("sky_name", ""), seen])
+
+	# [b]And what a player sees from the spawn is lit (2026-10-11).[/b] Five maps rendered
+	# black or near it from where a player appears, and every check above passed: three held
+	# the player in a sealed black spawn room whose floor is the teleport out (the importer
+	# made it send back to the spawn), one wrapped the spawn in `$additive` rainbow sheets
+	# drawn opaque, one is dark by design. No headless run can render, so this estimates the
+	# frame instead: rays from the eye through the drawn meshes, each hit what the shader
+	# would draw there (the albedo the material samples, times the baked light under it,
+	# plus the material's ambient), each miss the sky. See [constant DARK_SPAWNS]. Armed on
+	# the manifests from before the fix: bhop_lego2, bhop_lego3 and kz_bhop_yonkoma measured
+	# 0.000. bhop_badges' dark spawn room measured 0.017, as bright as its lit black-walled
+	# sections: an estimate cannot tell those apart, and its zones file now names the start.
+	var view := _spawn_view_luminance(node as G2GBspMap, world)
+	var listed_dark := DARK_SPAWNS.has(String(_map_id))
+	print("  spawn view %s: %.3f (display %.0f of 255)" % [_map_id, view, pow(view, 1.0 / 2.2) * 255.0])
+	_check((view >= SPAWN_VIEW_FLOOR) != listed_dark,
+		"and the view from its spawn is lit" if not listed_dark
+			else "and the view from its spawn is dark, as DARK_SPAWNS says",
+		"estimated linear luminance %.3f, floor %.3f%s" % [view, SPAWN_VIEW_FLOOR,
+			"; listed: " + str(DARK_SPAWNS[String(_map_id)]) if listed_dark else ""])
 	_done()
+
+
+## The estimated linear luminance of the view from a map's main spawn: 8 headings by 3
+## pitches from eye height, through every drawn World and Props surface. A hit is what
+## the material draws (see [method _surface_albedo]) under the atlas's light; a surface a
+## player sees through (additive, translucent, water, or the back of a one-sided face) is
+## passed through; a miss is the sky. No fog and no tone map, so it reads a little bright,
+## which is the safe side for a floor.
+func _spawn_view_luminance(node: G2GBspMap, world: WorldEnvironment) -> float:
+	var meshes: Array[MeshInstance3D] = []
+	for child in node.find_children("*", "MeshInstance3D", true, false):
+		var mi := child as MeshInstance3D
+		if mi.mesh != null and (String(mi.name).begins_with("World") or String(mi.name).begins_with("Props")):
+			meshes.append(mi)
+	var lightmap: Image = null
+	var tris: Array = []        # per mesh: TriangleMesh
+	var firsts: Array = []      # per mesh: the first face index of each surface
+	for mi in meshes:
+		tris.append(mi.mesh.generate_triangle_mesh())
+		var starts := PackedInt32Array()
+		var at := 0
+		for i in range(mi.mesh.get_surface_count()):
+			starts.append(at)
+			at += mi.mesh.surface_get_array_index_len(i) / 3
+			if lightmap == null:
+				var m := mi.get_surface_override_material(i) as ShaderMaterial
+				var lm_tex: Variant = m.get_shader_parameter("lightmap_tex") if m != null else null
+				if lm_tex is Texture2D:
+					lightmap = (lm_tex as Texture2D).get_image()
+					if lightmap != null and lightmap.is_compressed():
+						lightmap.decompress()
+		firsts.append(starts)
+	var sky := _sky_luminance(node, world)
+	var eye := node.spawn_for(0) + Vector3.UP * 1.2
+	var total := 0.0
+	var rays := 0
+	for pitch: float in [-0.3, -0.1, 0.1]:
+		for k in range(8):
+			var dir := Vector3.FORWARD.rotated(Vector3.RIGHT, pitch).rotated(Vector3.UP, TAU * k / 8.0)
+			total += _ray_luminance(meshes, tris, firsts, lightmap, eye, dir, sky)
+			rays += 1
+	return total / float(rays)
+
+
+func _ray_luminance(meshes: Array[MeshInstance3D], tris: Array, firsts: Array,
+		lightmap: Image, eye: Vector3, dir: Vector3, sky: float) -> float:
+	var from := eye
+	for _pass in range(24):
+		var best := {}
+		var best_mesh := -1
+		for m in range(meshes.size()):
+			var tm := tris[m] as TriangleMesh
+			if tm == null:
+				continue
+			# The meshes sit at the map's origin; a mesh moved off it would want its
+			# transform here, and none is.
+			var hit: Dictionary = tm.intersect_ray(from, dir)
+			if hit.is_empty():
+				continue
+			if best.is_empty() or from.distance_to(hit["position"]) < from.distance_to(best["position"]):
+				best = hit
+				best_mesh = m
+		if best.is_empty():
+			return sky
+		var mi := meshes[best_mesh]
+		var starts: PackedInt32Array = firsts[best_mesh]
+		var face := int(best["face_index"])
+		var surface := starts.bsearch(face, false) - 1
+		var mat := mi.get_surface_override_material(surface) as ShaderMaterial
+		var albedo := _surface_albedo(mat)
+		var two_sided := mat != null and mat.shader != null and mat.shader.resource_path.contains("water")
+		var facing := (best["normal"] as Vector3).dot(dir) < 0.0
+		if albedo < 0.0 or (not facing and not two_sided):
+			from = (best["position"] as Vector3) + dir * 0.01
+			continue
+		var light := 1.0
+		var boost := 1.0
+		var lift := 0.0
+		if mat != null and mat.shader != null and not mat.shader.resource_path.contains("additive"):
+			light = _lightmap_at(mi, surface, face - starts[surface], best["position"], lightmap)
+			boost = float(mat.get_shader_parameter("light_boost")) if mat.get_shader_parameter("light_boost") != null else 1.35
+			lift = float(mat.get_shader_parameter("ambient")) if mat.get_shader_parameter("ambient") != null else 0.10
+		return albedo * (light * boost + lift)
+	return sky
+
+
+## The linear luminance a material draws before light, or -1 for one a player sees
+## through. The texture it samples, averaged, times its tint, both decoded from sRGB as
+## the shader's `source_color` does.
+func _surface_albedo(mat: ShaderMaterial) -> float:
+	if mat == null or mat.shader == null:
+		return 0.5
+	var path := mat.shader.resource_path
+	if path.contains("additive") or path.contains("translucent"):
+		return -1.0
+	var tint: Variant = mat.get_shader_parameter("tint")
+	var colour: Color = (tint as Color) if tint is Color else Color.WHITE
+	var tex: Variant = null
+	if mat.get_shader_parameter("pixel_art") == true:
+		tex = mat.get_shader_parameter("pixel_tex")
+	elif mat.get_shader_parameter("has_albedo") != false:
+		tex = mat.get_shader_parameter("albedo_tex")
+	var base := _texture_mean(tex as Texture2D) if tex is Texture2D else Color.WHITE
+	return (base * colour).srgb_to_linear().get_luminance()
+
+
+var _texture_means := {}
+
+func _texture_mean(tex: Texture2D) -> Color:
+	var key := tex.get_rid()
+	if _texture_means.has(key):
+		return _texture_means[key]
+	var img := tex.get_image()
+	var mean := Color(0.5, 0.5, 0.5)
+	if img != null:
+		img = img.duplicate() as Image
+		if img.is_compressed():
+			img.decompress()
+		img.clear_mipmaps()
+		# Halving with a bilinear filter averages each 2x2 exactly, so this is the mean of
+		# the whole picture rather than a few samples of it -- a rainbow band is stripes.
+		while img.get_width() > 4 or img.get_height() > 4:
+			img.resize(maxi(img.get_width() / 2, 1), maxi(img.get_height() / 2, 1), Image.INTERPOLATE_BILINEAR)
+		var sum := Color(0, 0, 0, 0)
+		for y in range(img.get_height()):
+			for x in range(img.get_width()):
+				sum += img.get_pixel(x, y)
+		mean = sum / float(img.get_width() * img.get_height())
+	_texture_means[key] = mean
+	return mean
+
+
+## The baked light on a hit, linear: the atlas texel under the hit's UV2, interpolated
+## across the triangle.
+func _lightmap_at(mi: MeshInstance3D, surface: int, triangle: int, at: Vector3, lightmap: Image) -> float:
+	if lightmap == null:
+		return 1.0
+	var arrays := mi.mesh.surface_get_arrays(surface)
+	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var uv2s: Variant = arrays[Mesh.ARRAY_TEX_UV2]
+	if not (uv2s is PackedVector2Array) or index.size() < triangle * 3 + 3:
+		return 1.0
+	var a := verts[index[triangle * 3]]
+	var b := verts[index[triangle * 3 + 1]]
+	var c := verts[index[triangle * 3 + 2]]
+	var w := Geometry3D.get_triangle_barycentric_coords(at, a, b, c)
+	var uv := (uv2s as PackedVector2Array)[index[triangle * 3]] * w.x \
+		+ (uv2s as PackedVector2Array)[index[triangle * 3 + 1]] * w.y \
+		+ (uv2s as PackedVector2Array)[index[triangle * 3 + 2]] * w.z
+	var x := clampi(int(uv.x * lightmap.get_width()), 0, lightmap.get_width() - 1)
+	var y := clampi(int(uv.y * lightmap.get_height()), 0, lightmap.get_height() - 1)
+	return lightmap.get_pixel(x, y).srgb_to_linear().get_luminance()
+
+
+## What a ray that hits nothing sees: the packed sky's six faces averaged, or the
+## procedural sky's top and horizon, or the background colour.
+func _sky_luminance(node: G2GBspMap, world: WorldEnvironment) -> float:
+	if world == null or world.environment == null:
+		return 0.0
+	var env := world.environment
+	if env.background_mode != Environment.BG_SKY or env.sky == null:
+		return env.background_color.srgb_to_linear().get_luminance()
+	var shader_sky := env.sky.sky_material as ShaderMaterial
+	if shader_sky != null:
+		var sum := 0.0
+		var n := 0
+		for suffix: String in ["rt", "lf", "bk", "ft", "up"]:
+			var face: Variant = shader_sky.get_shader_parameter("face_" + suffix)
+			if face is Texture2D:
+				sum += _texture_mean(face as Texture2D).srgb_to_linear().get_luminance()
+				n += 1
+		return sum / float(maxi(n, 1))
+	var procedural := env.sky.sky_material as ProceduralSkyMaterial
+	if procedural != null:
+		return (procedural.sky_top_color.srgb_to_linear().get_luminance()
+			+ procedural.sky_horizon_color.srgb_to_linear().get_luminance()) * 0.5
+	return 0.3
 
 
 func _test_zones() -> void:
@@ -941,11 +1187,29 @@ func _test_stands_on_it() -> void:
 	# Let it fall. On a map whose collision never got built this is the only check in
 	# the file that fails, and it fails by hundreds of metres rather than marginally.
 	var floor_y := start.y
+	# [b]Watching for the pits while it falls (2026-10-11).[/b] bhop_lego2's, kz_bhop_yonkoma's
+	# and bhop_badges' players appear in a sealed black room whose floor is the teleport out,
+	# and the importer had that teleport send back to the spawn: the player dropped into it,
+	# was put back, and dropped again, for ever, and "still standing three seconds later"
+	# passed because the spawn is where it kept being put. A pit on the main track touched
+	# at any tick of the three seconds is that, or a spawn over a hole. Armed on the
+	# manifests from before the fix: it fired on bhop_lego2 (180 of 180 ticks). It does not
+	# see a pit the player stands over without its feet entering the zone (bhop_badges' pad
+	# was hung below the floor); the spawn view below is the other half.
+	var pits: Array[DotTimerZone] = game.timers.zones.of_kind(DotTimerZone.Kind.RESPAWN, DotTimerTrack.MAIN) \
+		if game.timers.zones != null else ([] as Array[DotTimerZone])
+	var in_pit := 0
 	for _i in range(180):
 		await get_tree().physics_frame
+		for pit in pits:
+			if pit.contains(bot.controller.state.position):
+				in_pit += 1
+				break
 	var drop := floor_y - bot.global_position.y
 	_check(drop < 8.0, "and is still standing on the map three seconds later",
 		"fell %.1f m" % drop)
+	_check(in_pit == 0, "and never touches a pit on the way down",
+		"inside a main-track pit on %d of 180 ticks" % in_pit)
 
 	# [b]And where it came to rest is inside the start zone (2026-09-27).[/b] The timer asks
 	# the zone about the player's own position every tick; a start box that stops short of

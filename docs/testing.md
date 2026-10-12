@@ -26,6 +26,7 @@ A list that exempts maps from a check is a mute button unless it is asserted in 
 - `NO_PIT`, separate from `NOT_COURSES`, so maps that have pits keep being asked.
 - `ARRIVES_IN_PIT` and `BONUSES_WITHOUT_PITS`: both empty, both still asserted.
 - `OWN_TEXTURES`, `STOCK_DRAWN`, `BLENDED`: floors for maps someone has looked at.
+- `DARK_SPAWNS`: maps whose view from the spawn is under `SPAWN_VIEW_FLOOR` on purpose, each with why. The view is estimated, not rendered (headless has no renderer): rays from the eye through the drawn meshes, each hit the material's averaged albedo times the atlas texel under it, each miss the sky.
 - `headless_mechanics`' `TRAP_BLOCK_FLOORS`.
 
 ## Checks that could not fail
@@ -36,6 +37,7 @@ Each of these passed while the thing it named was broken; write new checks again
 - **A bot that is put back still "finishes".** Route checks assert no reset, using an `Array` (a lambda captures a local by value), and a finish **without being put back**.
 - **"Mostly airborne" counted a bot falling out of the world.** Assert the pit fired, or drive until the run starts, rather than for a fixed tick count.
 - **A guard pointed at one map** (bonus pits, zone-file matching, a hardcoded list of map ids) passes for the others. Discover what to check.
+- **"Still standing three seconds later" passed for a player held in a loop**: a pit that sends back to the spawn puts the player where the check expects them. The collision section now also watches for a main-track pit on every one of those ticks.
 - **Both halves in one process share engine state** (tick rate, `Input`), which hides what a real client sees. `headless_client` and `headless_feel` exist for that.
 - **Arm a new check**: break the code it guards and see it fire, then put it back.
 

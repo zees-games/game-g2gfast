@@ -416,6 +416,15 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 	var texture_name := str(s.get("texture", ""))
 	if not texture_name.is_empty():
 		var tex := _load_texture(dir.path_join("textures").path_join(texture_name))
+		# [b]A `$additive` material is added to what is behind it, not drawn over it[/b]
+		# (the manifest's `additive`, `two_sided` for `$nocull`): its black is see-through.
+		# Drawn opaque, surf_lt_unicorn's spawn was inside black sheets. A new material on
+		# its own shader, because the blend is a render mode. See g2g_bsp_additive.gdshader.
+		if tex != null and bool(s.get("additive", false)):
+			mat.shader = load(G2GPaths.rebase("res://game/g2g_bsp_additive_two_sided.gdshader"
+				if bool(s.get("two_sided", false)) else "res://game/g2g_bsp_additive.gdshader"))
+			mat.set_shader_parameter("albedo_tex", tex)
+			return mat
 		if tex != null:
 			mat.set_shader_parameter("albedo_tex", tex)
 			mat.set_shader_parameter("has_albedo", true)

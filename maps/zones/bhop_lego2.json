@@ -1,13 +1,25 @@
 {
  "id": "bhop_lego2",
  "author": "Tony Montana (tmontana)",
- "attribution": {"author": "Tony Montana (tmontana)", "source": "https://gamebanana.com/mods/125408 (confirmed: Page: submitter tmontana, Key Authors 'Tony Montana - Creator', testers Nyastle, sQee, KorYouZ, nairda; archive 51954648 bytes matches page's bhop_lego2.zip exactly. In-map: game_text 'bhop_lego2 - map by Tony Montana' (hammerid 1503573) and a packed materials/lego2/mapby texture ('MAP BY').)", "archive": "bhop_lego2.zip", "recorded": "2026-09-27"},
- "notes": "No finish, on purpose: a section-chain map whose end is not labelled (see README.md and NOT_COURSES in examples/headless_imported.gd). This file exists only for its conditional teleports: 185 of the map's 409 teleports sit on its blocks behind `filter_activator`, the anti-standing trap, and 184 trigger_multiples pulse the name that filter passes.",
+ "attribution": {
+  "author": "Tony Montana (tmontana)",
+  "source": "https://gamebanana.com/mods/125408 (confirmed: Page: submitter tmontana, Key Authors 'Tony Montana - Creator', testers Nyastle, sQee, KorYouZ, nairda; archive 51954648 bytes matches page's bhop_lego2.zip exactly. In-map: game_text 'bhop_lego2 - map by Tony Montana' (hammerid 1503573) and a packed materials/lego2/mapby texture ('MAP BY').)",
+  "archive": "bhop_lego2.zip",
+  "recorded": "2026-09-27"
+ },
+ "notes": "No finish, on purpose: a section-chain map whose end is not labelled (see README.md and NOT_COURSES in examples/headless_imported.gd). This file exists for its spawn (below) and its conditional teleports: 185 of the map's 409 teleports sit on its blocks behind `filter_activator`, the anti-standing trap, and 184 trigger_multiples pulse the name that filter passes.",
  "conditional_teleports": {
   "filters": [
    "filter_activator"
   ],
   "note": "the map's anti-standing trap: a trigger_multiple on each block sets the player's name to the one this filter passes after a delay and resets it after another, so the teleport only fires on a player who stood on a block too long. This game does not run the map's outputs, so imported unconditionally it fired on every landing. Dropped; standing still is allowed here and costs the player time instead"
  },
- "zones": []
+ "zones": [
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "spawn_tele",
+   "note": "where the spawn room sends you (2026-10-11): the 64 team spawns stand in a sealed tools/toolsblack box whose floor is a teleport to `spawn_tele`; until then the importer had that floor send back to the spawn and every player was held in the black box"
+  }
+ ]
 }
