@@ -50,6 +50,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first.
 - **Run `godot --headless --path . --script tools/export_zones.gd` after changing a hand-built map**, or the zone-file check fails. [maps](docs/maps.md#geometry-and-zones-come-from-one-description)
 - `jitter_probe` is not in `./game.sh test`; run it after touching rendering or the tick rate. [testing](docs/testing.md#the-suites)
 - `headless_run` is order-sensitive (`-- --only=a,b`). [testing](docs/testing.md#the-suites)
+- **Footsteps and a bed per map are dot-audio's stock** (`G2GPresentation.keep_walkers`, `bed_for` by map prefix); the landing stays this game's own sound, so the stock landing step is off. Levels are measured with `addons/dot_audio/tools/loudness.sh` (−17 LUFS band, `loudness_trim_db`).
 - **Render after touching the client, a menu or an imported map** (`tools/screenshot_*.sh`, `tools/bsp_preview.sh`, under `xvfb-run`). No assertion sees the screen. [testing](docs/testing.md#tools)
 
 ## Rules that bite

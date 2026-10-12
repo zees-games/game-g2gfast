@@ -46,6 +46,11 @@ var bindings: DotMenuBindings = G2GBindings.make()
 ## [method _build_settings].
 var applier: DotMenuApplier = null
 var audio: DotAudioManager = null
+
+## Footsteps by surface and a bed per map: dot-audio's stock (Kenney's footsteps and generated
+## beds, CC0; the addon's stock/CREDITS.md). Under the landing and the timer, never over them.
+var steps: DotAudioFootsteps = null
+var ambience: DotAudioAmbience = null
 var fx: DotFxManager = null
 ## The player's console, built by [method build_console] once the client has a menu.
 var console: DotConsoleController = null
@@ -340,6 +345,7 @@ func _on_setting_changed(key: StringName, value: Variant, _why: StringName) -> v
 ## - **a personal best**, which is the only reason anybody is here.
 static func sound_catalogue() -> DotAudioCatalogue:
 	var c := DotAudioCatalogue.new()
+	DotAudioStock.add_to(c)
 
 	var land := DotAudioDef.new()
 	land.id = &"land"
@@ -511,11 +517,29 @@ func _build_audio() -> DotResult:
 	audio.mixer.master = settings.get_float(&"master_volume", 0.8)
 	# Small. There is one player making noises and the rest is a timer.
 	audio.voices = 12
+	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in run on
+	# the intro read -26.9 LUFS with the bed and the steps in, -21.6 at +8. The bed is held back a little
+	# (ambience.level) so a timer game's quiet is a breeze, not a wall of wind.
+	audio.loudness_trim_db = 12.0
 	add_child(audio)
 
 	var res := audio.setup()
 	if not res.ok:
 		return res.wrap("g2gfast's audio")
+
+	steps = DotAudioFootsteps.new()
+	steps.name = "Footsteps"
+	steps.manager = audio
+	# The landing is this game's own sound (the rhythm of a hop, pitched by speed); a stock
+	# landing step on top would smear it.
+	steps.landing_air_time = 1.0e9
+	add_child(steps)
+	ambience = DotAudioAmbience.new()
+	ambience.name = "Ambience"
+	ambience.manager = audio
+	ambience.level = 0.7
+	add_child(ambience)
+	ambience.set_map_bed(bed_for(&""))
 
 	# Only on a real sink, and only after setup: the manager decides whether there is a
 	# device, and on a headless server there is nothing to bake for. Building the bank
@@ -972,9 +996,46 @@ func on_flashlight(_on: bool) -> int:
 	return audio.play(FLASHLIGHT_SOUND)
 
 
-func on_map_changed() -> void:
+func on_map_changed(map_id: StringName = &"") -> void:
 	fx.clear()
 	_was_grounded = true
+	if ambience != null:
+		ambience.set_map_bed(bed_for(map_id))
+
+
+## A map's bed, from its name: the built-in stages are sky platforms (wind); a surf map is
+## ramps in the air (wind), a climb map is rock (a cave's rumble and drips), anything else a
+## breeze and birds. By prefix, because imported maps arrive by the hundred and nobody will
+## list them.
+static func bed_for(map_id: StringName) -> StringName:
+	var id := String(map_id).to_lower()
+	if id.begins_with("surf_") or id == "bhop_g2g_stages":
+		return &"amb_wind"
+	if id.begins_with("kz_") or id.begins_with("climb_") or id.begins_with("xc_"):
+		return &"amb_cave"
+	return &"amb_outdoor"
+
+
+## Everybody on the map steps, once a frame. A rider is a Node3D moved by its controller, so
+## the ground is the controller's own answer, not a ray.
+func keep_walkers(players: Array) -> void:
+	if steps == null:
+		return
+	var live: Array = []
+	for p: Variant in players:
+		if not (p is Node3D) or not is_instance_valid(p):
+			continue
+		var rider: Node3D = p
+		live.append(rider)
+		if not steps.is_tracking(rider):
+			# By property, not by type: a player script is referenced by path (a delivered
+			# pack's class_name is not registered in the host).
+			steps.track(rider, {"grounded": func() -> bool:
+				if not is_instance_valid(rider):
+					return false
+				var c: Variant = rider.get("controller")
+				return c != null and (c as Object).get("state") != null and bool(c.state.is_grounded())})
+	steps.keep(live)
 
 
 func on_server_clamps(request: Dictionary) -> PackedStringArray:

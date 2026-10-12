@@ -175,7 +175,7 @@ func _ready() -> void:
 
 	# Every effect drawn is somewhere on the map that just went away, and the landing
 	# watcher would otherwise read the first frame on the new one as a fall.
-	game.map_ready.connect(func(_map: DotMapDef) -> void: presentation.on_map_changed())
+	game.map_ready.connect(func(map: DotMapDef) -> void: presentation.on_map_changed(map.id if map != null else &""))
 
 	_build_ragdolls()
 
@@ -717,6 +717,7 @@ func _process(delta: float) -> void:
 				st.is_grounded(), Vector2(st.velocity.x, st.velocity.z).length(),
 				st.position
 			)
+		presentation.keep_walkers(game.players.values())
 
 		if camera != null:
 			# Zero by default on this game, which is the whole point: a shaken camera on
