@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 211
+const CHECKS := 210
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -465,17 +465,21 @@ func _test_handshake() -> void:
 		local_at_hello.append(_client_game.players.has(StringName("u%d" % id)))
 	)
 
-	var added := _server_bridge.add_player(CLIENT_PEER, SESSION, "Ada")
-	_check(added.ok, "the server adds the player", str(added.error) if not added.ok else "")
-	_check(_server_player() != null and not _server_player().samples_input, "as a remote player on the server")
-	_check(not _server_net.peers().has(CLIENT_PEER), "and sends nothing until the client says it can receive")
-	_flush()
-	_check(_client_player() == null, "so the client has heard nothing yet")
+	# The READY first, as over ENet with loss: a client is PLAYING by its own reckoning once it has
+	# sent `loaded`, on another channel, so its READY can reach the server before its seat. The
+	# server sends nothing on it, keeps it, and answers it when the seat comes; a bridge that
+	# dropped it never told this client anything.
+	_client_bridge.ask_ready()
+	_exchange()
+	_check(not _server_net.peers().has(CLIENT_PEER) and _client_player() == null and hellos.is_empty(),
+		"a READY before the seat admits nothing yet")
 
 	var loaded: Array[String] = []
 	_client_bridge.map_loaded.connect(func(m: DotMapDef) -> void: loaded.append(String(m.id)))
 
-	_client_bridge.ask_ready()
+	var added := _server_bridge.add_player(CLIENT_PEER, SESSION, "Ada")
+	_check(added.ok, "the server adds the player", str(added.error) if not added.ok else "")
+	_check(_server_player() != null and not _server_player().samples_input, "as a remote player on the server")
 	_exchange()
 
 	_check(_server_net.peers().has(CLIENT_PEER), "asking admits them")

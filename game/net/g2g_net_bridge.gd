@@ -162,6 +162,11 @@ var _behaviours: Dictionary = {}
 var _player_of_peer: Dictionary = {}
 var _peer_of_player: Dictionary = {}
 var _ready_peers: Dictionary = {}
+## Server: peers whose READY came before their seat ([method add_player]). A client sends READY
+## when its link says PLAYING, which the link decides itself after sending `loaded` on another
+## channel; over ENet with loss the READY can overtake `loaded`, and a READY dropped here left
+## that client waiting for a world for ever. Admitted when seated.
+var _ready_unseated: Dictionary = {}
 var _tick: int = 0
 var _adding: bool = false
 var _game_ticked_for: int = -1
@@ -351,10 +356,16 @@ func add_player(
 	_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 	roster_changed.emit(session_id)
 
+	if _ready_unseated.has(peer_id):
+		_ready_unseated.erase(peer_id)
+		_admit(peer_id)
+
 	return DotResult.success(player)
 
 
 func remove_peer(peer_id: int) -> void:
+	_ready_unseated.erase(peer_id)
+
 	if _player_of_peer.has(peer_id):
 		remove_player(int(_player_of_peer[peer_id]))
 
@@ -770,7 +781,11 @@ func receive_voice_frame(peer_id: int, payload: PackedByteArray) -> DotResult:
 # --- Server: what a joining peer is told ------------------------------------
 
 func _admit(peer_id: int) -> void:
-	if peer_id <= 0 or not _player_of_peer.has(peer_id):
+	if peer_id <= 0:
+		return
+
+	if not _player_of_peer.has(peer_id):
+		_ready_unseated[peer_id] = true
 		return
 
 	_ready_peers[peer_id] = true
@@ -1456,6 +1471,13 @@ func _on_request(message: DotNetMessage) -> void:
 		return
 
 	var peer_id := ask.sender_peer_id
+
+	# Before the seat check: a READY can come before the seat (see `_ready_unseated`), and
+	# `_admit` keeps it rather than drop it.
+	if ask.kind == G2GEvents.Ask.READY:
+		_admit(peer_id)
+		return
+
 	var session_id := player_for_peer(peer_id)
 	if session_id == 0:
 		return
@@ -1464,8 +1486,6 @@ func _on_request(message: DotNetMessage) -> void:
 	var reader := ask.reader()
 
 	match ask.kind:
-		G2GEvents.Ask.READY:
-			_admit(peer_id)
 		G2GEvents.Ask.STYLE:
 			if game.set_player_style(id, _style_id(G2GEvents.read_int(reader))):
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))

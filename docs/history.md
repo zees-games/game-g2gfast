@@ -54,3 +54,4 @@ Kept where the bug could come back and the story says how to recognise it. Each 
 
 - **A missing flag its neighbours have is evidence of nothing until you have checked whether a suite asserts the difference.** `g2g_map` lacking `.with_chat()` was defended by an assertion written on sound reasoning in the wrong place.
 - **Three hardcoded copies of three map ids** (`G2GGame._map_catalogue`, `tools/export_zones.gd`, the export scripts): the tree's most repeated bug, here too. Replaced by discovery.
+- **A READY that overtook the seat was dropped (2026-10-12).** A client sends READY when its link says PLAYING, which the link decides itself after sending `loaded` on another ENet channel. Through a lossy link the READY can reach the server first; `_admit` found no player for the peer and returned, and nothing asked again, so that client never got a world. Loopback and WebSocket order the two, so no suite could see it until `headless_net` sent the READY before the seat.

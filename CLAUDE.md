@@ -119,6 +119,7 @@ Short forms; the reasoning is in the linked file.
 - Draw the view from the sampler once a frame and add the predictor's `visual_offset`; draw the eye at the clock's `render_alpha` (`_fold_clock`); never interpolate view angles. [netcode](docs/netcode.md#what-a-connected-player-sees)
 - Wait for `player_added`; the local player does not exist when HELLO names it. [netcode](docs/netcode.md#the-local-player-is-adopted-not-looked-up)
 - Event and request kinds are appended; no message script preloads itself. [netcode](docs/netcode.md#wire-rules)
+- **A READY before the player is seated is kept** (`_ready_unseated` in the bridge; `_on_request` hands READY to `_admit` before its seat check) and answered by `add_player`: over ENet with loss it overtakes the link's `loaded`, and a dropped READY left the client waiting for ever. `headless_net` sends it first (armed). [history](docs/history.md)
 - Player and hunter entities are `always_relevant`. [netcode](docs/netcode.md#hunters-reach-a-connected-client)
 
 **Client**
