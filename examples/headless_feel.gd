@@ -65,6 +65,8 @@ const TCP_STALL_MS := 200.0
 ## neither leaves the start platform for a pit.
 const TURN_RATE := 240.0
 const BOT_TURN := 2.0
+## The forced slips each pass of `_test_a_clock_slip` judges.
+const SLIPS := 12
 
 var _verbose := false
 var _only := ""
@@ -622,9 +624,20 @@ func _test_key_to_motion() -> void:
 	# 0 is the frame the key went down in, whose physics had already run; 1 is the next.
 	var frames := moved_at - pressed_at if moved_at >= 0 else -1
 	var ms := float(at_usec[moved_at] - pressed_usec) / 1000.0 if moved_at >= 0 else -1.0
-	_check(moved_at >= 0 and frames <= 1,
-		"the eye moved %d frame(s) after the key, %.1f ms, %d client ticks later; the round trip is %d ms" % [
-			frames, ms, (ticks[moved_at] - pressed_tick) if moved_at >= 0 else -1, int(_client.net.clock.rtt_ms())])
+	# The first frame after the key whose physics ran a client tick. It is usually the next
+	# one, but at 144 frames a second against 128 ticks about one frame in nine runs none,
+	# and a predicted player only moves on a tick: the key landing just before one of those
+	# moved the eye on the second frame, one tick later, and failed this one run in nine
+	# with nothing wrong. The claim is that the prediction moves on the very next tick.
+	var first_tick := -1
+	for i in range(pressed_at + 1, ticks.size()):
+		if ticks[i] > ticks[i - 1]:
+			first_tick = i
+			break
+	_check(moved_at >= 0 and first_tick >= 0 and moved_at <= first_tick,
+		"the eye moved %d frame(s) after the key, %.1f ms, %d client ticks later, on the first frame that ran a tick (%d); the round trip is %d ms" % [
+			frames, ms, (ticks[moved_at] - pressed_tick) if moved_at >= 0 else -1,
+			first_tick - pressed_at if first_tick >= 0 else -1, int(_client.net.clock.rtt_ms())])
 	_done()
 
 
@@ -674,6 +687,11 @@ func _test_a_correction_is_eased() -> void:
 	var worst := 0.0
 	for i in range(nudged_at, eyes.size()):
 		var step := eyes[i] - eyes[i - 1]
+		# A respawn is a teleport, not a correction (as in a window): on a loaded machine
+		# the 120 frames last long enough for the runner to reach the pit, and its 12 m
+		# was reported as the worst frame of a 30 cm correction.
+		if step.length() > 0.5:
+			continue
 		var v := velocities[i]
 		var steady := Vector3(v.x, 0.0, v.z) * deltas[i]
 		worst = maxf(worst, (Vector3(step.x, 0.0, step.z) - steady).length())
@@ -716,19 +734,37 @@ func _test_a_clock_slip() -> void:
 	var control := await _slip_frames(true)
 	var drawn := await _slip_frames(false)
 	Input.action_release(&"dot_fps_forward")
-	print("    12 forced slips each: control %d stalled, %d doubled, worst %.1f cm off; drawn %d stalled, %d doubled, worst %.1f cm off" % [
-		control[0], control[1], control[2] * 100.0, drawn[0], drawn[1], drawn[2] * 100.0])
-	_check(control[0] + control[1] >= 6,
+	print("    %d and %d slips judged on a steady run: control %d stalled, %d doubled, worst %.1f cm (%d%% of a frame's step) off; drawn %d stalled, %d doubled, worst %.1f cm (%d%%) off" % [
+		control[3], drawn[3], control[0], control[1], control[2] * 100.0, roundi(control[4] * 100.0),
+		drawn[0], drawn[1], drawn[2] * 100.0, roundi(drawn[4] * 100.0)])
+	_check(control[3] == SLIPS and control[0] + control[1] >= 6,
 		"the control (the engine's fraction alone) stalls or doubles the eye after the slips",
 		"%d stalled, %d doubled" % [control[0], control[1]])
-	_check(drawn[0] == 0 and drawn[1] == 0 and drawn[2] < 0.02,
-		"drawn at the clock's render alpha, no frame stalls, doubles, or lands 2 cm off its motion",
-		"%d stalled, %d doubled, worst %.1f cm" % [drawn[0], drawn[1], drawn[2] * 100.0])
+	# Off its motion by a share of the frame's own step, not by a distance: a frame is as long
+	# as the machine makes it, and on a loaded one (16 frames a second, eight ticks each) a
+	# frame drawn 10% long is 3 cm off. Half a step is 1.7 cm at 144 frames, where the old
+	# 2 cm bound was set.
+	_check(drawn[3] == SLIPS and drawn[0] == 0 and drawn[1] == 0 and drawn[4] < 0.5,
+		"drawn at the clock's render alpha, no frame stalls, doubles, or lands half a step off its motion",
+		"%d of %d slips, %d stalled, %d doubled, worst %.1f cm, %d%% of its step" % [
+			drawn[3], SLIPS, drawn[0], drawn[1], drawn[2] * 100.0, roundi(drawn[4] * 100.0)])
 	_done()
 
 
-## Twelve forced slips, alternately none and two ticks, 24 frames apart; what the eye did on
-## the frames after each: [stalled, doubled, worst metres off steady motion].
+## Twelve forced slips, alternately none and two ticks, at least 24 frames apart, each
+## judged over the 20 frames after it; what the eye did on those frames: [stalled, doubled,
+## worst metres off steady motion].
+##
+## [b]Only slips on a steady run are judged.[/b] The runner holds W for the whole section,
+## which is longer than the course before its first pit, so a pass falls in, respawns at the
+## start and runs up from a standstill. A respawn is a snap, the frames after it ease the
+## replays that follow it, and a run-up moves the eye a little more each frame: at 1 m/s a
+## correction easing a few millimetres a frame is half the motion, and those frames read as
+## stalled or doubled with no slip near them (logged: slip 0, render alpha the engine's
+## fraction, `drawn_offset` decaying). Judged anyway, the check failed about every other run,
+## on whichever pass the pit fell in. So a slip is forced only at full running speed, a window
+## the runner leaves it in (the pit, the respawn) is not counted, and the pass goes on until
+## twelve have been counted, never fewer.
 func _slip_frames(forget: bool) -> Array:
 	_forget_slip = forget
 	var eyes: Array[Vector3] = []
@@ -738,40 +774,58 @@ func _slip_frames(forget: bool) -> Array:
 		eyes.append(_client.player.camera.active().global_position)
 		velocities.append(_client.player.controller.state.velocity)
 		deltas.append(delta)
+	var tunables: DotFpsTunables = _client.player.controller.tunables
+	var steady := 0.95 * tunables.max_speed
+	var is_steady := func(i: int) -> bool:
+		var v: Vector3 = velocities[i]
+		return Vector2(v.x, v.z).length() >= steady
 	var forced_at: Array[int] = []
-	for i in range(12):
-		for _f in range(24):
-			await get_tree().process_frame
-		forced_at.append(eyes.size())
-		_force_slip = -1 if i % 2 == 0 else 1
-	for _f in range(24):
+	var counted: Array[int] = []
+	var since := 0
+	var limit := eyes.size() + 3000
+	while counted.size() < SLIPS and eyes.size() < limit:
 		await get_tree().process_frame
+		since += 1
+		# A window is counted once its 20 frames have been drawn, and only if the runner
+		# kept its speed through all of them.
+		while not forced_at.is_empty() and eyes.size() >= forced_at[0] + 21:
+			var at: int = forced_at.pop_front()
+			var kept := true
+			for i in range(at, at + 20):
+				if not is_steady.call(i) or eyes[i].distance_to(eyes[i - 1]) > 0.5:
+					kept = false
+					break
+			if kept:
+				counted.append(at)
+		if since >= 24 and forced_at.is_empty() and eyes.size() > 1 and is_steady.call(eyes.size() - 1):
+			forced_at.append(eyes.size())
+			_force_slip = -1 if (counted.size() + forced_at.size()) % 2 == 1 else 1
+			since = 0
 	_frame_hook = Callable()
 	_forget_slip = false
 
 	var stalled := 0
 	var doubled := 0
 	var worst := 0.0
+	var worst_share := 0.0
 	var corrections := int(_client.net.predictor.get("_corrections_applied"))
-	for at in forced_at:
-		for i in range(at, mini(at + 20, eyes.size())):
-			if i == 0:
-				continue
+	for at in counted:
+		for i in range(at, at + 20):
 			var step := eyes[i] - eyes[i - 1]
 			var flat := Vector3(velocities[i].x, 0.0, velocities[i].z)
 			var speed := flat.length()
-			if speed < 1.0 or step.length() > 0.5:
-				continue
 			var expected := speed * deltas[i]
 			var along := Vector3(step.x, 0.0, step.z).dot(flat / speed)
 			if along < expected * 0.5:
 				stalled += 1
 			elif along > expected * 1.5:
 				doubled += 1
-			worst = maxf(worst, (Vector3(step.x, 0.0, step.z) - flat / speed * expected).length())
+			var off := (Vector3(step.x, 0.0, step.z) - flat / speed * expected).length()
+			worst = maxf(worst, off)
+			worst_share = maxf(worst_share, off / expected)
 	if _verbose:
 		print("      %s: %d corrections so far" % ["control" if forget else "drawn", corrections])
-	return [stalled, doubled, worst]
+	return [stalled, doubled, worst, counted.size(), worst_share]
 
 
 func _play_window(window: Array) -> void:
