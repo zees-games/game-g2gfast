@@ -97,8 +97,11 @@ sv_map_sync_timeout 30       // how long a map change waits for slow clients
 sv_deathmatch 0              // players can shoot each other
 sv_hunters 0                 // monsters walk the course
 sv_props 0                   // players can place practice blocks
+sv_ragdoll 1                 // a dead player falls as a ragdoll; 0 is a quick fall with no physics
 sv_map_rotation_file cfg/map_rotation   // which installed maps rotate; see below
 ```
+
+A player killed in deathmatch or by a hunter falls as a ragdoll ([dot-player-char](https://github.com/modcommunity/dot-player-char)) until they are back at the start; the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
 
 ### Which maps rotate
 Put the maps you want played in `cfg/map_rotation.yml`. A map you leave out stays installed: `g2g_map <id>` still loads it and **M** lists it, marked "not in rotation". It just never comes round on its own, and the vote and nominations don't offer it.

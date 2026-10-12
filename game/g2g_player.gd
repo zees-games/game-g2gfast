@@ -86,6 +86,10 @@ var camera: G2GCamera = null
 ## This player's timer. Owned by the game's [DotTimerManager].
 var timer: DotTimer = null
 
+## How this player's body fell on their last death: the server's pick
+## ([method G2GCombat.decide_death]), carried on DEATH to every client. Null before one.
+var death: DotPlayerDeath = null
+
 var movement_style: DotFpsStyle = null
 var timer_style: DotTimerStyle = null
 

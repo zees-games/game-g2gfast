@@ -2,6 +2,7 @@ extends Node
 
 const G2GClient := preload("../game/g2g_client.gd")
 const G2GEvents := preload("../game/net/g2g_events.gd")
+const G2GPlayer := preload("../game/g2g_player.gd")
 
 ## The real client, offline: what a player's keys do, rather than what the pieces do.
 ##
@@ -18,8 +19,8 @@ const G2GEvents := preload("../game/net/g2g_events.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 28
-const SECTIONS := 9
+const CHECKS := 33
+const SECTIONS := 10
 
 var _passed := 0
 var _failed := 0
@@ -69,6 +70,7 @@ func _run() -> void:
 	_test_tab_holds_the_board()
 	await _test_the_layout_editor_is_an_overlay()
 	await _test_the_camera_is_the_watched_players()
+	await _test_a_dead_body_falls()
 
 	print("")
 	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
@@ -266,6 +268,52 @@ func _test_the_camera_is_the_watched_players() -> void:
 	_check(bea.visible and camera.global_position.distance_to(bea.eye_position()) > 1.0,
 		"stopping puts the camera back in this player's own head, and Bea back on screen")
 	_client.game.remove_player(&"u8")
+	_done()
+
+
+## A death copies a ragdoll from the rig this client draws and hides the rig until the
+## player is back; the server's `sv_ragdoll 0` is the scripted topple (no physics). Armed by
+## spawning from the player node instead of the rig (the hidden-rig check fails: the copy
+## and the figure both stand there) and by ignoring the rules (the topple check fails).
+func _test_a_dead_body_falls() -> void:
+	_section("A dead body falls the way the server picked, and gets up")
+	var game := _client.game
+	# A Kenney body, whose parts are named (torso, arm-left, ...): the stock primitives are one
+	# capsule, which is honestly one rigid piece.
+	var dressed := DotAvatar.make(&"g2g_stock")
+	dressed.set_part(&"body", &"body_kenney_c")
+	dressed.set_part(&"head", &"head_kenney_c")
+	var other: G2GPlayer = game.add_player(&"u91", "Fallen", false, dressed)
+	other.teleport(_client.player.controller.state.position + Vector3(0.0, 0.0, -4.0))
+	for _i in range(4):
+		await get_tree().process_frame
+
+	var crumple := DotPlayerDeath.new()
+	crumple.reaction = DotPlayerDeathReactions.CRUMPLE
+	crumple.roll_seed = 7
+	var body := _client.fall(&"u91", crumple)
+	_check(body != null and body.reaction.id == DotPlayerDeathReactions.CRUMPLE
+			and body.part_count() > 1 and _client.ragdolls.live().size() == 1,
+		"the server's reaction, as a jointed body copied from the drawn rig",
+		str(body.describe()) if body != null else "no body")
+	_check(not other.rig.visible, "and the standing figure is hidden while the body lies there")
+	_client.rise(&"u91")
+	_check(other.rig.visible, "a return draws the figure again")
+	_client.ragdolls.clear()
+
+	var _off := game.ragdoll_rules.set_cvar("sv_ragdoll", "0")
+	var toppled := _client.fall(&"u91", crumple)
+	_check(toppled != null and toppled.style == DotPlayerRagdollRules.Style.TOPPLE,
+		"the server's sv_ragdoll 0 is the topple fallback, no physics",
+		str(toppled.describe()) if toppled != null else "no body")
+	var _on := game.ragdoll_rules.set_cvar("sv_ragdoll", "1")
+	_client.rise(&"u91")
+	_client.ragdolls.clear()
+
+	_check(_client.fall(_client.player.player_id, crumple) == null and _client.player.rig.visible,
+		"no ragdoll of your own body in first person: the camera is inside its head")
+	game.remove_player(&"u91")
+	await get_tree().process_frame
 	_done()
 
 

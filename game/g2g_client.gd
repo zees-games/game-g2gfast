@@ -72,6 +72,10 @@ var zone_outlines: G2GZoneOutlines = null
 ## Z: drawing zones in the world. See [G2GZoneEditor].
 var zone_editor: G2GZoneEditor = null
 
+## Where the dead lie: dot-player-char's ragdolls, built from each death (the server's pick)
+## under [member G2GGame.ragdoll_rules]. See [method fall].
+var ragdolls: DotPlayerRagdolls = null
+
 ## What the server last said about this client's own screen: `sv_flashlight`,
 ## `sv_allow_thirdperson` and the chat commands. See [method _on_rules].
 var rules: Dictionary = {"flashlight": true, "thirdperson": true, "commands": []}
@@ -173,6 +177,8 @@ func _ready() -> void:
 	# watcher would otherwise read the first frame on the new one as a fall.
 	game.map_ready.connect(func(_map: DotMapDef) -> void: presentation.on_map_changed())
 
+	_build_ragdolls()
+
 	zone_outlines = G2GZoneOutlines.new()
 	zone_outlines.name = "ZoneOutlines"
 	add_child(zone_outlines)
@@ -216,6 +222,58 @@ func _ready() -> void:
 
 	_grab_mouse()
 	set_process(true)
+
+
+# --- Dead bodies -------------------------------------------------------------
+
+## The yard the dead lie in, the presentation's sound, and the solo game's own deaths. Built
+## once; emptied on a map change (a body on the old map's floor would hang in the new one's
+## air). Connected, the deaths arrive as DEATH and ALIVE through the bridge instead.
+func _build_ragdolls() -> void:
+	ragdolls = DotPlayerRagdolls.new()
+	ragdolls.name = "Ragdolls"
+	ragdolls.rules = game.ragdoll_rules
+	ragdolls.sound_fn = func(id: StringName, at: Vector3, volume: float) -> void:
+		if presentation != null:
+			var _played := presentation.on_body(id, at, volume)
+	add_child(ragdolls)
+
+	game.map_ready.connect(func(_map: DotMapDef) -> void:
+		ragdolls.clear()
+		for id: StringName in game.players:
+			rise(id)
+	)
+
+	# Solo, the world is this process's and there is no DEATH message: the death the combat
+	# layer decided is on the player.
+	if game.combat != null:
+		game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
+			var id := game.combat.player_id_for(entry.victim_key.to_int())
+			var who: G2GPlayer = game.players.get(id)
+			var _fell := fall(id, who.death if who != null else null)
+		)
+		game.combat.player_respawned.connect(rise)
+
+
+## [param id]'s body falls the way the server picked ([param death]; null is a plain drop),
+## copied from the rig this client draws, which stays hidden until [method rise]. Null when
+## the server's style hides bodies, or nobody here draws that body: a player the client is
+## hiding, or this client's own in first person (the camera is inside its head).
+func fall(id: StringName, death: DotPlayerDeath) -> DotPlayerRagdoll:
+	var who: G2GPlayer = game.players.get(id) if game != null else null
+	if who == null or ragdolls == null or who.rig == null or not who.rig.is_inside_tree():
+		return null
+	if not who.visible or (who == player and not who.rig.visible_to_owner):
+		return null
+	var velocity := who.controller.state.velocity if who.controller != null else Vector3.ZERO
+	return ragdolls.spawn(who.rig, death if death != null else DotPlayerDeath.new(), velocity)
+
+
+## [param id] is alive again: the rig a fall hid is drawn again where they now stand.
+func rise(id: StringName) -> void:
+	var who: G2GPlayer = game.players.get(id) if game != null else null
+	if who != null and who.rig != null:
+		who.rig.visible = true
 
 
 ## Lists what the browser found, on the HUD. What `!servers` and F3 both call.
@@ -457,6 +515,15 @@ func _build_netcode() -> DotResult:
 		if hud != null:
 			hud.confirm_hit(victim, amount, point, killed, headshot)
 	)
+	# Every death on the server, a hunter's swipe included, and every return to a start.
+	bridge.death_received.connect(func(id: StringName, death: DotPlayerDeath) -> void:
+		var _fell := fall(id, death)
+	)
+	bridge.alive_received.connect(rise)
+	# The server's sv_ragdoll* set: this end draws the bodies. An older shell's link cannot
+	# say, and the rules keep their defaults.
+	if link != null:
+		var _bodies := game.ragdoll_rules.follow_cvars(link)
 	# The map's time left, from the server's vote. The bridge holds it; the HUD draws it.
 	bridge.clock_received.connect(func(_state: Dictionary) -> void:
 		if hud != null:

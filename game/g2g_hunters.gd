@@ -441,6 +441,16 @@ func hunter_attack(npc: DotNpcInstance, victim: StringName, amount: float) -> vo
 	# because dot-combat has nothing registered under it and simply does nothing.
 	var damage := DotDamage.make(0, game.combat.entity_for(victim), amount, type)
 	damage.weapon_id = npc.def.id if npc.def != null else &"hunter"
+	# [b]The tick, or the swipe is refused for ever after a respawn.[/b] DotHealth compares it
+	# with the spawn protection's last tick, and a damage left on tick 0 is inside every
+	# window: a runner who had died once (or been placed at a round start) could not be hurt
+	# by a hunter again. The effects layer and the admin's slay always stamped it.
+	damage.tick = game.current_tick()
+	# Away from the hunter, so a runner it kills falls the way the swipe pushed them
+	# ([method G2GCombat.decide_death]); world damage has no attacker to measure from.
+	var target: G2GPlayer = game.players.get(victim)
+	if target != null and target.controller != null:
+		damage.direction = target.controller.state.position - npc.position()
 	game.combat.manager.apply_damage(damage)
 
 	# And the part that makes being chased cost something other than health.

@@ -40,8 +40,13 @@ const G2GStats := preload("g2g_stats.gd")
 
 const CHANNEL := "g2g.combat"
 
-## A player was killed. After the scoreboard has seen it.
+## A player was killed. After the scoreboard has seen it, and after the server has picked how
+## their body falls ([member G2GPlayer.death]). A hunter's kill comes through here too: it
+## is world damage through the same manager.
 signal player_killed(entry: DotKillFeed.Entry)
+
+## A dead player is alive again, back at a start. A client shows the figure it hid.
+signal player_respawned(player_id: StringName)
 
 ## A player's shot took health off somebody: the shooter's hit marker and damage number.
 ## Only what the authority applied, never a client's prediction, and never a refused hit,
@@ -69,6 +74,9 @@ var match_node: DotMatch = null
 
 ## player id -> the components this layer hung off their node.
 var _kit: Dictionary = {}
+
+## The weapon definitions by id, for the death reaction a weapon asks for. Built on first use.
+var _weapon_defs: Dictionary = {}
 
 var _started: bool = false
 
@@ -641,6 +649,11 @@ func _on_entity_killed(entity_id: int, damage: DotDamage) -> void:
 		damage.is_headshot()
 	)
 
+	# How the body falls, picked once, here, and carried on DEATH to every client.
+	var fallen: G2GPlayer = game.players.get(player_id_for(entity_id))
+	if game.authoritative and fallen != null:
+		fallen.death = decide_death(fallen, damage)
+
 	if game.progress != null:
 		var victim := player_id_for(entity_id)
 
@@ -706,6 +719,28 @@ func _on_respawn_due(key: String, spawn: DotSpawnPoint, tick: int) -> void:
 		player.teleport(at)
 	else:
 		game.spawn_player(player_id)
+
+	player_respawned.emit(player_id)
+
+
+## The fall a death gets: dot-player-char's reaction rule over the server's
+## `sv_ragdoll_reactions`, seeded from the victim and the tick, with the killing weapon's def.
+## The push goes the way the shot went, or away from the killer when the damage carries no
+## direction (a hunter's swipe sets one; see [method G2GHunters.hunter_attack]).
+func decide_death(player: G2GPlayer, damage: DotDamage) -> DotPlayerDeath:
+	if _weapon_defs.is_empty():
+		_weapon_defs = G2GArsenal.weapon_table()
+	var direction := damage.direction
+	if direction.length_squared() < 0.0001 and damage.attacker != 0 and damage.attacker != damage.victim:
+		var attacker: G2GPlayer = game.players.get(player_id_for(damage.attacker))
+		if attacker != null and attacker != player:
+			direction = player.controller.state.position - attacker.controller.state.position
+	direction.y = 0.0
+	return DotPlayerDeath.decide(
+		game.ragdoll_rules.reactions(), damage.is_headshot(), damage.amount, direction,
+		DotPlayerDeath.seed_of(entity_for(player.player_id), game.current_tick()),
+		_weapon_defs.get(damage.weapon_id)
+	)
 
 
 # --- Ids -------------------------------------------------------------------

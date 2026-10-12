@@ -194,6 +194,12 @@ var entities := DotEntityTable.new()
 
 var combat: G2GCombat = null
 
+## What a dead body does, and which death reactions the server allows: dot-player-char's
+## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
+## link, because the client draws the bodies. On the game, not on [member combat]: a client
+## has no combat layer and still draws every fall.
+var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
+
 ## Hunters on the course. Null unless `sv_hunters` built them.
 var hunters: G2GHunters = null
 

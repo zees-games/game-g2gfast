@@ -317,6 +317,14 @@ func _module_load() -> DotResult:
 	# Each one flips a layer that is already built. A layer constructed on the cvar
 	# instead would be constructed under live players, which is where the interesting
 	# failures are — and it would have to be torn down again on the way back.
+	# Dead bodies: dot-player-char's sv_ragdoll* set. The server only picks each death's
+	# reaction from them; REPLICATED, because the clients draw the bodies (the client's
+	# _build_netcode follows them). Bound whether or not anybody can die yet, so a config's
+	# `sv_ragdoll_style stiff` holds when deathmatch or the hunters are turned on later.
+	var _ragdolls := game.ragdoll_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+	)
+
 	add_cvar("sv_deathmatch", "1" if game.config.deathmatch else "0",
 		"Whether players can shoot each other.").changed.connect(
 		func(_old: String, new_value: String) -> void:

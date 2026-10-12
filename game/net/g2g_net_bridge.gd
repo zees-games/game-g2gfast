@@ -129,6 +129,12 @@ signal spectators_received(target: StringName, names: PackedStringArray)
 ## A hit of this client's player that the server applied (see [signal G2GCombat.hit_landed]).
 signal hit_received(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool)
 
+## A player died: their key, and how the body falls (null from a server that did not say).
+signal death_received(player_id: StringName, death: DotPlayerDeath)
+
+## A dead player is alive again: their key.
+signal alive_received(player_id: StringName)
+
 ## The map's time left as the server last described it. Client side; what the HUD draws.
 ## Never adopted means never told, which the HUD answers with the local clock.
 var clock_view: DotVoteClockView = DotVoteClockView.new()
@@ -239,6 +245,11 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 		# hunters), so connecting once here sees every combat layer this game will have.
 		if game.combat != null:
 			game.combat.hit_landed.connect(_on_hit_landed)
+			# Every death, a hunter's included, and every return: before this nothing
+			# connected player_killed, and a dead runner stood upright on every screen.
+			game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
+				broadcast_death(game.combat.player_id_for(entry.victim_key.to_int())))
+			game.combat.player_respawned.connect(broadcast_alive)
 
 	return DotResult.success(self)
 
@@ -248,6 +259,19 @@ func _on_hit_landed(by: StringName, victim: int, amount: float, point: Vector3, 
 	var peer_id := peer_for_player(session_of(by))
 	if peer_id > 0:
 		_tell(peer_id, G2GEvents.Kind.HIT, G2GEvents.write_hit(victim, amount, point, killed, headshot))
+
+
+## To everybody: [param id] died, and how the body falls ([member G2GPlayer.death], the
+## server's pick). Server side; from [signal G2GCombat.player_killed].
+func broadcast_death(id: StringName) -> void:
+	var victim: G2GPlayer = game.players.get(id)
+	if victim != null:
+		_broadcast(G2GEvents.Kind.DEATH, G2GEvents.write_death(session_of(id), victim.death))
+
+
+## To everybody: [param id] is alive again. Server side; from [signal G2GCombat.player_respawned].
+func broadcast_alive(id: StringName) -> void:
+	_broadcast(G2GEvents.Kind.ALIVE, G2GEvents.write_player(session_of(id)))
 
 
 func _style_index(id: StringName) -> int:
@@ -1620,6 +1644,14 @@ func _on_event(message: DotNetMessage) -> void:
 			if bool(hit["ok"]):
 				hit_received.emit(int(hit["victim"]), float(hit["amount"]), hit["point"],
 					bool(hit["killed"]), bool(hit["headshot"]))
+		G2GEvents.Kind.DEATH:
+			var died := G2GEvents.read_death(reader)
+			if bool(died["ok"]):
+				death_received.emit(_player_key(int(died["player_id"])), died.get("death"))
+		G2GEvents.Kind.ALIVE:
+			var session_id := G2GEvents.read_player(reader)
+			if reader.ok():
+				alive_received.emit(_player_key(session_id))
 
 
 func _apply_hello(reader: DotNetReader) -> void:

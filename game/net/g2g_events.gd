@@ -72,6 +72,13 @@ enum Kind {
 	## health it took, where it landed, whether it killed and whether it was the head. The
 	## hit marker and the damage numbers are drawn from this, never predicted. Appended.
 	HIT,
+	## A player died, to everybody: who, and how their body falls (dot-player-char's
+	## [DotPlayerDeath], the server's pick, last and optional). Every client copies a ragdoll
+	## from the figure it draws and hides the figure. Appended.
+	DEATH,
+	## A dead player is alive again, at a start: every client shows the figure it hid on
+	## DEATH. Appended.
+	ALIVE,
 }
 
 enum Ask {
@@ -623,6 +630,25 @@ static func read_spectators(reader: DotNetReader) -> Dictionary:
 	for i in range(count):
 		names.append(reader.read_string(NAME_BYTES))
 	return {"ok": reader.ok(), "target": target, "names": names}
+
+
+## [constant Kind.DEATH]'s body: the victim's session id, then the fall when there is one. The
+## fall is last and optional, so a reader that does not know it reads the victim and stops.
+static func write_death(player_id: int, death: DotPlayerDeath = null) -> PackedByteArray:
+	var writer := _w()
+	writer.write_varint(maxi(player_id, 0))
+	if death != null:
+		death.write_to(writer)
+	return writer.to_bytes()
+
+
+static func read_death(reader: DotNetReader) -> Dictionary:
+	var out := {"player_id": reader.read_varint()}
+	# A byte or more left is the fall; less is the padding to the last byte.
+	if reader.bits_remaining() >= 8:
+		out["death"] = DotPlayerDeath.read_from(reader)
+	out["ok"] = reader.ok()
+	return out
 
 
 ## [constant Kind.HIT]'s body. The point is three float32s, not a range: imported maps run

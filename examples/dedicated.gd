@@ -27,7 +27,7 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 18
-const CHECKS := 199
+const CHECKS := 204
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -980,6 +980,41 @@ func _test_modes() -> void:
 				"and an applied hit on somebody else says who fired, at whom and how much",
 				"refused=%s heard=%s" % [hit.refused, str(heard)]
 			)
+
+			# --- How a dead body falls: picked here, from the server's own weights ---
+			#
+			# Armed by turning the cvar binding off in the module (the replicated check fails
+			# and the pick stays a draw over the stock weights) and by deciding nothing in
+			# `_on_entity_killed` (the death is null).
+			var weights := server.console.find_cvar("sv_ragdoll_reactions")
+			_check(weights != null and weights.has_flag(DotConVar.FLAG_REPLICATED)
+					and server.console.find_cvar("sv_ragdoll") != null,
+				"the sv_ragdoll* set is bound, replicated, because the clients draw the bodies")
+			var _only := _run_command("sv_ragdoll_reactions limp=0,crumple=0,face_plant=1")
+			var fatal := DotDamage.make(entity, victim_entity, 500.0, bullet)
+			fatal.tick = game.current_tick()
+			game.combat.manager.apply_damage(fatal)
+			var fallen: G2GPlayer = game.players.get(&"u4343")
+			var away := Vector3.ZERO
+			if fallen != null:
+				away = fallen.controller.state.position - runner.controller.state.position
+				away.y = 0.0
+			_check(fallen != null and fallen.death != null
+					and fallen.death.reaction == DotPlayerDeathReactions.FACE_PLANT,
+				"a kill picks the body's fall on the server, from sv_ragdoll_reactions",
+				str(fallen.death.describe()) if fallen != null and fallen.death != null else "no death")
+			_check(fallen != null and fallen.death != null
+					and (away.length() < 0.01 or fallen.death.direction.dot(away.normalized()) > 0.9),
+				"pushed away from the shooter")
+			var _stock := _run_command("sv_ragdoll_reactions limp=4,headshot_launch=6,power_launch=8,face_plant=1.5,crumple=2.5")
+			var back: Array[StringName] = []
+			var on_back := func(id: StringName) -> void: back.append(id)
+			game.combat.player_respawned.connect(on_back)
+			for _respawn in range(game.tick_rate + game.tick_rate / 4):
+				game.tick_once(game.current_tick() + 1)
+			game.combat.player_respawned.disconnect(on_back)
+			_check(back.has(&"u4343"), "and the dead player's return is announced, for the clients to draw them again", str(back))
+
 			if target != null:
 				game.remove_player(&"u4343")
 
@@ -1078,6 +1113,18 @@ func _test_modes() -> void:
 				shooter != null and not shooter.has_meta("g2g_fire"),
 				"and a trigger is read once, so a lost packet is not a held trigger"
 			)
+
+			# A hunter's kill is world damage through the same combat layer, so it is a death
+			# like any other: the body falls away from the hunter that swiped.
+			if game.hunters != null:
+				var at := runner.controller.state.position + Vector3(3.0, 0.0, 0.0)
+				var hunter := game.hunters.spawn_one(&"g2g_stalker", at)
+				if hunter != null:
+					game.hunters.hunter_attack(hunter, &"u4242", 1000.0)
+					game.hunters.spawner.remove(hunter.instance_id, DotNpcSpawner.REASON_ADMIN)
+				_check(hunter != null and runner.death != null and runner.death.direction.x < -0.9,
+					"a hunter's kill falls too, away from the hunter",
+					str(runner.death.describe()) if runner.death != null else "no death")
 
 			game.remove_player(&"u4242")
 

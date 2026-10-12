@@ -140,6 +140,7 @@ Short forms; the reasoning is in the linked file.
 - Hunters have no navigation graph (`require_navigable_spawn` off). Practice blocks spawn frozen, `only_practice` on. [modes](docs/modes.md#a-timer-map-is-a-critical-path-so-the-hunters-have-no-navigation-graph)
 - A hunter brain seeds from `npc.seed`, never `npc.instance_id` (moves with every allocation). dot-npc `docs/runtime.md`
 - Spectating: `force_camera` 0 unless deathmatch; `sv_spec_list` gated on the server. [modes](docs/modes.md#spectating)
+- A death's fall is the server's pick (`G2GCombat.decide_death`), sent as DEATH, undone by ALIVE; every `DotDamage` made here carries `tick` (tick 0 is inside every spawn protection). [modes](docs/modes.md#a-dead-player-falls)
 
 ## Not here yet
 

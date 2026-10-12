@@ -435,6 +435,26 @@ static func sound_catalogue() -> DotAudioCatalogue:
 	light.priority = 20
 	c.add(light)
 
+	# A body landing: dot-player-char's stock death sounds (Kenney, CC0), shipped in the addon.
+	# Under the landing and the timer: a body somewhere on the map must never take a voice
+	# from the rhythm a runner keeps time by.
+	for row: Dictionary in DotPlayerDeathSounds.rows():
+		var fall := DotAudioDef.new()
+		fall.id = row["id"]
+		fall.path = row["path"]
+		fall.variants = row["variants"]
+		fall.kind = DotAudioDef.Kind.POSITIONAL_3D
+		fall.bus = &"SFX"
+		fall.unit_size = 8.0
+		fall.max_distance = 45.0
+		fall.max_concurrent = 3
+		fall.priority = 35
+		fall.gain_db = float(row["gain_db"])
+		fall.pitch_min = float(row["pitch_min"])
+		fall.pitch_max = float(row["pitch_max"])
+		fall.cooldown_ms = int(row["cooldown_ms"])
+		c.add(fall)
+
 	return c
 
 
@@ -475,6 +495,11 @@ static func sound_recipes() -> Dictionary:
 		G2GVote.CUE_END: DotAudioSynth.Voice.DIE,
 		G2GVote.CUE_WARNING: DotAudioSynth.Voice.BOOM,
 		G2GVote.CUE_COUNT: DotAudioSynth.Voice.SHOT,
+		# Stand-ins only for a build without dot-player-char's files.
+		DotPlayerDeathReactions.SOUND_THUD: DotAudioSynth.Voice.IMPACT,
+		DotPlayerDeathReactions.SOUND_FACE_PLANT: DotAudioSynth.Voice.IMPACT,
+		DotPlayerDeathReactions.SOUND_SLUMP: DotAudioSynth.Voice.STEP,
+		DotPlayerDeathReactions.SOUND_WHOOSH: DotAudioSynth.Voice.SPAWN,
 	}
 
 
@@ -929,6 +954,14 @@ func on_beacon(at: Vector3) -> int:
 		return 0
 
 	return audio.play_at(BEACON_SOUND, at)
+
+
+## A dead body's sound (dot-player-char's ragdolls), where it landed.
+func on_body(id: StringName, at: Vector3, volume: float) -> int:
+	if audio == null:
+		return 0
+
+	return audio.play_at(id, at, clampf(volume, 0.3, 1.0))
 
 
 ## The flashlight went on or off.

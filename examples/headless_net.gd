@@ -37,13 +37,13 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 206
+const CHECKS := 211
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 29
+const SECTIONS := 30
 
 var _passed := 0
 var _failed := 0
@@ -98,6 +98,7 @@ func _run() -> void:
 		_test_clock_wire()
 		_test_rules_wire()
 		_test_hit_wire()
+		_test_death_wire()
 		_test_blind_and_beacon()
 		_test_hunters_reach_the_client()
 		_test_spectating_reaches_the_client()
@@ -1784,6 +1785,56 @@ func _test_hit_wire() -> void:
 
 	_check(arrived.size() == 1 and int(arrived[0]["victim"]) == 12 and bool(arrived[0]["headshot"]),
 		"the shooter's own hit reaches their client, and a peerless shooter's does not (%s)" % str(arrived))
+	_done()
+
+
+## A death and a return, to everybody: who, and how the body falls (the server's pick). Before
+## DEATH existed nothing connected `G2GCombat.player_killed` and a dead runner stood upright on
+## every screen. Armed by dropping the fall from `write_death` (the reaction check fails) and by
+## reading it unconditionally (the bare check fails: an older server's DEATH reads garbage).
+func _test_death_wire() -> void:
+	_section("a death and a return over the link")
+
+	var fall := DotPlayerDeath.new()
+	fall.reaction = DotPlayerDeathReactions.HEADSHOT_LAUNCH
+	fall.roll_seed = 9001
+	fall.damage = 62.0
+	fall.direction = Vector3(1.0, 0.0, 0.0)
+	fall.headshot = true
+	var carried := G2GEvents.read_death(DotNetReader.new(G2GEvents.write_death(4097, fall)))
+	var read: DotPlayerDeath = carried.get("death")
+	_check(bool(carried["ok"]) and int(carried["player_id"]) == 4097 and read != null
+			and read.reaction == fall.reaction and read.roll_seed == 9001 and read.headshot
+			and read.direction.distance_to(Vector3(1.0, 0.0, 0.0)) < 0.05,
+		"a DEATH round-trips: the victim and the server's fall", str(carried))
+	var bare := G2GEvents.read_death(DotNetReader.new(G2GEvents.write_death(4097)))
+	_check(bool(bare["ok"]) and int(bare["player_id"]) == 4097 and not bare.has("death"),
+		"and one without a fall reads as the victim alone", str(bare))
+
+	var deaths: Array = []
+	var alive: Array = []
+	var on_death := func(id: StringName, death: DotPlayerDeath) -> void:
+		deaths.append([id, death])
+	var on_alive := func(id: StringName) -> void:
+		alive.append(id)
+	_client_bridge.death_received.connect(on_death)
+	_client_bridge.alive_received.connect(on_alive)
+	var victim := _server_player()
+	victim.death = fall
+	_server_bridge.broadcast_death(victim.player_id)
+	_flush()
+	_server_bridge.broadcast_alive(victim.player_id)
+	_flush()
+	victim.death = null
+	_client_bridge.death_received.disconnect(on_death)
+	_client_bridge.alive_received.disconnect(on_alive)
+
+	_check(deaths.size() == 1 and deaths[0][0] == victim.player_id,
+		"the death reaches the client, keyed as the client keys the player", str(deaths))
+	_check(deaths.size() == 1 and deaths[0][1] != null
+			and (deaths[0][1] as DotPlayerDeath).reaction == DotPlayerDeathReactions.HEADSHOT_LAUNCH,
+		"with the reaction the server picked, so every screen draws the same fall")
+	_check(alive == [victim.player_id], "and so does the return", str(alive))
 	_done()
 
 
