@@ -800,6 +800,12 @@ func _drive_spectator_camera() -> void:
 	if not game.spectate.is_spectating(player.player_id):
 		return
 
+	# The chase camera pulled out of the walls by dot-spectate, given the level.
+	var manager: DotSpectatorManager = game.spectate.manager
+	if manager != null and manager.camera_world == null:
+		manager.camera_world = camera.get_world_3d()
+		manager.camera_mask = 1
+
 	var where := game.spectate.camera_for(player.player_id)
 
 	if where == Transform3D.IDENTITY:
