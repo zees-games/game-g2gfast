@@ -452,6 +452,7 @@ func present(delta: float) -> void:
 		pitch = (view_now as Vector2).y
 
 	rig.set_crouch(state.crouch_fraction)
+	rig.move(state, delta)
 	rig.global_basis = Basis(Vector3.UP, deg_to_rad(yaw))
 
 	# The rig hangs off this node, which only moves on a tick — so in third person the

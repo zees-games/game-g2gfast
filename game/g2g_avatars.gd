@@ -166,6 +166,39 @@ static func apply(
 	return DotAvatarBuilder.apply(steps, rig, null)
 
 
+## The person an avatar document is drawn as: one of dot-player-char's people (the family's
+## one animated style for players, bots and NPCs), coloured from the document. A Kenney body
+## part gives that skin's clothes, a Kenney head that skin's face, hair and which of the four
+## bodies; a primitive part gives its tint to the top over a stock person seeded by
+## [param player_key]. The hat is not drawn (the people have no mount for one).
+static func look_of(avatar: DotAvatar, player_key: StringName) -> DotHumanoidLook:
+	var look := DotHumanoidLook.stock(hash(String(player_key)))
+	if avatar == null or avatar.schema_id != SCHEMA_ID:
+		return look
+	var body := _kenney_letter(avatar.part_in(SLOT_BODY))
+	var head := _kenney_letter(avatar.part_in(SLOT_HEAD))
+	if body != "":
+		look.top = Color(DotHumanoidLook.SITE_SKINS[body][2])
+		look.bottom = Color(DotHumanoidLook.SITE_SKINS[body][3])
+	elif avatar.has_slot(SLOT_BODY):
+		look.top = avatar.colour_of(SLOT_BODY, 0)
+	if head != "":
+		var face := DotHumanoidLook.from_letter(head)
+		look.skin = face.skin
+		look.hair = face.hair
+		look.body = face.body
+	return look
+
+
+static func _kenney_letter(part: StringName) -> String:
+	var text := String(part)
+	var at := text.find("_kenney_")
+	if at < 0:
+		return ""
+	var letter := text.substr(at + 8)
+	return letter if DotHumanoidLook.SITE_SKINS.has(letter) else ""
+
+
 ## A member's site avatar as a runner: their top's skin is the body, their face's skin
 ## the head. See `DotPlatformIdentity.avatar_translate_fn`. Null when the document is not
 ## the site's, so the member wears their stock look rather than a guess.

@@ -52,6 +52,9 @@ var owner_sees_head: bool = true:
 ## The avatar currently applied, for a HUD or a debug dump.
 var avatar: DotAvatar = null
 
+## The person drawn, or null before [method dress].
+var person: DotHumanoidFigure = null
+
 var _crouch: float = 0.0
 
 
@@ -72,7 +75,12 @@ func _mount(slot: StringName, at: Vector3) -> Node3D:
 	return node
 
 
-## Puts an avatar on the rig.
+## Puts an avatar on the rig: as one of the family's people (dot-player-char's
+## `DotHumanoidFigure`), coloured from the document by `G2GAvatars.look_of`, wearing the
+## document's hat. The parts are still built onto the mounts (conformed first, so a part from a
+## newer client is dropped rather than refused, and the result counts the slots drawn), then
+## the body and head parts are let go: the person is the body and the head. The hat stays, on
+## the top of the person's head.
 func dress(
 	p_avatar: DotAvatar,
 	schema: DotAvatarSchema,
@@ -80,29 +88,59 @@ func dress(
 ) -> DotResult:
 	avatar = p_avatar
 
+	for mount in [body_mount, head_mount, hat_mount]:
+		for child in mount.get_children():
+			mount.remove_child(child)
+			child.queue_free()
+
 	var built := G2GAvatars.apply(p_avatar, self, schema, catalogue)
+	if not built.ok:
+		return built
+
+	for mount in [body_mount, head_mount]:
+		for child in mount.get_children():
+			mount.remove_child(child)
+			child.queue_free()
+
+	if person != null:
+		remove_child(person)
+		person.queue_free()
+	person = DotHumanoidFigure.new()
+	person.name = "Person"
+	add_child(person)
+	var height := G2GMovement.player_height()
+	person.build(G2GAvatars.look_of(p_avatar, StringName(str(get_meta(&"player_key", "")))), height)
+	# The people's heads are big: the crown is a few centimetres under the full height.
+	hat_mount.position = Vector3(0.0, height - HAT_DROP, 0.0)
 
 	_apply_visibility()
 
 	return built
 
 
-## Squashes the rig for a crouch. [param fraction] is the state's crouch fraction.
-##
-## Scaled rather than re-posed, because a stock character has no skeleton — and a
-## player's own avatar from the platform is a set of parts on mounts, not a rig with
-## bones. It reads as a duck at a glance, which is what a timer HUD needs.
-func set_crouch(fraction: float) -> void:
-	if absf(fraction - _crouch) < 0.001:
+## How far under the person's full height a hat sits (the hair is the top).
+const HAT_DROP := 0.3
+
+
+## Tells the person how the player moves and advances its clip, once a frame: the drawn
+## state's ground speed, vertical speed and floor. The crouch is [method set_crouch]'s.
+func move(state: DotFpsState, delta: float) -> void:
+	if person == null:
 		return
+	var v := state.velocity
+	person.set_motion({
+		"on_floor": state.is_grounded(),
+		"vertical": v.y,
+		"crouched": _crouch > 0.5,
+	})
+	person.animate(Vector2(v.x, v.z).length(), delta)
 
+
+## Records the crouch for the person, who crouches with its clip ([method move]).
+## [param fraction] is the state's crouch fraction. It was a squash of the rig when the
+## characters were rigid parts with no knees.
+func set_crouch(fraction: float) -> void:
 	_crouch = fraction
-
-	var stand := G2GUnits.PLAYER_HEIGHT
-	var duck := G2GUnits.PLAYER_CROUCH_HEIGHT
-	var scale_y := lerpf(1.0, duck / stand, fraction)
-
-	scale = Vector3(1.0, scale_y, 1.0)
 
 
 func _apply_visibility() -> void:
@@ -116,9 +154,13 @@ func _apply_visibility() -> void:
 	# `body_mount` and is hidden, which is the safe way round.
 	for child in get_children():
 		var sees := visible_to_owner
-		if sees and not owner_sees_head and child != body_mount:
+		if sees and not owner_sees_head and child != body_mount and child != person:
 			sees = false
 		_set_layers_recursive(child, sees)
+	# The person is one mesh, so the head is not a separate mount to cull: its bone is shrunk
+	# instead, for the owner's own body in first person.
+	if person != null:
+		person.hide_head = visible_to_owner and not owner_sees_head
 
 
 func _set_layers_recursive(node: Node, owner_sees: bool) -> void:
@@ -161,5 +203,6 @@ func describe() -> Dictionary:
 			"" if owner_sees_head else " (body only)",
 		],
 		"parts": body_mount.get_child_count() + head_mount.get_child_count()
-			+ hat_mount.get_child_count(),
+			+ hat_mount.get_child_count() + (1 if person != null else 0),
+		"person": person.describe() if person != null else {},
 	}

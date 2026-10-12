@@ -1029,6 +1029,7 @@ func add_player(
 	# Their own avatar when they have one, a stock character when they do not. The
 	# stock one is a real document over the same schema, so nothing about drawing
 	# changes the day the platform hands one over.
+	player.rig.set_meta(&"player_key", String(id))
 	var dressed := player.rig.dress(
 		avatar if avatar != null else G2GAvatars.stock_avatar(id),
 		avatar_schema, avatar_catalogue

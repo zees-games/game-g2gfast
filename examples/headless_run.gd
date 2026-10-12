@@ -593,8 +593,8 @@ func _test_avatars() -> void:
 		site_avatars.from_site(unknown_skin) == null and site_avatars.from_site(not_site) == null,
 		"a skin this game does not draw, or a document that is not the site's, is stock"
 	)
-	_check(bot.rig.body_mount.get_child_count() == 1, "with a body")
-	_check(bot.rig.head_mount.get_child_count() == 1, "and a head")
+	_check(bot.rig.person != null and bot.rig.person.from_art, "with a body: one of the family's people")
+	_check(bot.rig.person != null and bot.rig.person.skeleton() != null and bot.rig.person.skeleton().find_bone("Head") >= 0, "and a head")
 
 	# Deterministic in the id, so the same player is the same character everywhere.
 	var a := G2GAvatars.stock_avatar(&"alice")
