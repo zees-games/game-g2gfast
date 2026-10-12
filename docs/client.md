@@ -64,7 +64,8 @@ The Escape menu, help, the map list, "Move HUD elements", the key rebinder, the 
 - **The time left is the vote's clock**, adopted from CLOCK events into one `clock_view` and counted down between messages; with no clock the slot is gone (see [services.md](services.md#the-vote)). Offline, where the local session is the real clock, it keeps the session's.
 - **While spectating**, the clock, speed and keys are the watched player's (`G2GHud.followed_id`); the standing line stays the owner's, because a client is only told its own.
 - **The blind overlay** fades in under the clock and keys, sized to the viewport rather than to the HUD, and is the HUD's first child.
-- `tools/screenshot_hud.sh` renders the clock, keys, stage line, notices, the clock states, beacon, blind and the gate effects (`--fx`).
+- **Hit feedback on combat maps is dot-ui's** `DotHitMarker` and `DotDamageNumbers`, flashed by `confirm_hit` from a hit the authority applied and never from the local prediction (a marker for a shot the server refused teaches a player to ignore it). `G2GCombat.hit_landed` says it: offline the HUD hears it directly, online the server sends a HIT event to the shooter alone. A refused hit, one that took no health or one on yourself is no hit. The run timer is not a `DotScoreStrip` clock and stays the timer's.
+- `tools/screenshot_hud.sh` renders the clock, keys, stage line, notices, the clock states, beacon, a confirmed headshot, blind and the gate effects (`--fx`).
 
 ## The flashlight lights unshaded surfaces too
 

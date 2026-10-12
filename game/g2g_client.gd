@@ -451,6 +451,12 @@ func _build_netcode() -> DotResult:
 		if hud != null and pid == bridge.local_player_id:
 			hud.apply_standing(standing)
 	)
+	# A hit of ours the server applied: the marker and the number on the body. Only sent to
+	# the one who fired, so there is no player to check.
+	bridge.hit_received.connect(func(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> void:
+		if hud != null:
+			hud.confirm_hit(victim, amount, point, killed, headshot)
+	)
 	# The map's time left, from the server's vote. The bridge holds it; the HUD draws it.
 	bridge.clock_received.connect(func(_state: Dictionary) -> void:
 		if hud != null:

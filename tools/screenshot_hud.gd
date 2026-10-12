@@ -168,6 +168,7 @@ func _stage() -> void:
 		{"name": "hud_clock", "arrange": _arrange_clock, "arranged": false},
 		{"name": "hud_no_clock", "arrange": _arrange_no_clock, "arranged": false},
 		{"name": "hud_beacon", "arrange": _arrange_beacon, "arranged": false},
+		{"name": "hud_hit", "arrange": _arrange_hit, "arranged": false},
 		{"name": "hud_blind", "arrange": _arrange_blind, "arranged": false},
 		{"name": "hud_loading", "arrange": _arrange_loading, "arranged": false},
 	]
@@ -229,6 +230,16 @@ func _arrange_beacon() -> void:
 	_other.controller.state.position = ahead
 	_other.global_position = ahead
 	_other.beacon = true
+
+
+## A confirmed headshot on the beaconed runner ahead: the hit marker round the crosshair
+## and the number on their head, as a combat map draws them. Both are made to last, since
+## a software renderer's four settle frames outlive a real marker's quarter second.
+func _arrange_hit() -> void:
+	_other.beacon = false
+	_hud.hit_marker.hit_sec = 30.0
+	_hud.damage_numbers.life_sec = 5.0
+	_hud.confirm_hit(4, 27.0, _other.controller.state.position + Vector3(0.0, 1.6, 0.0), false, true)
 
 
 ## The same view, blinded: nothing of the course, and the clock and keys still drawn.

@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 185
+const CHECKS := 189
 
 var _passed := 0
 var _failed := 0
@@ -73,6 +73,7 @@ func _run() -> void:
 	await _test_a_theme_is_every_screen()
 	await _test_the_board_is_a_timer_servers()
 	await _test_the_timer_is_the_players_layout()
+	await _test_a_confirmed_hit_is_drawn()
 
 	print("")
 	_check(
@@ -1663,6 +1664,27 @@ func _test_the_timer_is_the_players_layout() -> void:
 	menu.queue_free()
 	host.queue_free()
 	editor.queue_free()
+	hud.queue_free()
+	_done()
+
+
+## Hit feedback on a combat map, from dot-ui: the marker and the number come from a hit the
+## authority applied (`confirm_hit`), and nothing is drawn before one.
+func _test_a_confirmed_hit_is_drawn() -> void:
+	_section("A hit the server confirmed is drawn, and nothing before it")
+
+	var hud := G2GHud.new()
+	add_child(hud)
+	await get_tree().process_frame
+
+	_check(hud.hit_marker != null and hud.damage_numbers != null,
+		"the HUD carries dot-ui's hit marker and damage numbers")
+	_check(hud.hit_marker.alpha() == 0.0 and hud.damage_numbers.texts().is_empty(),
+		"and neither draws anything until a hit lands", str(hud.hit_marker.describe()))
+	hud.confirm_hit(7, 27.0, Vector3(0.0, 1.0, -4.0), false, true)
+	_check(hud.hit_marker.alpha() > 0.0, "a confirmed hit flashes the marker", str(hud.hit_marker.describe()))
+	_check(hud.damage_numbers.texts().size() == 1 and hud.damage_numbers.texts()[0].contains("27"),
+		"and puts its number up", str(hud.damage_numbers.texts()))
 	hud.queue_free()
 	_done()
 

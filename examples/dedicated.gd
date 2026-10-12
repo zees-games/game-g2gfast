@@ -27,7 +27,7 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 18
-const CHECKS := 197
+const CHECKS := 199
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -957,6 +957,31 @@ func _test_modes() -> void:
 				entity != 4242,
 				"and is no longer what the entity id happens to be"
 			)
+
+			# The shooter's hit feedback is what the authority applied, never a refusal.
+			# A second player, hit by the first: a refused hit (spawn protection) or one
+			# on yourself is no hit, and an applied one says who fired, at whom, how much.
+			var target := game.add_player(&"u4343", "Target")
+			var heard: Array = []
+			var on_hit := func(by: StringName, victim: int, amount: float, _point: Vector3, _killed: bool, _head: bool) -> void:
+				heard.append([by, victim, amount])
+			game.combat.hit_landed.connect(on_hit)
+			var bullet := game.combat.manager.damage_type(G2GArsenal.DAMAGE_BULLET)
+			var victim_entity := game.combat.entity_for(&"u4343")
+			game.combat.manager.apply_damage(DotDamage.make(entity, entity, 10.0, bullet))
+			var self_heard := heard.size()
+			var hit := DotDamage.make(entity, victim_entity, 25.0, bullet)
+			game.combat.manager.apply_damage(hit)
+			game.combat.hit_landed.disconnect(on_hit)
+			_check(self_heard == 0, "a hit on yourself is no hit marker", str(heard))
+			_check(
+				not hit.refused and heard.size() == 1 and heard[0][0] == &"u4242"
+					and heard[0][1] == victim_entity and absf(float(heard[0][2]) - hit.health_lost) < 0.01,
+				"and an applied hit on somebody else says who fired, at whom and how much",
+				"refused=%s heard=%s" % [hit.refused, str(heard)]
+			)
+			if target != null:
+				game.remove_player(&"u4343")
 
 			# The ghost is deliberately not armed: it is a replay, it cannot be hurt,
 			# and registering it would put a name on the scoreboard that never dies

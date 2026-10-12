@@ -36,13 +36,13 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 201
+const CHECKS := 203
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 28
+const SECTIONS := 29
 
 var _passed := 0
 var _failed := 0
@@ -96,6 +96,7 @@ func _run() -> void:
 		_test_vote_wire()
 		_test_clock_wire()
 		_test_rules_wire()
+		_test_hit_wire()
 		_test_blind_and_beacon()
 		_test_hunters_reach_the_client()
 		_test_spectating_reaches_the_client()
@@ -1740,6 +1741,33 @@ func _test_clock_wire() -> void:
 	_client_bridge.clock_view = DotVoteClockView.new()
 	remove_child(vote)
 	vote.free()
+	_done()
+
+
+## A hit the server applied reaches the one who fired, and only as the server described it.
+func _test_hit_wire() -> void:
+	_section("a confirmed hit over the link")
+
+	var round_trip := G2GEvents.read_hit(DotNetReader.new(
+		G2GEvents.write_hit(4097, 33.5, Vector3(-9123.25, 412.5, 15000.0), true, false)))
+	_check(bool(round_trip["ok"]) and int(round_trip["victim"]) == 4097
+			and absf(float(round_trip["amount"]) - 33.5) < 0.1
+			and (round_trip["point"] as Vector3).is_equal_approx(Vector3(-9123.25, 412.5, 15000.0))
+			and bool(round_trip["killed"]) and not bool(round_trip["headshot"]),
+		"a HIT round-trips: victim, amount, point and both flags", str(round_trip))
+
+	var arrived: Array[Dictionary] = []
+	var on_hit := func(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> void:
+		arrived.append({"victim": victim, "amount": amount, "point": point, "killed": killed, "headshot": headshot})
+	_client_bridge.hit_received.connect(on_hit)
+	_server_bridge._on_hit_landed(&"u%d" % SESSION, 12, 20.0, Vector3(1.0, 2.0, 3.0), false, true)
+	# A shooter with no peer (a bot) is told nothing, and nothing reaches this client for it.
+	_server_bridge._on_hit_landed(&"u999999", 12, 20.0, Vector3.ZERO, false, false)
+	_flush()
+	_client_bridge.hit_received.disconnect(on_hit)
+
+	_check(arrived.size() == 1 and int(arrived[0]["victim"]) == 12 and bool(arrived[0]["headshot"]),
+		"the shooter's own hit reaches their client, and a peerless shooter's does not (%s)" % str(arrived))
 	_done()
 
 

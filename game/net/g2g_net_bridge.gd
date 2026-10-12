@@ -126,6 +126,9 @@ signal spectate_received(target: StringName, target_name: String)
 ## The server said who is watching [param target]. Client side.
 signal spectators_received(target: StringName, names: PackedStringArray)
 
+## A hit of this client's player that the server applied (see [signal G2GCombat.hit_landed]).
+signal hit_received(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool)
+
 ## The map's time left as the server last described it. Client side; what the HUD draws.
 ## Never adopted means never told, which the HUD answers with the local clock.
 var clock_view: DotVoteClockView = DotVoteClockView.new()
@@ -232,8 +235,19 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 		game.announced.connect(_on_announced)
 		game.movement_changed.connect(_on_movement_changed)
 		game.map_ready.connect(_on_map_ready)
+		# Built in the game's `_ready`, before any bridge, or never (no deathmatch and no
+		# hunters), so connecting once here sees every combat layer this game will have.
+		if game.combat != null:
+			game.combat.hit_landed.connect(_on_hit_landed)
 
 	return DotResult.success(self)
+
+
+## To the one who fired: their marker and number are drawn from this, never predicted.
+func _on_hit_landed(by: StringName, victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> void:
+	var peer_id := peer_for_player(session_of(by))
+	if peer_id > 0:
+		_tell(peer_id, G2GEvents.Kind.HIT, G2GEvents.write_hit(victim, amount, point, killed, headshot))
 
 
 func _style_index(id: StringName) -> int:
@@ -1601,6 +1615,11 @@ func _on_event(message: DotNetMessage) -> void:
 			var watching := G2GEvents.read_spectators(reader)
 			if bool(watching["ok"]):
 				spectators_received.emit(StringName(str(watching["target"])), watching["names"])
+		G2GEvents.Kind.HIT:
+			var hit := G2GEvents.read_hit(reader)
+			if bool(hit["ok"]):
+				hit_received.emit(int(hit["victim"]), float(hit["amount"]), hit["point"],
+					bool(hit["killed"]), bool(hit["headshot"]))
 
 
 func _apply_hello(reader: DotNetReader) -> void:

@@ -43,6 +43,11 @@ const CHANNEL := "g2g.combat"
 ## A player was killed. After the scoreboard has seen it.
 signal player_killed(entry: DotKillFeed.Entry)
 
+## A player's shot took health off somebody: the shooter's hit marker and damage number.
+## Only what the authority applied, never a client's prediction, and never a refused hit,
+## a hit that took nothing (a body, spawn protection) or one on yourself.
+signal hit_landed(by: StringName, victim: int, amount: float, point: Vector3, killed: bool, headshot: bool)
+
 @export_group("Rules")
 
 ## Whether anybody can be shot at all.
@@ -147,8 +152,24 @@ func _build_combat() -> DotResult:
 		manager.register_damage_type(type)
 
 	manager.entity_killed.connect(_on_entity_killed)
+	manager.damage_applied.connect(_on_damage_applied)
 
 	return DotResult.success(manager)
+
+
+## Turns dot-combat's applied damage into [signal hit_landed] for the player who fired.
+func _on_damage_applied(damage: DotDamage) -> void:
+	if not game.authoritative or damage.refused or damage.health_lost <= 0.0 \
+			or damage.attacker == 0 or damage.attacker == damage.victim:
+		return
+
+	var by := player_id_for(damage.attacker)
+
+	if by == &"" or not game.players.has(by):
+		return
+
+	hit_landed.emit(by, damage.victim, damage.health_lost, damage.point, damage.lethal,
+		damage.hit_group == DotHitGroup.HEAD)
 
 
 ## Refuses a hit on somebody inside their spawn window.

@@ -19,6 +19,10 @@ var _spectators: PanelContainer = null
 var _spectators_label: Label = null
 var _notice: Label = null
 var _crosshair: DotCrosshair = null
+## Four ticks round the crosshair on a hit the server confirmed (combat maps only).
+var hit_marker: DotHitMarker = null
+## The confirmed hits' numbers, on the bodies they landed on.
+var damage_numbers: DotDamageNumbers = null
 var _notice_until: float = 0.0
 
 var game: G2GGame = null
@@ -188,6 +192,21 @@ func _ready() -> void:
 	_crosshair.offset_bottom = 0.0
 	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_crosshair)
+
+	# Hit feedback, from dot-ui: full rect, centred on the crosshair, and drawn only from a
+	# hit the authority applied (`confirm_hit`). Neither draws anything until one lands, so a
+	# timer map that never fires shows exactly what it did before.
+	damage_numbers = DotDamageNumbers.new()
+	damage_numbers.name = "DamageNumbers"
+	damage_numbers.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	damage_numbers.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(damage_numbers)
+
+	hit_marker = DotHitMarker.new()
+	hit_marker.name = "HitMarker"
+	hit_marker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hit_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hit_marker)
 
 	# Things that just happened: a finish, a rank, a map change, a cvar an admin
 	# moved. Above the clock, where a player's eye already is.
@@ -574,6 +593,14 @@ func bind(p_game: G2GGame, p_player: StringName) -> void:
 	player_id = p_player
 
 	game.run_filed.connect(_on_run_filed)
+	# Offline (and on a listen server) the combat layer is in this process and says it
+	# itself; a client is told by the server instead (G2GClient, the bridge's HIT).
+	if game.combat != null:
+		game.combat.hit_landed.connect(
+			func(id: StringName, victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> void:
+				if id == player_id:
+					confirm_hit(victim, amount, point, killed, headshot)
+		)
 	# Where an authoritative game is in this process (offline, a listen server), it says
 	# these itself; on a client they arrive from the server instead (G2GClient).
 	game.standing_changed.connect(
@@ -615,6 +642,15 @@ func bind(p_game: G2GGame, p_player: StringName) -> void:
 	)
 
 	refresh_stage_reference()
+
+
+## A hit of this HUD's player that the authority applied: the marker round the crosshair
+## and the number on the body. Never called from a prediction.
+func confirm_hit(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> void:
+	if hit_marker == null:
+		return
+	hit_marker.flash(killed, headshot)
+	damage_numbers.add(victim, amount, point, headshot)
 
 
 ## Re-reads what the stage line counts and compares against.

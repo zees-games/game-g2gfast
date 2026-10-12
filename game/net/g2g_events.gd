@@ -68,6 +68,10 @@ enum Kind {
 	## player and to everybody watching them. Only sent while `sv_spec_list` is on; an
 	## empty list clears it. Appended.
 	SPECTATORS,
+	## A hit the server applied, to the player who fired it only: the victim's entity id, the
+	## health it took, where it landed, whether it killed and whether it was the head. The
+	## hit marker and the damage numbers are drawn from this, never predicted. Appended.
+	HIT,
 }
 
 enum Ask {
@@ -612,3 +616,25 @@ static func read_spectators(reader: DotNetReader) -> Dictionary:
 	for i in range(count):
 		names.append(reader.read_string(NAME_BYTES))
 	return {"ok": reader.ok(), "target": target, "names": names}
+
+
+## [constant Kind.HIT]'s body. The point is three float32s, not a range: imported maps run
+## to 30 000 units either way and a number on a body wants better than a range's step.
+static func write_hit(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool) -> PackedByteArray:
+	var writer := _w()
+	writer.write_varint(maxi(victim, 0))
+	writer.write_float_range(clampf(amount, 0.0, 1000.0), 0.0, 1000.0, 14)
+	writer.write_float32(point.x)
+	writer.write_float32(point.y)
+	writer.write_float32(point.z)
+	writer.write_uint((1 if killed else 0) | (2 if headshot else 0), 2)
+	return writer.to_bytes()
+
+
+static func read_hit(reader: DotNetReader) -> Dictionary:
+	var victim := reader.read_varint()
+	var amount := reader.read_float_range(0.0, 1000.0, 14)
+	var point := Vector3(reader.read_float32(), reader.read_float32(), reader.read_float32())
+	var flags := reader.read_uint(2)
+	return {"ok": reader.ok(), "victim": victim, "amount": amount, "point": point,
+		"killed": flags & 1 != 0, "headshot": flags & 2 != 0}
