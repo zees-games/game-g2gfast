@@ -15,6 +15,7 @@ const G2GHud := preload("../game/g2g_hud.gd")
 const G2GModTools := preload("../game/g2g_mod_tools.gd")
 const G2GPlayerNet := preload("../game/net/g2g_player_net.gd")
 const G2GRequest := preload("../game/net/g2g_request.gd")
+const G2GEvent := preload("../game/net/g2g_event.gd")
 const G2GMapCatalogue := preload("../game/g2g_map_catalogue.gd")
 ## game-g2gfast's netcode, end to end, in one process.
 ##
@@ -36,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 203
+const CHECKS := 206
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -230,6 +231,15 @@ func _test_hello_wire() -> void:
 	garbage.write_string("{not json", G2GEvents.MAP_REPLY_BYTES)
 	_check(G2GEvents.read_map_message(DotNetReader.new(garbage.to_bytes()), G2GEvents.MAP_REPLY_BYTES).is_empty(),
 		"and a reply that is not a JSON object reads as nothing, which dot-map ignores")
+	# A kind goes out in a fixed field the writer masks without a word, so one past it aliases a
+	# smaller kind: game-zombie-zone sent HURT and AMMO as HELLO and MAP that way. The track is
+	# dot-timer's number in dot-timer's width, which can grow under this game.
+	_check(G2GEvent.fits(), "every event kind fits the event's kind field",
+		"%d kinds in %d bits" % [G2GEvents.Kind.size(), G2GEvent.KIND_BITS])
+	_check(G2GRequest.fits(), "every request kind fits the request's kind field",
+		"%d kinds in %d bits" % [G2GEvents.Ask.size(), G2GRequest.KIND_BITS])
+	_check(G2GEvents.tracks_fit(), "every timer track fits JOIN's track field",
+		"%d tracks in %d bits" % [DotTimerTrack.COUNT, DotTimerTrack.BITS])
 	_done()
 
 
@@ -326,6 +336,12 @@ func _build() -> bool:
 
 	_server_net = _make_manager(true, &"server", 1, server_side, _server_game.tick_rate)
 	_client_net = _make_manager(false, &"client", CLIENT_PEER, client_side, _client_game.tick_rate)
+	# This harness stamps every command itself (`_tick + INPUT_LEAD`), not from the client's
+	# clock, so the client must not ask for dot-net's input-lead report: steered by reports
+	# about commands it never stamped, the clock runs away from them (only dot-net's cap
+	# holds it). By the constant map, so this parses against a dot-net from before the report.
+	var lead_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_INPUT_LEAD", 0))
+	_client_net.messages.features &= ~lead_bit
 
 	_server_bridge = G2GNetBridge.new()
 	_server_bridge.name = "Bridge"

@@ -209,6 +209,13 @@ static func read_hello(reader: DotNetReader) -> Dictionary:
 
 # --- JOIN / LEAVE ----------------------------------------------------------
 
+## Whether every [DotTimerTrack] fits in [code]DotTimerTrack.BITS[/code], the field JOIN carries
+## a track in. dot-timer owns both numbers, so a bonus added there can outgrow the field under
+## this game; headless_net reads this.
+static func tracks_fit() -> bool:
+	return DotTimerTrack.BONUS_LAST < (1 << DotTimerTrack.BITS)
+
+
 static func write_join(
 	player_id: int, peer_id: int, net_id: int, display_name: String,
 	avatar: DotAvatar, style_index: int, track: int

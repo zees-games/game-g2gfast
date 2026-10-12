@@ -47,5 +47,11 @@ func _validate() -> DotResult:
 	return DotResult.success(true)
 
 
+## Whether every [enum G2GEvents.Ask] fits in [constant KIND_BITS]. What a check reads: the writer
+## masks a value to its field, so a kind past it goes out as a smaller one and nothing errors.
+static func fits() -> bool:
+	return int(G2GEvents.Ask.values().max()) < (1 << KIND_BITS)
+
+
 func reader() -> DotNetReader:
 	return DotNetReader.new(body)
