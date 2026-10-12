@@ -9,5 +9,12 @@
   "archive": "surf_torque2_2.rar",
   "recorded": "2026-10-10"
  },
- "notes": "Credit only, and deliberately no zones: a race round with an end jail. 35 team spawns a side, 10 game_player_equip, gun buttons per level (gun_lvl1..gun_lvlbonus), glass that breaks when the first player through reaches each level, an Endround_tele and a knife-fight end jail with saw blades and rockets. Its 114 trigger_teleports are level spawns enabled and disabled by that system (spawn_lvl3, spawn4 behind cheat_protection, lvl2_spawn behind bonus_entry_denied). gb-maps-2. Not published."
+ "notes": "Credit only, and deliberately no zones: a race round with an end jail. 35 team spawns a side, 10 game_player_equip, gun buttons per level (gun_lvl1..gun_lvlbonus), glass that breaks when the first player through reaches each level, an Endround_tele and a knife-fight end jail with saw blades and rockets. Its 114 trigger_teleports are level spawns enabled and disabled by that system (spawn_lvl3, spawn4 behind cheat_protection, lvl2_spawn behind bonus_entry_denied). gb-maps-2. Not published.",
+ "round_teleports": {
+  "names": [
+   "endround_tele",
+   "afktele"
+  ],
+  "note": "`Endround_tele` is enabled at the round's end and `afktele` by the AFK timer; both are boxes round the spawn rows; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }

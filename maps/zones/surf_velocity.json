@@ -9,5 +9,11 @@
   "archive": "surf_velocity.rar",
   "recorded": "2026-10-10"
  },
- "notes": "Credit only, and deliberately no zones: a combat surf map by seven mappers, one level each. 29 team spawns a side on two facing rows, four func_buyzones, 66 placed rifles, pistols and grenades, nine game_player_equip, and an end jail with an equipment trigger per level (end_jail_equip_triggers). Its 115 trigger_teleports aim at each mapper's level start (targetpractice, sangre_spawn, jacky, hellstage, ...), a level-select and a loop rather than one route. gb-maps-2. Not published."
+ "notes": "Credit only, and deliberately no zones: a combat surf map by seven mappers, one level each. 29 team spawns a side on two facing rows, four func_buyzones, 66 placed rifles, pistols and grenades, nine game_player_equip, and an end jail with an equipment trigger per level (end_jail_equip_triggers). Its 115 trigger_teleports aim at each mapper's level start (targetpractice, sangre_spawn, jacky, hellstage, ...), a level-select and a loop rather than one route. gb-maps-2. Not published.",
+ "round_teleports": {
+  "names": [
+   "end_of_round_teleports"
+  ],
+  "note": "`end_of_round_teleports` (seven boxes, the spawn rows among them) is enabled at the round's end to send everybody to the end jail; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }

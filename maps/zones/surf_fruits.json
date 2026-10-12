@@ -9,5 +9,11 @@
   "archive": "surf_fruits.rar (the .bsp alone)",
   "recorded": "2026-10-05"
  },
- "notes": "Credit only, and deliberately no zones (gb-maps-1): ten fruit stages, one played per round, and the end of every one (endroundtele -> lvl<n>end) drops the runner into a row of weapon-handing cells beside a jail for a fight. The stages have ends, but which stage a round plays is the map's own choice and its finish is a fight, so there is no one route to time. A future pass could zone each stage as a bonus track. Not published."
+ "notes": "Credit only, and deliberately no zones (gb-maps-1): ten fruit stages, one played per round, and the end of every one (endroundtele -> lvl<n>end) drops the runner into a row of weapon-handing cells beside a jail for a fight. The stages have ends, but which stage a round plays is the map's own choice and its finish is a fight, so there is no one route to time. A future pass could zone each stage as a bonus track. Not published.",
+ "round_teleports": {
+  "names": [
+   "endroundtele"
+  ],
+  "note": "`endroundtele` (13 brushes round the spawn hall and every stage) is enabled by the round's timer and the stage-end triggers to send everybody to the end cells; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }

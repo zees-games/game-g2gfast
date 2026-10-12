@@ -7,5 +7,14 @@
   "archive": "surf_animals.rar",
   "recorded": "2026-10-09"
  },
- "notes": "Credit only, no zones yet, on purpose (gb-maps-1, 2026-10-09): a race-then-fight surf map. Sections named after animals (froggy, penguin_1/11, kitty, bear-spawn, spawn_zebra, dog, shark_hell, amstaff_stage, poco), but the route is driven by the map's logic rather than a gate chain: 33 func_buttons, and per section a family of start-disabled teleports that hand each team a weapon by race position (t_m4a1 / ct_m4a1 ... t_knife, t_lose, t_lose_last_stage) and a fight_tele into the poco arena, all turned on by outputs this importer does not run. A finish guessed from that would time a route the map does not have; read the outputs (as surf_lt_omnific's were) or draw the zones in-game. Loads, draws and collides. Not published."
+ "notes": "Credit only, no zones yet, on purpose (gb-maps-1, 2026-10-09): a race-then-fight surf map. Sections named after animals (froggy, penguin_1/11, kitty, bear-spawn, spawn_zebra, dog, shark_hell, amstaff_stage, poco), but the route is driven by the map's logic rather than a gate chain: 33 func_buttons, and per section a family of start-disabled teleports that hand each team a weapon by race position (t_m4a1 / ct_m4a1 ... t_knife, t_lose, t_lose_last_stage) and a fight_tele into the poco arena, all turned on by outputs this importer does not run. A finish guessed from that would time a route the map does not have; read the outputs (as surf_lt_omnific's were) or draw the zones in-game. Loads, draws and collides. Not published.",
+ "round_teleports": {
+  "names": [
+   "cola_cola",
+   "ct_tele",
+   "t_tele",
+   "fight_tele"
+  ],
+  "note": "the four start-disabled teleports round the spawn hall (`cola_cola`, the team knife teleports `ct_tele`/`t_tele`, `fight_tele` into the poco arena) are enabled by the race's end and the jail logic; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }

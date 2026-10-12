@@ -9,5 +9,13 @@
   "archive": "surf_pavilion.rar",
   "recorded": "2026-10-10"
  },
- "notes": "Credit only, and deliberately no zones: a scored race-and-fight round. 27 and 24 team spawns, 37 game_score entities awarding points per level end and per fail (lvl_1_end_trig, lvl_2_fail_trig, ...), two jails with timers, 21 func_breakables, placed weapons (deagle, m249, grenades) and two game_player_equip. Its levels are scored against each other rather than timed from a line, and the winner's room is a kill box. gb-maps-2. Not published."
+ "notes": "Credit only, and deliberately no zones: a scored race-and-fight round. 27 and 24 team spawns, 37 game_score entities awarding points per level end and per fail (lvl_1_end_trig, lvl_2_fail_trig, ...), two jails with timers, 21 func_breakables, placed weapons (deagle, m249, grenades) and two game_player_equip. Its levels are scored against each other rather than timed from a line, and the winner's room is a kill box. gb-maps-2. Not published.",
+ "round_teleports": {
+  "names": [
+   "jail_1_*",
+   "jail_2_*",
+   "ifailed"
+  ],
+  "note": "the jail teleports (`jail_1_*`, `jail_2_*`, seven brushes each over the spawn and the levels) are enabled by the jail timers, and `IFAILED` by a level's fail teleport; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }

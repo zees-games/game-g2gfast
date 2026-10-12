@@ -9,5 +9,12 @@
   "archive": "surf_xiv_v2a.rar (surf_XIV_v2a.bsp)",
   "recorded": "2026-10-05"
  },
- "notes": "Credit only, and deliberately no zones (gb-maps-1): a minigame surf map. Ten buyzones, and the spawn hall's one teleport wall sends a team to whichever of the leet, target, rocket or halfpipe games the round picked; the rocket game has winners and losers and hammers. No route, no finish. Not published."
+ "notes": "Credit only, and deliberately no zones (gb-maps-1): a minigame surf map. Ten buyzones, and the spawn hall's one teleport wall sends a team to whichever of the leet, target, rocket or halfpipe games the round picked; the rocket game has winners and losers and hammers. No route, no finish. Not published.",
+ "round_teleports": {
+  "names": [
+   "teleport_blockfort_*",
+   "teleporter_*"
+  ],
+  "note": "the spawn hall's teleport wall (`teleporter_<game>_ct/_t`, `teleport_blockfort_*`) is enabled for whichever minigame the round picked; until then each starts disabled. This game runs no round, so imported they were pits round the spawn that sent a player who walked out and back in to the spawn (headless_imported: 'never touches a pit on the way down', 2026-10-11). Dropped, as the map is at the start of a round"
+ }
 }
