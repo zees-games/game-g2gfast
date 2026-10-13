@@ -9,6 +9,10 @@ const G2GUnits := preload("../game/g2g_units.gd")
 const G2GStockSubstitutes := preload("../game/g2g_stock_substitutes.gd")
 const RouteBot := preload("../tools/route_bot.gd")
 const ReplayFollow := preload("../tools/replay_follow.gd")
+const G2GSurfSim := preload("../game/g2g_surf_sim.gd")
+const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
+const G2GSurfPilot := preload("../game/g2g_surf_pilot.gd")
+const SurfPlan := preload("../tools/surf_plan.gd")
 
 ## Checks a map imported from a Source .bsp: it loads, it is the right size, it is
 ## lit, and — the only question that matters — a player put on it stays on it.
@@ -269,13 +273,13 @@ const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_ocean", "bhop_ove
 	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 53
+const CHECKS_PER_MAP := 55
 
 ## Sections every map runs, entered against run to their last line. A runtime error inside
 ## a section aborts that function and nothing says so; a section that bailed out after a
 ## failed guard is counted as not finished on purpose, and the two that end early because
 ## a map legitimately has nothing to check (no course, no door) say so first.
-const SECTIONS_PER_MAP := 11
+const SECTIONS_PER_MAP := 12
 
 ## A script error inside a test aborts THAT TEST and not the run, so a suite that has
 ## quietly lost two checks still prints "0 failed" — which is what happened while this
@@ -324,6 +328,7 @@ func _run() -> void:
 		_test_a_door_keeps_the_run()
 		await _test_runs_its_route()
 		await _test_follows_its_recording()
+		await _test_surfs_from_its_cache()
 		if game != null:
 			game.queue_free()
 			game = null
@@ -1604,5 +1609,88 @@ func _test_follows_its_recording() -> void:
 			and int(left["frame"]) < LIFT_FROM_FRAME + ReplayFollow.LEAD_FRAMES * 4,
 		"and a recording it cannot follow is reported where it leaves the line",
 		ReplayFollow.summary(off))
+	bot.timer.stop()
+	_done()
+
+
+## Perturbed starts the surf section rides besides the stage's own arrival, and how many
+## of them must arrive. Not all: the pilot arrives from 72 to 80% of perturbed starts
+## (measured on 50 simulated and 20 live rides, see game-dev/docs/surf-bots-study.md), so
+## asking for every one would be asking for a number nobody has measured. The ride from
+## the stage's own arrival must arrive. Seeded, so the same rides are asked every run.
+const SURF_PERTURBED := 4
+const SURF_PERTURBED_ARRIVING := 3
+
+
+## A surf bot rides the first stage in the map's surf cache (`maps/routes/<id>.surf.json`,
+## written by `tools/surf_plan.gd`) in the real game, from the stage's own arrival and from
+## [constant SURF_PERTURBED] perturbed starts (of which [constant SURF_PERTURBED_ARRIVING]
+## must arrive), and the game sends it into the next stage
+## (`fpt-arena-surf-bots-1`). First the simulator it plans and vetoes with is checked to be
+## the motor: a simulated ride leaves the live player untouched, repeats exactly, and ends
+## where the live player ends after the same commands, along the cache's own first ride.
+##
+## A map with no cache passes both and says so. A failure here after a movement or
+## collision change is the cache going stale: re-run `tools/surf_plan.gd` for the stage.
+func _test_surfs_from_its_cache() -> void:
+	_section("surf bot")
+	var path := G2GSurfCourse.cache_path(_map_id)
+	if not FileAccess.file_exists(path):
+		_check(true, "the surf simulator is the motor", "no surf cache")
+		_check(true, "a surf bot rides a stage from its cache into the next", "no surf cache")
+		_done()
+		return
+	var stages: Dictionary = SurfPlan._read(ProjectSettings.globalize_path(path)).get("stages", {})
+	var numbers: Array = stages.keys().map(func(k: String) -> int: return int(k))
+	numbers.sort()
+	if numbers.is_empty():
+		_check(false, "the surf simulator is the motor", "%s has no stages" % path)
+		_check(false, "a surf bot rides a stage from its cache into the next", "%s has no stages" % path)
+		_done()
+		return
+	var number: int = numbers[0]
+	var data: Dictionary = stages[str(number)]
+	var why: Array = []
+	var course: RefCounted = G2GSurfCourse.for_stage(game, number, why)
+	if course == null:
+		_check(false, "the surf simulator is the motor", why[0])
+		_check(false, "a surf bot rides a stage from its cache into the next", why[0])
+		_done()
+		return
+	if game.mechanics != null:
+		game.mechanics.blocks.clear()
+	var bot: G2GPlayer = game.players.get(&"bot")
+	if bot == null:
+		bot = game.add_player(&"bot", "Bot", true)
+		bot.sampler = null
+		await get_tree().physics_frame
+	bot.teleport(course.start, course.start_yaw)
+	var base := bot.controller.state.duplicate_state()
+	var sim: RefCounted = G2GSurfSim.for_controller(bot.controller, bot, game.tick_rate)
+	sim.oracle = course.event_at
+	sim.mechanics = game.mechanics
+	var checks: Array = await SurfPlan.simulator_checks(game, bot, sim, base, course.reference_yaw(),
+		SurfPlan.first_ride_actions(data))
+	var bad: Array = checks.filter(func(c: Array) -> bool: return not c[0])
+	for c: Array in checks:
+		print("        %s %s%s" % ["ok" if c[0] else "NOT", c[1], "" if c[2] == "" else " (%s)" % c[2]])
+	_check(bad.is_empty(), "the surf simulator is the motor",
+		"" if bad.is_empty() else "; ".join(bad.map(func(c: Array) -> String: return "%s %s" % [c[1], c[2]])))
+
+	var pilot := G2GSurfPilot.new()
+	pilot.load_stage(data)
+	pilot.sim = sim
+	pilot.score = course.score
+	var result: Dictionary = await SurfPlan.ride_live(game, bot, course, pilot, base, 1 + SURF_PERTURBED, 7000 + number, true)
+	var times: Array = result["times"]
+	print("        stage %d: %d of %d rides arrived (%s); %s" % [number, result["ok"], 1 + SURF_PERTURBED,
+		", ".join(times.map(func(t: float) -> String: return "%.2f s" % t)),
+		", ".join(result["failures"]) if not (result["failures"] as Array).is_empty() else "no failures"])
+	var own_arrived := not (result["failures"] as Array).any(func(f: String) -> bool: return f.begins_with("ride 0 "))
+	_check(own_arrived and int(result["ok"]) >= 1 + SURF_PERTURBED_ARRIVING,
+		"a surf bot rides a stage from its cache into the next",
+		"stage %d: %d of %d arrived (the stage's own arrival %s, and %d of the perturbed starts needed); %s" % [
+			number, result["ok"], 1 + SURF_PERTURBED, "did" if own_arrived else "did NOT",
+			SURF_PERTURBED_ARRIVING, ", ".join(result["failures"])])
 	bot.timer.stop()
 	_done()
