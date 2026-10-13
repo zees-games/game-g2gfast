@@ -20,6 +20,25 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | [history.md](history.md) | Bugs this game found and how they looked |
 | [gamebanana-ranking.md](gamebanana-ranking.md) | Candidate maps for import, ranked, and why each was or was not taken |
 
+## Layout
+
+| Path | What |
+| --- | --- |
+| `game/g2g_units.gd`, `g2g_config.gd`, `g2g_movement.gd` | the unit ratio (the ONLY place), every cvar in genre units, the one boundary into metres |
+| `game/g2g_game.gd` | the simulation: maps, timers, boards, players; headless |
+| `game/g2g_player*.gd`, `g2g_rig.gd`, `g2g_camera.gd`, `g2g_avatars.gd`, `g2g_ladder_mode.gd`, `g2g_effects.gd` | the player, its stack, body, camera, climbing, effects |
+| `game/g2g_replays.gd`, `g2g_stats.gd`, `g2g_awards.gd`, `g2g_progress.gd` | replays, statistics, achievements |
+| `game/g2g_module.gd`, `g2g_services.gd`, `g2g_mod_tools.gd`, `g2g_vote.gd`, `g2g_identity.gd`, `g2g_query.gd`, `g2g_party.gd` | the server side |
+| `game/g2g_combat.gd`, `g2g_arsenal.gd`, `g2g_hunter*.gd`, `g2g_props.gd`, `g2g_spectate.gd` | the layers over the timer |
+| `game/g2g_bots.gd`, `g2g_surf_course.gd`, `g2g_route_bot.gd` | the server's bots (`bot_quota`), the stage they ride read from the zones, the rule-based fallback; the simulator, planner and pilot are dot-player-controller's and dot-bot's |
+| `game/g2g_map.gd`, `g2g_geometry.gd`, `g2g_textures.gd`, `g2g_reach.gd`, `g2g_map_survey.gd` | hand-built maps |
+| `game/g2g_bsp_map.gd`, `g2g_map_mechanics.gd`, `g2g_lighting.gd`, `g2g_stock_substitutes.gd`, `*.gdshader`, `g2g_map_catalogue.gd`, `g2g_map_rotation_file.gd` | imported maps, the catalogue, rotation |
+| `game/g2g_client.gd`, `g2g_hud.gd`, `g2g_presentation.gd`, `g2g_bindings.gd`, `ui/`, and the other client files | the client; never loaded by a server |
+| `game/net/` | the bridge (its ordering is the file), net classes, the `@rpc` link (identical on both ends), events and requests |
+| `maps/` | the three hand-built maps (+ generated `.zones.json`), `imported_map.tscn`, `imported/` (link to g2gfast-maps), `zones/<id>.json` (hand-written; see its README), `routes/` (route files, recordings, surf caches) |
+| `npcs/`, `props/`, `avatars/`, `textures/`, `scenes/` | hunters, practice blocks, avatar parts, prototype set and Kenney stand-ins, server scene and effect scenes |
+| `examples/`, `tools/` | the suites and the tools: [testing](testing.md) |
+
 ## Not here yet
 
 - **A server browser screen**: deliberately a chat listing (`!servers`, F3); a master server is the family's gap. [services](services.md#the-server-browser-from-the-other-end)

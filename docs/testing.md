@@ -44,6 +44,8 @@ Each of these passed while the thing it named was broken; write new checks again
 
 ## Tools
 
+Render after touching the client, a menu or an imported map: no assertion sees the screen, and every tool that draws runs under `xvfb-run` (`--headless` gives a null renderer and empty frames). The bots' route bot moved from `tools/` to `game/g2g_route_bot.gd`, because the server's bots fall back on it and a pack leaves `tools/` out.
+
 | Tool | For |
 | --- | --- |
 | `tools/export_zones.gd` | Write `maps/<id>.zones.json` after changing a hand-built map. |

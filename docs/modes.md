@@ -46,7 +46,7 @@ A player killed in deathmatch, by a hunter, or by an admin's slay falls as dot-p
 
 - **The server picks the fall.** `G2GCombat._on_entity_killed` calls `decide_death` (the reaction rule over `sv_ragdoll_reactions`, seeded from the victim's entity and the tick, the killing weapon's def) and puts it on `G2GPlayer.death` before `player_killed`. The bridge sends it to everybody as **DEATH** (victim, then the fall, last and optional) and the return as **ALIVE**; a solo client reads the same two signals off its own combat layer. Before this nothing connected `player_killed`: a dead runner stood upright on every screen until the respawn teleported them.
 - **A hunter's swipe pushes away from the hunter**: `hunter_attack` sets the damage's direction, because world damage has no attacker to measure from.
-- **The swipe carries the tick.** It did not, and `DotHealth` compares a damage's tick with the end of spawn protection, so a runner who had been respawned once (every round start) could never be hurt by a hunter again. `dedicated` checks a hunter's kill.
+- **The swipe carries the tick, and so does every `DotDamage` made here.** It did not, and `DotHealth` compares a damage's tick with the end of spawn protection (tick 0 is inside every one), so a runner who had been respawned once (every round start) could never be hurt by a hunter again. `dedicated` checks a hunter's kill.
 - **The `sv_ragdoll*` cvars are the module's, REPLICATED**, and a connected client follows them: the client is what draws the body.
 - **No ragdoll of your own body in first person**: the copy would start with the camera inside its head. In third person you see yourself fall.
 

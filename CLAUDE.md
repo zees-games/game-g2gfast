@@ -1,10 +1,8 @@
 # game-g2gfast
 
-A bunny-hop and surf timer server in the competitive-shooter shape: the genre's movement, units and cvars, a timer with zones, stages, bonuses, styles, records and a replay ghost, and the genre's own `.bsp` maps imported as content. game-playground is a sandbox with a surf ramp; this is the *timer server* a records community would migrate to.
+A bunny-hop and surf timer server in the competitive-shooter shape: the genre's movement, units and cvars, a timer with zones, stages, bonuses, styles, records and a replay ghost, and the genre's `.bsp` maps imported as content (game-playground is a sandbox with a surf ramp; this is the *timer server* a records community would migrate to). It ships as a signed dot-cloud pack (`game.yml`) into dot-server-deploy's client shell; imported maps are their own packs from `../g2gfast-maps`.
 
-It ships as a signed dot-cloud pack (`game.yml`) into dot-server-deploy's client shell; the imported maps are their own packs from `../g2gfast-maps`. **Movement and the timer are the core and have the most precise rules**: read [movement](docs/movement.md) and [timer](docs/timer.md) before touching either.
-
-Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first. **The detail is in [docs/](docs/README.md)**.
+**Movement and the timer are the core**: read [movement](docs/movement.md) and [timer](docs/timer.md) before touching either. Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first. **The detail is in [docs/](docs/README.md)**.
 
 ## Read before
 
@@ -28,22 +26,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first.
 
 ## Layout
 
-| Path | What |
-| --- | --- |
-| `game/g2g_units.gd`, `g2g_config.gd`, `g2g_movement.gd` | the unit ratio (the ONLY place), every cvar in genre units, the one boundary into metres |
-| `game/g2g_game.gd` | the simulation: maps, timers, boards, players; headless |
-| `game/g2g_player*.gd`, `g2g_rig.gd`, `g2g_camera.gd`, `g2g_avatars.gd`, `g2g_ladder_mode.gd`, `g2g_effects.gd` | the player, its stack, body, camera, climbing, effects |
-| `game/g2g_replays.gd`, `g2g_stats.gd`, `g2g_awards.gd`, `g2g_progress.gd` | replays, statistics, achievements |
-| `game/g2g_module.gd`, `g2g_services.gd`, `g2g_mod_tools.gd`, `g2g_vote.gd`, `g2g_identity.gd`, `g2g_query.gd`, `g2g_party.gd` | the server side |
-| `game/g2g_combat.gd`, `g2g_arsenal.gd`, `g2g_hunter*.gd`, `g2g_props.gd`, `g2g_spectate.gd` | the layers over the timer |
-| `game/g2g_bots.gd`, `g2g_surf_course.gd`, `g2g_route_bot.gd` | the server's bots (`bot_quota`), the stage they ride read from the zones, the rule-based fallback; the simulator, planner and pilot are dot-player-controller's and dot-bot's |
-| `game/g2g_map.gd`, `g2g_geometry.gd`, `g2g_textures.gd`, `g2g_reach.gd`, `g2g_map_survey.gd` | hand-built maps |
-| `game/g2g_bsp_map.gd`, `g2g_map_mechanics.gd`, `g2g_lighting.gd`, `g2g_stock_substitutes.gd`, `*.gdshader`, `g2g_map_catalogue.gd`, `g2g_map_rotation_file.gd` | imported maps, the catalogue, rotation |
-| `game/g2g_client.gd`, `g2g_hud.gd`, `g2g_presentation.gd`, `g2g_bindings.gd`, `ui/`, and the other client files | the client; never loaded by a server |
-| `game/net/` | the bridge (its ordering is the file), net classes, the `@rpc` link (identical on both ends), events and requests |
-| `maps/` | the three hand-built maps (+ generated `.zones.json`), `imported_map.tscn`, `imported/` (link to g2gfast-maps), `zones/<id>.json` (hand-written; see its README), `routes/` (route files, recordings, surf caches) |
-| `npcs/`, `props/`, `avatars/`, `textures/`, `scenes/` | hunters, practice blocks, avatar parts, prototype set and Kenney stand-ins, server scene and effect scenes |
-| `examples/`, `tools/` | the suites and the tools: [testing](docs/testing.md) |
+`game/` is the simulation (`g2g_game.gd`; units, config and movement are the only boundary into metres), the player, the layers over the timer (combat, hunters, blocks, spectating, bots), hand-built and imported maps, and the client (`g2g_client.gd`, `g2g_hud.gd`, `ui/`; never loaded by a server); `game/net/` the bridge and wire. `maps/` holds the three hand-built maps, `imported/` (linked from g2gfast-maps), `zones/` and `routes/`; `examples/` the suites, `tools/` the tools. **The file-by-file table is in [docs/README.md](docs/README.md#layout).**
 
 ## Running and testing
 
@@ -51,8 +34,8 @@ Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first.
 - **Run `godot --headless --path . --script tools/export_zones.gd` after changing a hand-built map**, or the zone-file check fails. [maps](docs/maps.md#geometry-and-zones-come-from-one-description)
 - `jitter_probe` is not in `./game.sh test`; run it after touching rendering or the tick rate. [testing](docs/testing.md#the-suites)
 - `headless_run` is order-sensitive (`-- --only=a,b`). [testing](docs/testing.md#the-suites)
-- **Footsteps and a bed per map are dot-audio's stock** (`G2GPresentation.keep_walkers`, `bed_for` by map prefix); the landing stays this game's own sound, so the stock landing step is off. Levels are measured with `addons/dot_audio/tools/loudness.sh` (−17 LUFS band, `loudness_trim_db`).
-- **Render after touching the client, a menu or an imported map** (`tools/screenshot_*.sh`, `tools/bsp_preview.sh`, under `xvfb-run`). No assertion sees the screen. [testing](docs/testing.md#tools)
+- Footsteps and map beds are dot-audio's stock; the landing is ours; levels by `loudness.sh`. [client](docs/client.md#presentation-settings-sound-and-effects)
+- **Render after touching the client, a menu or an imported map** (`tools/screenshot_*.sh`, `tools/bsp_preview.sh`, xvfb). [testing](docs/testing.md#tools)
 
 ## Rules that bite
 
@@ -64,7 +47,7 @@ Short forms; the reasoning is in the linked file.
 - A movement change abandons every run; styles' `auto_hop`/`easy_bhop` are `INHERIT` (except `prebhop`); validate a cvar on a copy before writing it. [movement](docs/movement.md#auto-bhop-is-the-servers-and-the-styles-defer-to-it)
 - A bot walks before it hops: a held jump from standstill creeps at 30 u/s, faithfully. [movement](docs/movement.md#a-held-jump-from-a-standstill-creeps-at-30-us-and-that-is-faithful)
 - A movement effect is refused during a ranked run, classified by what the definition changes, never by id. [movement](docs/movement.md#a-movement-effect-is-a-style-and-a-style-you-did-not-choose-is-a-record-you-did-not-set)
-- Third person is `G2GCamera` over one motor, never `DotTpsController`; its arm is dot-core's `DotCameraBoom` and `mp_forceview` decides it (`sv_allow_thirdperson` writes it); `tools/camera_check.gd` after touching either. [movement](docs/movement.md#third-person-is-cosmetic-and-stays-g2gcameras)
+- Third person is `G2GCamera` over one motor, never `DotTpsController`; arm `DotCameraBoom`, decided by `mp_forceview`; `tools/camera_check.gd` after touching either. [movement](docs/movement.md#third-person-is-cosmetic-and-stays-g2gcameras)
 - A ladder wins over water; the ladder mode never calls `categorise_ground`. [movement](docs/movement.md#ladders-and-water)
 
 **Timer**
@@ -80,7 +63,7 @@ Short forms; the reasoning is in the linked file.
 
 - Geometry, zones and the bot read one list per route; `_pad_centre()` answers "where is the finish". [maps](docs/maps.md#geometry-and-zones-come-from-one-description)
 - Every route needs a start, a finish, a spawn and a pit of its own; every zone must hang over something. [maps](docs/maps.md#every-route-has-a-start-a-finish-a-spawn-and-a-pit-of-its-own)
-- The surf bot plans on a second motor (`DotFpsSimulator`), never on a model of one; its cache `maps/routes/<id>.surf.json` is regenerated by `tools/surf_plan.tscn` after a movement or collision change. [routes](docs/routes.md#a-surf-bot-planned-on-the-motor)
+- The surf bot plans on a second motor (`DotFpsSimulator`), never a model of one; regenerate `maps/routes/<id>.surf.json` (`tools/surf_plan.tscn`) after a movement or collision change. [routes](docs/routes.md#a-surf-bot-planned-on-the-motor)
 - Server bots: `bot_quota` 0 by default, no timer (never filed), put back by the course; the surf pilot with no forecast (`veto_horizon` 0) where a cache exists, else the route bot. [routes](docs/routes.md#bots-on-a-server)
 - A new bonus is a RUN route sized inside `G2GReach`, declared with `add_course`, driven pad to finish with no reset and a pace check. [routes](docs/routes.md#how-the-bots-drive)
 - There is no list of maps anywhere; discover. [map-delivery](docs/map-delivery.md#maps-are-dropped-in-not-listed)
@@ -122,7 +105,7 @@ Short forms; the reasoning is in the linked file.
 - Draw the view from the sampler once a frame and add the predictor's `visual_offset`; draw the eye at the clock's `render_alpha` (`_fold_clock`); never interpolate view angles. [netcode](docs/netcode.md#what-a-connected-player-sees)
 - Wait for `player_added`; the local player does not exist when HELLO names it. [netcode](docs/netcode.md#the-local-player-is-adopted-not-looked-up)
 - Event and request kinds are appended; no message script preloads itself. [netcode](docs/netcode.md#wire-rules)
-- **A READY before the player is seated is kept** (`_ready_unseated` in the bridge; `_on_request` hands READY to `_admit` before its seat check) and answered by `add_player`: over ENet with loss it overtakes the link's `loaded`, and a dropped READY left the client waiting for ever. `headless_net` sends it first (armed). [history](docs/history.md)
+- A READY before the player is seated is kept (`_ready_unseated`) and answered by `add_player`. [netcode](docs/netcode.md#wire-rules)
 - Player and hunter entities are `always_relevant`. [netcode](docs/netcode.md#hunters-reach-a-connected-client)
 
 **Client**
@@ -131,7 +114,7 @@ Short forms; the reasoning is in the linked file.
 - Pointer lock only on a click; Escape releases, never toggles. [client](docs/client.md#the-pointer-asked-for-never-told)
 - The rig's layers: set only the one `visible_to_owner` asks for. [client](docs/client.md#the-camera-the-rig-and-the-players-own-body)
 - The menu is dot-menu's and a view of the settings; the shell must be built with dot-menu. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
-- The HUD is in the menu's theme twice over: `G2GHud.apply_theme` (the timer, the lines, outlined in the theme's ink) on `theme_changed`, and dot-menu's `follow_hud(hud, null, false)` for dot-ui's pieces on it (hit marker, damage numbers). Not scaled by `hud_scale`: the zone editor lays this HUD out in frame pixels. [client](docs/client.md#menus-are-dot-menus-the-pages-are-this-games)
+- The HUD follows the menu's theme (`apply_theme`, and `follow_hud(hud, null, false)` for dot-ui's pieces), never `hud_scale`. [client](docs/client.md#the-hud)
 - The flashlight is a shader default texture, never a `global uniform`. [client](docs/client.md#the-flashlight-lights-unshaded-surfaces-too)
 - Shake 0, flashes off, effect budget 24; emitters `local_coords`. [client](docs/client.md#presentation-settings-sound-and-effects)
 - Typing suspends the sampler as well as swallowing input; the console is a menu overlay, built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
@@ -141,12 +124,12 @@ Short forms; the reasoning is in the linked file.
 - One chat path: `player_chat` and `player_command` are hooked and cancelled; dot-moderation is built first. [services](docs/services.md#chat-is-the-policy-dot-server-stays-the-transport)
 - One rock-the-vote; the vote's clock is the one every screen shows; the session's clock ends no map while there is a vote. [services](docs/services.md#the-vote)
 - The fire command is a bit on the command, consumed on read, never retained over a lost packet; never `get_meta(key, null)`. [modes](docs/modes.md#the-trigger-is-one-ticks-input)
-- Weapon rows set `authored_tick_rate` to the rate their ticks are written at (128); a new row without it runs at the wrong speed off 128 Hz. [modes](docs/modes.md#deathmatch-is-a-layer)
+- Weapon rows set `authored_tick_rate` (128). The held weapon reaches its owner only (`net_weapon`, `G2GArsenal.WIRE_IDS` appended). [modes](docs/modes.md#deathmatch-is-a-layer)
 - Entity ids from `DotEntityTable`, never derived; the userid is a separate thing. [modes](docs/modes.md#deathmatch-is-a-layer)
 - Hunters have no navigation graph (`require_navigable_spawn` off). Practice blocks spawn frozen, `only_practice` on. [modes](docs/modes.md#a-timer-map-is-a-critical-path-so-the-hunters-have-no-navigation-graph)
-- A hunter brain seeds from `npc.seed`, never `npc.instance_id` (moves with every allocation). dot-npc `docs/runtime.md`
+- A hunter brain seeds from `npc.seed`, never `npc.instance_id`. dot-npc `docs/runtime.md`
 - Spectating: `force_camera` 0 unless deathmatch; `sv_spec_list` gated on the server. [modes](docs/modes.md#spectating)
-- A death's fall is the server's pick (`G2GCombat.decide_death`), sent as DEATH, undone by ALIVE; every `DotDamage` made here carries `tick` (tick 0 is inside every spawn protection). [modes](docs/modes.md#a-dead-player-falls)
+- A death's fall is the server's (`G2GCombat.decide_death`), sent as DEATH, undone by ALIVE; every `DotDamage` carries `tick`. [modes](docs/modes.md#a-dead-player-falls)
 
 ## Not here yet
 
