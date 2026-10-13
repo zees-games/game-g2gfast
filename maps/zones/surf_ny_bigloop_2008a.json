@@ -1,0 +1,13 @@
+{
+ "id": "surf_ny_bigloop_2008a",
+ "author": "Paper-Cut and FAJ",
+ "attribution": {
+  "author": "Paper-Cut, FAJ",
+  "source": "https://gamebanana.com/mods/122644 (Key Authors: Paper-Cut, FAJ; submitter Paper-Cut; the page is surf_ny_bigloop_2008 and its archive ships surf_ny_bigloop_2008a)",
+  "archive": "bigloop_08a.zip",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit only, and deliberately no zones: a combat surf loop (its readme: 'all about ramp combat ... grab yourself an M3'). 20 spawns a side facing each other, 64 placed shotguns, scouts, TMPs and G3s, four teleports into jail1..jail4 and no line a run could end at. chk-maps run 64. Not published.",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch."
+}

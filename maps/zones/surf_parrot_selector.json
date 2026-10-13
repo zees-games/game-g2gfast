@@ -1,0 +1,20 @@
+{
+ "id": "surf_parrot_selector",
+ "author": "ptad",
+ "attribution": {
+  "author": "ptad",
+  "source": "https://gamebanana.com/mods/122709 (Key Authors: ptad (mapper); submitter ptad)",
+  "archive": "surf_parrot_selector_2.zip",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit only, and deliberately no zones: a team surf minigame. 18 spawns a side, team filters, a knife/AWP equip, a jail timer and jail_win_ct / jail_win_t ends; 49 of its 75 teleports aim back at destination1 and the rest at jails, a selector rather than one route. chk-maps run 64. Not published.",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "round_teleports": {
+  "names": [
+   "raht",
+   "rahct"
+  ],
+  "note": "`raht` / `rahct` are two start-disabled team-filtered teleports the size of the whole map that send every T / CT to their jail when the round ends. This game runs no round, so imported they were a pit over the spawn (headless_imported: 'inside a main-track pit on 180 of 180 ticks'). Dropped, as the map is at the start of a round"
+ }
+}

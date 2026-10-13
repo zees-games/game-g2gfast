@@ -1,0 +1,51 @@
+{
+ "id": "bhop_nature",
+ "author": "BLENDIE",
+ "attribution": {
+  "author": "BLENDIE",
+  "source": "https://gamebanana.com/mods/125590 (Mapper: BLENDIE; textures and models credited on the page (Z-O-M-B-I-E, Karatekaefer, Fibbs, TopHATTwaffle); the map's own game_text agrees (\"bhop_nature - Created by BLEND\"); submitter BLENDIE)",
+  "archive": "bhop_nature.rar",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic (chk-maps run 64). The 64 spawns stand in a holding room at z 9048 over a teleport to `level1`; the start is a box round that arrival. Sections level1..level22 (with ekstra1..7 side checkpoints) follow, each block behind the anti-standing trap below. The last section (level22) runs south-west to [-9000, -4320, 3112]; 600 units below its end is the only trigger that shows the map's credit (`message`, a game_text 'bhop_nature - Created by BLEND'), in a closed room the route drops into. That trigger is the finish. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "level1",
+    "extents": [
+     256,
+     256,
+     96
+    ]
+   },
+   "note": "round where the holding room sends everybody"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "level1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     -9019,
+     -4473,
+     2532
+    ],
+    "within": 64
+   },
+   "note": "the credit trigger (OnStartTouch message,Display) below the end of level22, the last section"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "the anti-standing blocks: a block's trigger renames the player `activator` 0.09 s after landing and `default` 0.01 s later, and these teleports fire only for that name"
+ }
+}

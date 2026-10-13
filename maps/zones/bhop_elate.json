@@ -1,0 +1,48 @@
+{
+ "id": "bhop_elate",
+ "author": "biql",
+ "attribution": {
+  "author": "biql",
+  "source": "https://gamebanana.com/mods/124933 (Creator: biql (a port of the CS:GO version); submitter biql)",
+  "archive": "bhop_elate_css.rar",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit, and a start and finish read from the map's own text and teleports (chk-maps run 64). The 56 team spawns stand in a holding room over an unfiltered teleport to `spawn_tele`, so a player lands there; the start is a box round that arrival. Two halves follow: the sea (sea01..sea09, its first platform carries the mapper's START text) and, through a door-sized teleport beside KEEP OUT text, the cave (cave01..cave08). Every other teleport is a section's pit. The cave's last platform carries the mapper's END text (BIQL/ROYALE/TEXT/END, a floor face at [-7112, -2664, 1471]) with no trigger on it; the finish is a box over that floor. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "spawn_tele",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round where the holding room sends everybody"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "spawn_tele"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "around": {
+    "point": [
+     -7112,
+     -2664,
+     1536
+    ],
+    "extents": [
+     192,
+     192,
+     64
+    ]
+   },
+   "note": "over the floor face textured with the mapper's END text, past cave08, the last section; the box starts at the floor (1472) so it never reaches the safety pit under it (1424..1460)"
+  }
+ ]
+}

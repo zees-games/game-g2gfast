@@ -1,0 +1,13 @@
+{
+ "id": "surf_pox",
+ "author": "Krusty and three others",
+ "attribution": {
+  "author": "Krusty, Pariah, Karatekäfer, Korr",
+  "source": "https://gamebanana.com/mods/122741 (Key Authors: Krusty, Pariah, Karatekäfer, Korr; submitter .Krusty)",
+  "archive": "surf_pox.rar",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit only, and deliberately no zones: combat surf. 20/21 team spawns, AWPs, deagles and grenades placed, three game_player_equip, jails (jail1, jail2, jail_tele) and every other teleport aimed at noob_teleport_1..4 or the ramp top. The black sky is the map's own (skyname sky_schwarz_). chk-maps run 64. Not published.",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch."
+}

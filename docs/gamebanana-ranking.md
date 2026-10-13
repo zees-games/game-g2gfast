@@ -136,3 +136,24 @@ The thirteen most-liked maps outside the top 50 by views (gb-maps-2). Twelve imp
 
 What the importer learned from them: boosters (a thin `trigger_multiple` whose OnEndTouch sets `basevelocity`) are pushes given on leaving, which ten maps use and none was reading; `stage_startzone_NN` and the `mod_` prefix are labels; `ignore_labels` leaves a labelled zone unread with a reason (unicorn's bonus 1, a collectables challenge); and a pit trimmed back off an arrival keeps a tick's depth.
 
+
+## Extended 2026-10-13: the next most liked, and the next by views
+
+Both lists above were used up, so chk-maps fetched pages 1-4 (200 maps) of each category by views and by likes (595 distinct maps, all Counter-Strike: Source, every BSP downloaded VBSP 20; no CS:GO/CS2 file among them). The ten most liked that we did not have were the batch:
+
+| Page | Map | Category | Views | Likes | Status |
+| --- | --- | --- | ---: | ---: | --- |
+| [125590](https://gamebanana.com/mods/125590) | bhop_nature | Bunny Hop | 9,761 | 26 | imported 2026-10-13: spawn room to level1, finish at the credit trigger past level22 (`bhop_nature`) |
+| [122709](https://gamebanana.com/mods/122709) | surf_parrot_selector | Surf Style | 17,857 | 25 | imported 2026-10-13, not a course: team minigame, round jails dropped (`surf_parrot_selector`) |
+| [124933](https://gamebanana.com/mods/124933) | bhop_elate | Bunny Hop | 9,549 | 25 | imported 2026-10-13: sea then cave, finish on the mapper's END floor (`bhop_elate`) |
+| [122644](https://gamebanana.com/mods/122644) | surf_ny_bigloop_2008 | Surf Style | 26,483 | 24 | imported 2026-10-13, not a course; the archive ships `surf_ny_bigloop_2008a` |
+| [122168](https://gamebanana.com/mods/122168) | surf_greatriver_awesome | Surf Style | 14,513 | 24 | downloaded, not imported (pending/): a joke reskin of surf_greatriver, unlit |
+| [125964](https://gamebanana.com/mods/125964) | bhop_shutdown2 | Bunny Hop | 14,288 | 24 | downloaded, not imported (pending/): 41% prototype grid, chapter graph unread |
+| [126278](https://gamebanana.com/mods/126278) | bhop_umbra | Bunny Hop | 10,195 | 24 | downloaded, not imported (pending/): route switches the player's classname |
+| [126281](https://gamebanana.com/mods/126281) | bhop_underground_crypt | Bunny Hop | 18,413 | 24 | imported 2026-10-13: start room, finish at the credit trigger past finale_04 (`bhop_underground_crypt`) |
+| [126357](https://gamebanana.com/mods/126357) | bhop_woodenspace | Bunny Hop | 10,011 | 24 | downloaded, not imported (pending/): no finish marked |
+| [122741](https://gamebanana.com/mods/122741) | surf_pox | Surf Style | 29,739 | 23 | imported 2026-10-13, not a course (`surf_pox`; its black sky is its own) |
+
+**Next by likes**, not held: surf_spectrum [123037] (23), bhop_communityjump [124722] (23), surf_ny_exploder_prime [122646] (21), Surf_Elements_beta3 [121990] (21), surf_snipers_island [137698] (21), bhop_epiphany [124957] (21), bhop_angst [303411] (21), bhop_cw_journey [124781] (21), surf_lithium2 [122445] (20), Surf_Gurus [122228] (20), surf_ember [122002] (20), surf_buck-around [121783] (20), surf_buck-ed_up [121784] (20), bhop_relinquished_fixx [125839] (20).
+
+**Next by views** (ranks 51 onwards, not held): surf_ny_platinum [122651] (30,756), surf_rebel_resistance_pack [122826], surf_4fun [121545], bhop_miku [125530], surf_ag_texture_final [121589], surf_akai_f1n4l [121605], surf_spongebob [123039], bhop_training_fun [126237], surf_simpsons_source [122938], surf_ski [122949], bhop_amor [124424]. Like the top 50, most of the surf ones are 2006-2009 combat maps; the liked bhop pages are where the courses are.

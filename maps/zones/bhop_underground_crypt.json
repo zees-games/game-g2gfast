@@ -1,0 +1,53 @@
+{
+ "id": "bhop_underground_crypt",
+ "author": "Yaznee",
+ "attribution": {
+  "author": "Yaznee",
+  "source": "https://gamebanana.com/mods/126281 (Key Authors: Yaznee; testers credited on the page (Tenshi, Serz, belial, Tool, Badges, sANDER); submitter yaznee)",
+  "archive": "_6448-.rar",
+  "recorded": "2026-10-13"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic (chk-maps run 64). The 32 spawns stand in the start room round the `start` destination (every way back to the beginning aims there); the start is a box round it. Levels lvl1..lvl6 and the finale follow (finale_01..04), each block behind the anti-standing trap below. Past finale_04 a trigger in the last room closes door5 and shows the `credit` hud hint; that trigger is the finish. That room also has five door-sized teleports back to start, lvl2, lvl3, lvl6 and the finale: a level select after the finish, imported as pits that keep the run. The trigger_pushes behind `filter_activator_boost` (renamed by the floor under them) import as plain pushes. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "start",
+    "extents": [
+     320,
+     320,
+     192
+    ]
+   },
+   "note": "the start room, round the `start` destination beside the spawns; 192 units down because the room's floor (about 520) is 88 under the spawns' origins"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "start"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     -13504,
+     2720,
+     216
+    ],
+    "within": 64
+   },
+   "note": "the trigger in the last room past finale_04 that closes door5 and shows the credit hud hint"
+  }
+ ],
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "the anti-standing blocks: a block's trigger renames the player `activator` 0.09 s after landing and `default` 0.01 s later, and these teleports fire only for that name"
+ },
+ "skybox": false,
+ "skybox_why": "its sky_camera ([-2576, -160, 2784], scale 16) stands in a room of TOOLS/TOOLSSKYBOX walls only (78 faces within 1500 units, no props): there is nothing in it to draw (headless_imported: 0 faces, 0 props)"
+}

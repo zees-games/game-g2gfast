@@ -67,7 +67,8 @@ const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "surf_grave_reloade
 	"surf_forbidden_ways_2nd", "surf_greatriver", "surf_greatriver_v4", "surf_rebel_resistance_final3", "bunnyhop_pro",
 	"surf_29_12_06", "surf_dust2_2008_final", "surf_machine2", "surf_machine_remix_final", "surf_matrix_v8",
 	"surf_ski_2_source", "surf_skyworld", "surf_the_gloaming", "surf_thriller", "surf_adverse", "surf_japan_ptad", "surf_animals",
-	"surf_ny_advance", "surf_pavilion", "surf_torque2", "surf_velocity", "kz_bhop_lucid"]
+	"surf_ny_advance", "surf_pavilion", "surf_torque2", "surf_velocity", "kz_bhop_lucid",
+	"surf_ny_bigloop_2008a", "surf_parrot_selector", "surf_pox"]
 
 ## The imported maps with no pit, which is a different question from having no finish.
 ##
@@ -266,7 +267,7 @@ const DARK_SPAWNS := {
 
 ## The maps with `$additive` surfaces the importer must find, asserted both ways (a map
 ## that loses them, or one not listed that gains them, fails). 2026-10-11's re-import.
-const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_ocean", "bhop_overthinker",
+const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_ocean", "bhop_overthinker",
 	"bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference", "surf_lt_omnific",
 	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
