@@ -13,6 +13,7 @@ const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GMapMechanics := preload("g2g_map_mechanics.gd")
 const G2GMapRotationFile := preload("g2g_map_rotation_file.gd")
 const G2GMovement := preload("g2g_movement.gd")
+const G2GPaths := preload("g2g_paths.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GPlayerStack := preload("g2g_player_stack.gd")
 const G2GProgress := preload("g2g_progress.gd")
@@ -706,7 +707,10 @@ func _build_layers() -> void:
 		_build_spectate()
 		return
 
-	bots = (load("res://game/g2g_bots.gd") as GDScript).new()
+	# Loaded, not preloaded (g2g_bots.gd preloads this file), and rebased: a bare res:// path
+	# names the host project's root in a delivered pack, so a delivered server had no bots and
+	# stopped building its layers here.
+	bots = (load(G2GPaths.rebase("res://game/g2g_bots.gd")) as GDScript).new()
 	bots.name = "Bots"
 	bots.set("game", self)
 	add_child(bots)

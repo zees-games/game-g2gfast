@@ -18,6 +18,7 @@ extends DotBotSurfCourse
 ## blocks is not branched with the state; nothing on a planned stage uses it.
 
 const G2GMapMechanics := preload("g2g_map_mechanics.gd")
+const G2GPaths := preload("g2g_paths.gd")
 const G2GUnits := preload("g2g_units.gd")
 
 var map_id: StringName = &""
@@ -33,7 +34,7 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 	var zones: DotTimerZoneSet = game.timers.zones
 	var track := DotTimerTrack.MAIN
 	var total := zones.stage_count(track)
-	var course: DotBotSurfCourse = (load("res://game/g2g_surf_course.gd") as GDScript).new()
+	var course: DotBotSurfCourse = (load(G2GPaths.rebase("res://game/g2g_surf_course.gd")) as GDScript).new()
 	course.map_id = game.maps.current.id
 	course.stage = number
 	course.gravity = G2GUnits.to_metres(800.0)

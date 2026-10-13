@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 200
+const CHECKS := 201
 
 var _passed := 0
 var _failed := 0
@@ -249,6 +249,17 @@ func _test_a_run_is_drawn() -> void:
 		if text.is_empty() or text.contains("ext_resource") or text.contains("script"):
 			self_contained = false
 	_check(self_contained, "and each is one file, with no script and nothing it loads")
+
+	# And no script of this game loads one of its own files by a bare res:// path: delivered,
+	# that names the host project's root. g2g_game.gd's bots layer did (0ae6117), and a
+	# delivered server had no bots and stopped building its layers at that line.
+	# The host's addons are where they are named, so a load of res://addons/ is not one of these.
+	var own := RegEx.create_from_string('load\\("res://(?!addons/)')
+	var bare: Array[String] = []
+	for path in _scripts_under("res://game"):
+		if own.search(FileAccess.get_file_as_string(path)) != null:
+			bare.append(path.get_file())
+	_check(bare.is_empty(), "no script loads its own files by a bare res:// path (%s)" % ", ".join(bare))
 
 	var p := _make()
 	var drawn := {}
@@ -1767,6 +1778,17 @@ func _test_the_weapon_in_hand_is_named() -> void:
 	hud.queue_free()
 	game.queue_free()
 	_done()
+
+
+## Every .gd file under [param dir], recursively.
+func _scripts_under(dir: String) -> Array[String]:
+	var out: Array[String] = []
+	for file in DirAccess.get_files_at(dir):
+		if file.ends_with(".gd"):
+			out.append(dir.path_join(file))
+	for sub in DirAccess.get_directories_at(dir):
+		out.append_array(_scripts_under(dir.path_join(sub)))
+	return out
 
 
 func _section(title: String) -> void:
