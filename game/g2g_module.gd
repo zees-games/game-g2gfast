@@ -61,6 +61,10 @@ var identity: G2GIdentity = null
 var vote: G2GVote = null
 var _painters: Dictionary = {}
 var _tick: int = 0
+
+## How many bots: dot-server's `bot_quota`, `bot_quota_mode`, `bot_quota_empty`. See
+## [method _keep_bots].
+var _quota: DotBotQuota = null
 var _joined: Dictionary = {}
 
 const SNAPSHOT_RATE := 32
@@ -115,6 +119,11 @@ func _module_load() -> DotResult:
 			else:
 				game.remove_player(G2GGame.GHOST_ID)
 	)
+
+	# The bots (`g2g_bots.gd`): the family's three cvars, at 0 so a timer server has none until
+	# its operator asks. A records community runs a server for people; a bot riding the first
+	# stage is a demonstration somebody chooses, not a crowd somebody is sold.
+	_quota = DotBotQuota.install(self, 0)
 
 	add_cvar("sv_allow_thirdperson", "1" if game.config.allow_thirdperson else "0",
 		"Whether players may use third person.").changed.connect(
@@ -888,6 +897,9 @@ func _module_unload() -> void:
 		for userid in _joined.keys():
 			bridge.remove_peer(bridge.peer_for_player(int(userid)))
 	if game != null and is_instance_valid(game):
+		if game.bots != null:
+			for id: StringName in (game.bots.get("ids") as Array).duplicate():
+				game.bots.call("remove_bot", id)
 		for id in game.players.keys():
 			game.remove_player(id)
 		game.external_tick = false
@@ -976,12 +988,39 @@ func _physics_process(delta: float) -> void:
 	_tick += 1
 	bridge.server_tick(_tick)
 
+	# Twice a second is soon enough for a person to take a bot's seat.
+	if _tick % 64 == 1:
+		_keep_bots()
+
 	# The vote clock, from the SIMULATED tick rather than from the frame. dot-vote
 	# says why and it is the same reason dot-map does: a server that stalls should not
 	# lose that time off its map, and a test must be able to run an hour of one in a
 	# millisecond.
 	if vote != null:
 		vote.advance(delta)
+
+
+## Adds or removes bots until there are as many as [DotBotQuota] wants for the people
+## playing. Newest first out, so the bot that has been riding longest keeps riding.
+func _keep_bots() -> void:
+	if game == null or game.bots == null or _quota == null:
+		return
+	var humans := 0
+	for id: StringName in game.players:
+		var player: G2GPlayer = game.players[id]
+		if not player.is_bot and id != G2GGame.GHOST_ID:
+			humans += 1
+	var slots: int = server.config.max_players if server != null and server.config != null else -1
+	var wanted := _quota.wanted(humans, slots)
+	var ids: Array = game.bots.get("ids")
+	while ids.size() < wanted:
+		var taken: Array = []
+		for id: StringName in game.players:
+			taken.append((game.players[id] as G2GPlayer).display_name)
+		if game.bots.call("add_bot", DotBotNames.pick(taken, game.players.size())) == null:
+			break
+	while ids.size() > wanted:
+		game.bots.call("remove_bot", ids[ids.size() - 1])
 
 
 ## Every command a player can type in chat here with no admin flag: what the client's

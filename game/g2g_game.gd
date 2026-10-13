@@ -212,6 +212,11 @@ var npc_skill: DotNpcAiSkill = DotNpcAiSkill.new()
 ## Props an admin can place. Null unless `sv_props` built them.
 var props: G2GProps = null
 
+## The server's bots (`g2g_bots.gd`): built on every authoritative game, idle until something
+## adds one (`G2GModule` from `bot_quota`). Untyped and loaded by path, never preloaded: it
+## brings dot-bot's surf classes with it, and a client never needs them.
+var bots: Node = null
+
 ## Watching somebody run, which on a timer server is the point rather than a
 ## consolation for being dead. Built in every configuration.
 var spectate: G2GSpectate = null
@@ -701,6 +706,11 @@ func _build_layers() -> void:
 		_build_spectate()
 		return
 
+	bots = (load("res://game/g2g_bots.gd") as GDScript).new()
+	bots.name = "Bots"
+	bots.set("game", self)
+	add_child(bots)
+
 	if config.deathmatch or config.hunters:
 		# The hunters need somewhere to put damage, so combat is built for either.
 		# A hunter that could hurt a player the server is not tracking would be doing
@@ -982,7 +992,8 @@ func apply_movement() -> void:
 # --- Players ---------------------------------------------------------------
 
 func add_player(
-	id: StringName, display_name: String, local: bool = false, avatar: DotAvatar = null
+	id: StringName, display_name: String, local: bool = false, avatar: DotAvatar = null,
+	bot: bool = false
 ) -> G2GPlayer:
 	if players.has(id):
 		return players[id]
@@ -1010,6 +1021,14 @@ func add_player(
 
 	player.timer = timers.timer_for(id)
 	player.set_style(movement_styles[&"normal"], timers.style_for(&"normal"))
+
+	# A bot (`g2g_bots.gd`) runs no timer and counts towards nothing, as the ghost does: its
+	# rides are the bots layer's to judge, and a board or a statistic with a bot in it is
+	# one nobody trusts.
+	player.is_bot = bot
+	if bot:
+		timers.remove_player(id)
+		player.timer = null
 
 	if player.camera != null:
 		player.camera.fov_desired = config.fov_desired
@@ -1044,7 +1063,7 @@ func add_player(
 	player.set_mechanics(mechanics)
 	player.map_event.connect(_on_map_event.bind(id))
 
-	if progress != null:
+	if progress != null and not bot:
 		# Not awaited: an achievement store may be remote and a join may not wait on
 		# it. Readings that arrive during the load are still counted — see
 		# `G2GProgress.begin`.
@@ -1217,6 +1236,10 @@ func tick_timers_only(tick: int) -> void:
 ## Move every player, then time the tick with the position the move produced.
 func _simulate_tick(step: float) -> void:
 	maps.advance(step)
+
+	# The bots' keys, before anybody moves: see `g2g_bots.gd`.
+	if bots != null:
+		bots.call("drive", step)
 
 	for id in players:
 		(players[id] as G2GPlayer).simulate(_tick, step)
@@ -1859,6 +1882,9 @@ func describe_lines() -> PackedStringArray:
 
 	if props != null:
 		out.append_array(props.describe_lines())
+
+	if bots != null:
+		out.append_array(bots.call("describe_lines"))
 
 	for id in players:
 		out.append("  %s" % str((players[id] as G2GPlayer).describe()))

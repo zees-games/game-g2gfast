@@ -4,7 +4,7 @@ const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
-const RouteBot := preload("route_bot.gd")
+const RouteBot := preload("../game/g2g_route_bot.gd")
 
 ## Rides a stage of a map from where `!s<n>` puts a player, and says where it got to.
 ##
@@ -124,7 +124,7 @@ func _run() -> void:
 	# Off a ramp the whole-run bot heads for the finish rather than along its own track:
 	# a bhop corridor's line is the straight one, and a door moves it closer.
 	var aim_at_finish := whole and finish != arrival
-	# The whole run follows the map's route (`maps/routes/<id>.json`, see route_bot.gd)
+	# The whole run follows the map's route (`maps/routes/<id>.json`, see game/g2g_route_bot.gd)
 	# when it has one, and otherwise its stage lines in order and then the finish.
 	var router: RouteBot = null
 	if whole:

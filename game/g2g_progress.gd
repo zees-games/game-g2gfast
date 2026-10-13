@@ -233,7 +233,7 @@ func sample(delta: float) -> void:
 	for id in _game.players.keys():
 		var player: G2GPlayer = _game.players[id]
 
-		if player == null or player.controller == null:
+		if player == null or player.controller == null or player.is_bot:
 			continue
 
 		_sample_movement(id, player)

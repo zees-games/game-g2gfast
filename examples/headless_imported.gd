@@ -7,7 +7,7 @@ const G2GLighting := preload("../game/g2g_lighting.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
 const G2GStockSubstitutes := preload("../game/g2g_stock_substitutes.gd")
-const RouteBot := preload("../tools/route_bot.gd")
+const RouteBot := preload("../game/g2g_route_bot.gd")
 const ReplayFollow := preload("../tools/replay_follow.gd")
 const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 const SurfPlan := preload("../tools/surf_plan.gd")
@@ -1479,7 +1479,7 @@ const ROUTE_SECONDS := 300.0
 ## game itself feeds, with no put-back by a pit on the way -- is the one check that a
 ## block moved or a brush lost fails. A map with no route file says so and passes: a
 ## route is data written per map (`tools/route_plan.py`), and most maps do not have one
-## yet. See route_bot.gd for how the bot drives it.
+## yet. See game/g2g_route_bot.gd for how the bot drives it.
 func _test_runs_its_route() -> void:
 	_section("route")
 	# The route bot lands on a block and runs to its lip, and the recording is that bot's:

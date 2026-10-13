@@ -37,7 +37,7 @@ extends RefCounted
 ## A point also counts as passed once the bot is beyond it along the leg it is on, so a
 ## point the bot flies past at speed is not chased back.
 
-const G2GUnits := preload("../game/g2g_units.gd")
+const G2GUnits := preload("g2g_units.gd")
 
 const DEFAULT_RADIUS := 96.0
 ## A route without its own `max`: fast enough for any jump on these maps, slow enough
