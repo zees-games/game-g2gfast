@@ -24,6 +24,7 @@ const G2GPresentation := preload("../game/g2g_presentation.gd")
 ## hud_clock      the time left as a server's vote describes it, after an extend
 ## hud_no_clock   a server whose vote has no clock: no time left drawn at all
 ## hud_beacon     an admin's beacon on another runner four metres ahead: ring, column
+## hud_hit        a confirmed headshot on that runner, and the deagle named bottom right
 ## hud_blind      the same view after an admin's blind: black, with the HUD still on it
 ## [/codeblock]
 ##
@@ -237,6 +238,9 @@ func _arrange_beacon() -> void:
 ## a software renderer's four settle frames outlive a real marker's quarter second.
 func _arrange_hit() -> void:
 	_other.beacon = false
+	# The weapon in hand, as `G2GCombat` writes it offline and `net_weapon` sends it to a
+	# client: its name bottom right, and no count, because neither weapon has a magazine.
+	_player.held_weapon = &"deagle"
 	_hud.hit_marker.hit_sec = 30.0
 	_hud.damage_numbers.life_sec = 5.0
 	_hud.confirm_hit(4, 27.0, _other.controller.state.position + Vector3(0.0, 1.6, 0.0), false, true)

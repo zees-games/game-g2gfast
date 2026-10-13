@@ -4,6 +4,7 @@ const G2GConfig := preload("g2g_config.gd")
 const G2GGame := preload("g2g_game.gd")
 const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GPlayer := preload("g2g_player.gd")
+const G2GArsenal := preload("g2g_arsenal.gd")
 
 ## The competitive-shooter timer HUD: the clock, the speed in u/s, the keys, the strafes.
 ##
@@ -21,6 +22,10 @@ var _notice: Label = null
 var _crosshair: DotCrosshair = null
 ## Four ticks round the crosshair on a hit the server confirmed (combat maps only).
 var hit_marker: DotHitMarker = null
+## The weapon in hand under deathmatch, bottom right: its name alone, because both weapons
+## have no magazine and an endless reserve (`G2GArsenal`), and "∞ | ∞" is a count that never
+## moves. Nothing at all on a pure timer server.
+var ammo: DotAmmoCounter = null
 ## The confirmed hits' numbers, on the bodies they landed on.
 var damage_numbers: DotDamageNumbers = null
 var _notice_until: float = 0.0
@@ -209,6 +214,12 @@ func _ready() -> void:
 	hit_marker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hit_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hit_marker)
+
+	# Placed by `place()`, which knows where the clock is.
+	ammo = DotAmmoCounter.new()
+	ammo.name = "Ammo"
+	ammo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(ammo)
 
 	# Things that just happened: a finish, a rank, a map change, a cvar an admin
 	# moved. Above the clock, where a player's eye already is.
@@ -476,6 +487,16 @@ func place() -> void:
 	else:
 		_put(_status, Vector2(0.0, 14.0), Vector2(area.x, 26.0))
 
+	# The weapon: bottom right, and over the clock when the clock was put there. Not one of
+	# the layout editor's ELEMENTS: it is empty on every server but a deathmatch one.
+	# 24 in from the edge, not 10: the plate overhangs the control by 14 on the right.
+	var ammo_size := Vector2(290.0, 70.0)
+	var ammo_at := Vector2(area.x - ammo_size.x - 24.0, area.y - ammo_size.y - 14.0)
+	var clock_rect := element_rect(&"timer")
+	if clock_rect.intersects(Rect2(ammo_at, ammo_size)):
+		ammo_at.y = clock_rect.position.y - ammo_size.y - 8.0
+	_put(ammo, _clamp_into(ammo_at, ammo_size, area), ammo_size)
+
 	# The spectator list: down the right, centred vertically.
 	var list_size := _list_size()
 	if positions.has(&"spectators"):
@@ -655,6 +676,28 @@ func confirm_hit(victim: int, amount: float, point: Vector3, killed: bool, heads
 	damage_numbers.add(victim, amount, point, headshot)
 
 
+## The counter for [param player]'s weapon in hand; cleared for null (watching somebody
+## else, whose weapon this client is never sent) or empty hands.
+func show_weapon(player: G2GPlayer) -> void:
+	if ammo == null:
+		return
+	var id: StringName = player.held_weapon if player != null else &""
+	if id == &"":
+		ammo.clear()
+		return
+	var def: DotWeaponDef = _weapon_defs().get(id)
+	ammo.show_ammo(def.display_name if def != null else String(id), -1, -1, false, true)
+
+
+static var _defs: Dictionary = {}
+
+
+static func _weapon_defs() -> Dictionary:
+	if _defs.is_empty():
+		_defs = G2GArsenal.weapon_table()
+	return _defs
+
+
 ## Re-reads what the stage line counts and compares against.
 ##
 ## Public because a net bridge changes the track under the HUD — a player pressing T
@@ -701,6 +744,8 @@ func _process(delta: float) -> void:
 		return
 
 	var state := player.controller.state
+
+	show_weapon(game.players.get(player_id) if shown_id() == player_id else null)
 
 	timer_hud.style_name = player.timer_style.display_name if player.timer_style != null else ""
 	timer_hud.show_run(player.timer.run if player.timer != null else null, player.speed(),

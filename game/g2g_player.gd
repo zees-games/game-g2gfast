@@ -133,6 +133,11 @@ var blinded: bool = false
 ## draw it in [method present].
 var beacon: bool = false
 
+## The weapon in this player's hand under deathmatch, or empty. Written by `G2GCombat`
+## on the authority and replicated to the owner alone (`G2GPlayerNet.net_weapon`), because
+## a client has no combat layer and `G2GHud`'s ammunition counter has to name something.
+var held_weapon: StringName = &""
+
 ## The marker [member beacon] draws, while it does. Client side; built and freed by
 ## [method present].
 var beacon_marker: G2GBeacon = null

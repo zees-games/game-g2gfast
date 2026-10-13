@@ -507,6 +507,10 @@ func _disarm(player_id: StringName) -> void:
 
 	var kit: Dictionary = _kit[player_id]
 
+	var player: G2GPlayer = game.players.get(player_id)
+	if player != null:
+		player.held_weapon = &""
+
 	if manager != null and is_instance_valid(manager):
 		manager.forget(int(kit["entity"]))
 
@@ -531,7 +535,12 @@ func _disarm(player_id: StringName) -> void:
 ## the move leaves from somewhere the player is not, and at those speeds that is not a
 ## rounding error, it is a different part of the map.
 func tick(delta: float) -> void:
-	if not _started or not enabled:
+	if not _started:
+		return
+
+	_note_held()
+
+	if not enabled:
 		return
 
 	var shots: Array[DotShot] = []
@@ -603,6 +612,21 @@ func tick(delta: float) -> void:
 			manager.resolve_shot(shot)
 
 	match_node.tick(game.current_tick())
+
+
+## Writes each armed player's weapon in hand onto [member G2GPlayer.held_weapon], for
+## the HUD offline and for `G2GPlayerNet` to send its owner. Empty with deathmatch off: the
+## arsenal stays armed under `sv_deathmatch 0`, but nobody can use it, and a counter naming
+## a weapon nobody may fire is a lie on the screen. The tick's start, so it is last tick's
+## pick: one tick late on a counter is invisible, and it keeps one line out of the loop
+## that `continue`s past players with no fresh command.
+func _note_held() -> void:
+	for id in _kit.keys():
+		var player: G2GPlayer = game.players.get(id)
+		if player == null:
+			continue
+		var def := (_kit[id]["arsenal"] as DotWeaponArsenal).current_def() if enabled else null
+		player.held_weapon = def.id if def != null else &""
 
 
 ## What a player is trying to do with their weapon this tick.

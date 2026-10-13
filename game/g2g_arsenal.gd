@@ -174,6 +174,20 @@ static func knife() -> DotWeaponDef:
 	return def
 
 
+## The held weapon on the wire (`G2GPlayerNet.net_weapon`): 0 is empty hands, then this
+## list's index plus one. [b]Appended only[/b]: the number is what travels, so reordering it
+## names the knife "Deagle" on every client one release behind the server.
+const WIRE_IDS: Array[StringName] = [ITEM_KNIFE, ITEM_DEAGLE]
+
+
+static func wire_of(id: StringName) -> int:
+	return WIRE_IDS.find(id) + 1
+
+
+static func id_from_wire(number: int) -> StringName:
+	return WIRE_IDS[number - 1] if number >= 1 and number <= WIRE_IDS.size() else &""
+
+
 static func weapons() -> Array[DotWeaponDef]:
 	return [knife(), deagle()]
 

@@ -3,6 +3,7 @@ extends DotNetBehaviour
 const G2GNetBridge := preload("g2g_net_bridge.gd")
 const G2GNetCommand := preload("g2g_net_command.gd")
 const G2GPlayer := preload("../g2g_player.gd")
+const G2GArsenal := preload("../g2g_arsenal.gd")
 
 ## What a networked g2gfast player replicates: the movement state, and an
 ## administrator's two marks on the player — `blind` and `beacon`.
@@ -30,6 +31,9 @@ var net_blind: bool = false
 
 ## `G2GPlayer.beacon`. Everybody's.
 var net_beacon: bool = false
+
+## `G2GPlayer.held_weapon` as `G2GArsenal.wire_of` numbers it; 0 is empty hands. Owner only.
+var net_weapon: int = 0
 
 ## Retained, not cleared: a player whose packet was lost keeps moving in a straight
 ## line rather than stopping dead. The controller says the same of its own command.
@@ -71,6 +75,12 @@ func _register_net_vars() -> void:
 	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only()
 	replicate(&"net_beacon", DotNetVar.Type.BOOL)
 
+	# The weapon in hand, for the owner's ammunition counter. A client has no combat layer
+	# to ask, and state rather than an event for the reason the blind is: a lost snapshot or
+	# a late join is corrected by the next one. Owner only, because nobody else's screen
+	# shows it; four bits, and nothing on a tick it did not change.
+	replicate(&"net_weapon", DotNetVar.Type.UINT).bits(4).to_owner_only()
+
 
 func _net_apply_input(input: DotNetInput, _tick: int) -> void:
 	var command := input as G2GNetCommand
@@ -110,6 +120,7 @@ func pull() -> void:
 		DotFpsNetSync.pull(player.controller.state, self)
 		net_blind = player.blinded
 		net_beacon = player.beacon
+		net_weapon = G2GArsenal.wire_of(player.held_weapon)
 
 	# [b]No relevance to change for a beacon, unlike game-arena.[/b] Every player entity
 	# here is `always_relevant` already (`G2GNetBridge._build_entity`), so a beaconed
@@ -127,6 +138,7 @@ func _net_state_applied(tick: int) -> void:
 	DotFpsNetSync.push(self, player.controller.state)
 	player.blinded = net_blind
 	player.beacon = net_beacon
+	player.held_weapon = G2GArsenal.id_from_wire(net_weapon)
 	# NOT the node, on a predicted entity: receive_snapshot calls this before the
 	# predictor reconciles, and reconcile's first act is to read the node as "what
 	# the client is showing". Moving it here makes the measured error the whole

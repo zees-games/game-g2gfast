@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 195
+const CHECKS := 200
 
 var _passed := 0
 var _failed := 0
@@ -74,6 +74,7 @@ func _run() -> void:
 	await _test_the_board_is_a_timer_servers()
 	await _test_the_timer_is_the_players_layout()
 	await _test_a_confirmed_hit_is_drawn()
+	await _test_the_weapon_in_hand_is_named()
 
 	print("")
 	_check(
@@ -1712,6 +1713,59 @@ func _test_a_confirmed_hit_is_drawn() -> void:
 	_check(hud.damage_numbers.texts().size() == 1 and hud.damage_numbers.texts()[0].contains("27"),
 		"and puts its number up", str(hud.damage_numbers.texts()))
 	hud.queue_free()
+	_done()
+
+
+## The ammunition counter on an offline deathmatch: the combat layer writes the weapon in
+## hand onto the player and the HUD names it, with no count (both weapons are endless). Armed
+## by dropping `_note_held` (the first check fails) and by showing the count (the last does).
+## Connected, the same field arrives by `net_weapon`: `headless_net`'s blind-and-beacon section.
+func _test_the_weapon_in_hand_is_named() -> void:
+	_section("The weapon in hand is named on a deathmatch, and nothing on a timer server")
+
+	var config := G2GConfig.new()
+	config.records_directory = ""
+	config.initial_map = &"bhop_g2g_intro"
+	config.deathmatch = true
+	var game := G2GGame.new()
+	game.name = "AmmoGame"
+	game.config = config
+	add_child(game)
+	for _i in range(120):
+		await get_tree().process_frame
+		if game.maps != null and game.maps.current != null:
+			break
+
+	var ada: G2GPlayer = game.add_player(&"u1", "Ada")
+	var hud := G2GHud.new()
+	hud.size = Vector2(1280.0, 720.0)
+	add_child(hud)
+	hud.bind(game, &"u1")
+	for _i in range(60):
+		await get_tree().physics_frame
+		if ada.held_weapon != &"":
+			break
+
+	_check(ada.held_weapon in [&"knife", &"deagle"], "the combat layer puts a weapon in hand", str(ada.held_weapon))
+	hud._process(1.0 / 60.0)
+	_check(hud.ammo.weapon_name == String(ada.held_weapon).capitalize() and hud.ammo.count_text() == "",
+		"and the counter names it with no count, because it has no magazine", str(hud.ammo.describe()))
+	_check(hud.ammo.footprint().size != Vector2.ZERO
+			and not hud.ammo.get_global_rect().intersects(hud.element_rect(&"timer")),
+		"drawn bottom right, clear of the clock", "%s / %s" % [hud.ammo.get_global_rect(), hud.element_rect(&"timer")])
+
+	game.combat.enabled = false
+	for _i in range(4):
+		await get_tree().physics_frame
+	hud._process(1.0 / 60.0)
+	_check(ada.held_weapon == &"" and hud.ammo.weapon_name == "",
+		"with deathmatch off the hand is empty and the counter draws nothing", str(hud.ammo.describe()))
+
+	hud.show_weapon(null)
+	_check(hud.ammo.footprint() == Rect2(), "and watching somebody else shows nothing")
+
+	hud.queue_free()
+	game.queue_free()
 	_done()
 
 

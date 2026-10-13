@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 210
+const CHECKS := 214
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -1410,6 +1410,24 @@ func _test_blind_and_beacon() -> void:
 		_server_bridge.behaviour_for(8).identity.always_relevant,
 		"a beaconed player is relevant to every peer, however far away"
 	)
+
+	# The weapon in hand: owner only, like the blind, and named on this client's HUD.
+	_server_player().held_weapon = &"deagle"
+	_server_bridge.behaviour_for(8).player.held_weapon = &"knife"
+	_steps(24)
+	_check(_client_player().held_weapon == &"deagle",
+		"the weapon in hand reaches its owner", str(_client_player().held_weapon))
+	_check(bea_here.player.held_weapon == &"" and bea_here.net_weapon == 0,
+		"and nobody else's weapon reaches this client", "received net_weapon = %d" % bea_here.net_weapon)
+	var hud := G2GHud.new()
+	add_child(hud)
+	hud.bind(_client_game, _client_player().player_id)
+	hud.show_weapon(_client_player())
+	_check(hud.ammo.weapon_name == "Deagle", "and the client's counter names it", str(hud.ammo.describe()))
+	hud.queue_free()
+	_server_player().held_weapon = &""
+	_steps(24)
+	_check(_client_player().held_weapon == &"", "and empty hands reach it too")
 
 	var _off: Array[DotResult] = [
 		blind.call(&"7", {"on": false, "actor": "1"}),
