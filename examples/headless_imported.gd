@@ -9,9 +9,7 @@ const G2GUnits := preload("../game/g2g_units.gd")
 const G2GStockSubstitutes := preload("../game/g2g_stock_substitutes.gd")
 const RouteBot := preload("../tools/route_bot.gd")
 const ReplayFollow := preload("../tools/replay_follow.gd")
-const G2GSurfSim := preload("../game/g2g_surf_sim.gd")
 const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
-const G2GSurfPilot := preload("../game/g2g_surf_pilot.gd")
 const SurfPlan := preload("../tools/surf_plan.gd")
 
 ## Checks a map imported from a Source .bsp: it loads, it is the right size, it is
@@ -1651,7 +1649,7 @@ func _test_surfs_from_its_cache() -> void:
 	var number: int = numbers[0]
 	var data: Dictionary = stages[str(number)]
 	var why: Array = []
-	var course: RefCounted = G2GSurfCourse.for_stage(game, number, why)
+	var course: DotBotSurfCourse = G2GSurfCourse.for_stage(game, number, why)
 	if course == null:
 		_check(false, "the surf simulator is the motor", why[0])
 		_check(false, "a surf bot rides a stage from its cache into the next", why[0])
@@ -1666,9 +1664,7 @@ func _test_surfs_from_its_cache() -> void:
 		await get_tree().physics_frame
 	bot.teleport(course.start, course.start_yaw)
 	var base := bot.controller.state.duplicate_state()
-	var sim: RefCounted = G2GSurfSim.for_controller(bot.controller, bot, game.tick_rate)
-	sim.oracle = course.event_at
-	sim.mechanics = game.mechanics
+	var sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 	var checks: Array = await SurfPlan.simulator_checks(game, bot, sim, base, course.reference_yaw(),
 		SurfPlan.first_ride_actions(data))
 	var bad: Array = checks.filter(func(c: Array) -> bool: return not c[0])
@@ -1677,8 +1673,8 @@ func _test_surfs_from_its_cache() -> void:
 	_check(bad.is_empty(), "the surf simulator is the motor",
 		"" if bad.is_empty() else "; ".join(bad.map(func(c: Array) -> String: return "%s %s" % [c[1], c[2]])))
 
-	var pilot := G2GSurfPilot.new()
-	pilot.load_stage(data)
+	var pilot := DotBotSurfPilot.new()
+	pilot.load_stage(data, G2GUnits.METRES_PER_UNIT)
 	pilot.sim = sim
 	pilot.score = course.score
 	var result: Dictionary = await SurfPlan.ride_live(game, bot, course, pilot, base, 1 + SURF_PERTURBED, 7000 + number, true)

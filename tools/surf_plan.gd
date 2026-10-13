@@ -4,13 +4,12 @@ const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
-const G2GSurfSim := preload("../game/g2g_surf_sim.gd")
 const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
-const G2GSurfPlanner := preload("../game/g2g_surf_planner.gd")
-const G2GSurfPilot := preload("../game/g2g_surf_pilot.gd")
 
 ## Plans a surf stage on the real motor, saves what it found as the map's surf cache, and
-## measures the bot that rides from it.
+## measures the bot that rides from it. The planner and the pilot are dot-bot's
+## ([DotBotSurfPlanner], [DotBotSurfPilot]), the simulator dot-player-controller's
+## ([DotFpsSimulator]); the stage is [code]G2GSurfCourse[/code], read from the timer's zones.
 ##
 ##     godot --headless --fixed-fps 128 --path . tools/surf_plan.tscn -- surf_beginner 1
 ##     godot --headless --fixed-fps 128 --path . tools/surf_plan.tscn -- surf_beginner 1 --starts 6 --runs 50 --live 20
@@ -23,11 +22,11 @@ const G2GSurfPilot := preload("../game/g2g_surf_pilot.gd")
 ## 2. `--starts M` (default 6): searches from M starts perturbed from the stage's own
 ##    arrival (sideways and along by up to [constant SIDE_UNITS] and
 ##    [constant ALONG_UNITS], an initial velocity of up to [constant SPEED_UNITS] in any
-##    direction), each with [code]G2GSurfPlanner[/code], and writes every ride found to
+##    direction), each with [DotBotSurfPlanner], and writes every ride found to
 ##    `maps/routes/<id>.surf.json` under the stage's number. `--no-plan` keeps the file.
 ##    Then up to `--rounds R` (default 4) rounds of repair: the pilot rides from
 ##    `--repairs K` (default 24) further perturbed starts, and every ride that fails is
-##    searched again from a second before it failed (see `G2GSurfPlanner.build`).
+##    searched again from a second before it failed (see `DotBotSurfPlanner.build`).
 ## 3. `--runs N` (default 40): rides the stage N times in the simulator with the pilot,
 ##    from N other perturbed starts, reading the cache as it was saved.
 ## 4. `--live N` (default 10): rides it N times in the game itself -- the timer's zones,
@@ -80,7 +79,7 @@ func _run() -> void:
 		game.mechanics.blocks.clear()
 
 	var why: Array = []
-	var course: RefCounted = G2GSurfCourse.for_stage(game, number, why)
+	var course: DotBotSurfCourse = G2GSurfCourse.for_stage(game, number, why)
 	if course == null:
 		print("[surf] %s: %s" % [id, why[0]])
 		get_tree().quit(1)
@@ -90,11 +89,9 @@ func _run() -> void:
 	await get_tree().physics_frame
 	bot.teleport(course.start, course.start_yaw)
 	var base := bot.controller.state.duplicate_state()
-	var sim: RefCounted = G2GSurfSim.for_controller(bot.controller, bot, game.tick_rate)
-	sim.oracle = course.event_at
-	sim.mechanics = game.mechanics
+	var sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 	print("[surf] %s stage %d: from %s u, %d goal zones, %d pits, aiming %s u" % [id, number,
-		str(G2GUnits.vector_to_units(course.start).round()), course.goals.size(), course.pits.size(),
+		str(G2GUnits.vector_to_units(course.start).round()), course.goal_zones.size(), course.pit_zones.size(),
 		str(G2GUnits.vector_to_units(course.goal_centre).round())])
 
 	var checks: Array = await simulator_checks(game, bot, sim, base, course.reference_yaw(),
@@ -119,13 +116,13 @@ func _run() -> void:
 			repair_starts.append(perturbed(base, course, repair_rng))
 		var started := Time.get_ticks_msec()
 		var steps_before: int = sim.steps
-		var planner := G2GSurfPlanner.new()
+		var planner := DotBotSurfPlanner.new()
 		planner.seconds = RIDE_SECONDS
-		var repair_sim: RefCounted = G2GSurfSim.for_controller(bot.controller, bot, game.tick_rate)
-		repair_sim.oracle = course.event_at
-		repair_sim.mechanics = game.mechanics
+		var repair_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
+		var repair_pilot := DotBotSurfPilot.new()
+		repair_pilot.rolling = not args.has("--no-rolling")
 		var built: Dictionary = planner.build(from_starts, repair_starts, rounds, course, sim, repair_sim,
-			func(line: String) -> void: print("[surf]   " + line))
+			func(line: String) -> void: print("[surf]   " + line), repair_pilot)
 		var rides: PackedFloat32Array = built["rides"]
 		var seconds: Array = built["seconds"]
 		var spent := (Time.get_ticks_msec() - started) / 1000.0
@@ -145,28 +142,30 @@ func _run() -> void:
 			"lengths": Array(built["lengths"]),
 			"planned": {"starts": starts, "repairs": repairs, "rounds": built["rounds"],
 				"searches": built["searches"], "seconds": snappedf(spent, 0.1), "motor_ticks": motor_ticks},
-			"entries": G2GSurfPilot.entries_to_rows(rides),
+			"entries": DotBotSurfPilot.entries_to_rows(rides, G2GUnits.METRES_PER_UNIT),
 		}
 		cache["id"] = String(id)
-		cache["note"] = "Written by tools/surf_plan.gd: per stage, every tick of every ride the planner found on the real motor, as [x, y, z, vx, vy, vz, action] in genre units (Godot axes). The pilot (game/g2g_surf_pilot.gd) takes the action of the nearest entry. Regenerate after a movement or collision change."
+		cache["note"] = "Written by tools/surf_plan.gd: per stage, every tick of every ride the planner found on the real motor, as [x, y, z, vx, vy, vz, action] in genre units (Godot axes). The pilot (dot-bot's DotBotSurfPilot) takes the action of the nearest entry. Regenerate after a movement or collision change."
 		cache["stages"] = stages
 		var f := FileAccess.open(path, FileAccess.WRITE)
 		f.store_string(JSON.stringify(cache, "", false))
 		f.close()
-		print("[surf]   saved %d entries to %s" % [rides.size() / G2GSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
+		print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
 
 	var data: Dictionary = _read(path).get("stages", {}).get(str(number), {})
 	if data.is_empty():
 		print("[surf] no cache for stage %d at %s" % [number, path])
 		get_tree().quit(1)
 		return
-	var pilot := G2GSurfPilot.new()
-	pilot.load_stage(data)
+	var pilot := DotBotSurfPilot.new()
+	pilot.load_stage(data, G2GUnits.METRES_PER_UNIT)
 	pilot.sim = sim
 	pilot.score = course.score
 	# `--track`: track the remembered ride instead of taking the nearest entry's action;
-	# `--no-veto`: no lookahead. The pilot's parts, measured apart.
+	# `--no-veto`: no lookahead; `--no-rolling`: the lookahead run afresh every 24 ticks
+	# instead of kept and extended. The pilot's parts, measured apart.
 	pilot.tracking = args.has("--track")
+	pilot.rolling = not args.has("--no-rolling")
 	if args.has("--no-veto"):
 		pilot.horizon = 0
 
@@ -179,24 +178,22 @@ func _run() -> void:
 		var usec_before: int = sim.usec
 		var ridden := 0
 		var misses: Array[String] = []
-		var ride_sim: RefCounted = G2GSurfSim.for_controller(bot.controller, bot, game.tick_rate)
-		ride_sim.oracle = course.event_at
-		ride_sim.mechanics = game.mechanics
+		var ride_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 		for i in range(runs):
 			var r: Dictionary = pilot.ride(perturbed(base, course, rng), ride_sim, int(RIDE_SECONDS / sim.delta))
 			ridden += int(r["ticks"])
-			if int(r["event"]) == G2GSurfSim.Event.GOAL:
+			if int(r["event"]) == DotBotSurfCourse.EVENT_GOAL:
 				ok += 1
 				times.append(float(r["ticks"]) * sim.delta)
 			elif misses.size() < 12:
 				var last: DotFpsState = (r["trail"] as Array).back()
-				misses.append("%s %.2f s near %s u" % ["fell" if int(r["event"]) != G2GSurfSim.Event.NONE else "stalled",
+				misses.append("%s %.2f s near %s u" % ["fell" if int(r["event"]) != DotBotSurfCourse.EVENT_NONE else "stalled",
 					float(r["ticks"]) * sim.delta, str(G2GUnits.vector_to_units(last.position).round())])
 		var lookahead: int = sim.steps - steps_before
-		print("[surf]   simulated rides: %d of %d reached the goal (%.0f%%), %s; lookahead %.1f motor ticks per ridden tick (%.0f us of motor per ridden tick); %d checks, %d vetoes, %d hopeless" % [
+		print("[surf]   simulated rides: %d of %d reached the goal (%.0f%%), %s; lookahead %.2f motor ticks per ridden tick (%.0f us of motor per ridden tick); %d futures, %d vetoes, %d hopeless, %d resyncs" % [
 			ok, runs, 100.0 * ok / maxf(1.0, runs), _spread(times),
 			float(lookahead) / maxf(1.0, ridden), float(sim.usec - usec_before) / maxf(1.0, ridden),
-			pilot.checks, pilot.vetoes, pilot.hopeless])
+			pilot.checks, pilot.vetoes, pilot.hopeless, pilot.resyncs])
 		if not misses.is_empty():
 			print("[surf]     misses: %s" % "; ".join(misses))
 
@@ -217,7 +214,7 @@ func _run() -> void:
 ## (from its start, stopped short of the door that would teleport the live player), so
 ## the comparison covers the drop, the ramp and the flight, not just a deck. Empty, a
 ## fixed run-and-strafe of 256 ticks.
-static func simulator_checks(p_game: Node, bot: G2GPlayer, sim: RefCounted, base: DotFpsState,
+static func simulator_checks(p_game: Node, bot: G2GPlayer, sim: DotFpsSimulator, base: DotFpsState,
 		reference: float, actions: PackedInt32Array = PackedInt32Array()) -> Array:
 	var out: Array = []
 	var tree := bot.get_tree()
@@ -231,20 +228,20 @@ static func simulator_checks(p_game: Node, bot: G2GPlayer, sim: RefCounted, base
 	var motor_before := bot.controller.motor.ticks_simulated
 	var a := base.duplicate_state()
 	for action in plan:
-		var _e: int = sim.step(a, G2GSurfSim.command_for(action, a, reference))
+		var _e: int = sim.step(a, DotBotSurfPilot.command_for(sim, action, a, reference))
 	out.append([bot.controller.state.equals(live_before) and bot.controller.motor.ticks_simulated == motor_before
 		and bot.controller.state.position == live_before.position,
 		"a simulated ride leaves the live player and its motor untouched", ""])
 	var b := base.duplicate_state()
 	for action in plan:
-		var _e: int = sim.step(b, G2GSurfSim.command_for(action, b, reference))
+		var _e: int = sim.step(b, DotBotSurfPilot.command_for(sim, action, b, reference))
 	out.append([a.equals(b, 0.0), "the same start and inputs end in the same state",
 		"" if a.equals(b, 0.0) else "%.6f m apart" % a.divergence(b)])
 	# The live player, from the same start, given the same commands.
 	bot.teleport(base.position, base.yaw)
 	bot.controller.state.copy_from(base)
 	for action in plan:
-		bot.controller.apply_command(G2GSurfSim.command_for(action, bot.controller.state, reference))
+		bot.controller.apply_command(DotBotSurfPilot.command_for(sim, action, bot.controller.state, reference))
 		await tree.physics_frame
 	var apart := bot.controller.state.position.distance_to(a.position)
 	out.append([apart < 0.001, "the live player given the same commands ends where the simulation did",
@@ -255,7 +252,7 @@ static func simulator_checks(p_game: Node, bot: G2GPlayer, sim: RefCounted, base
 ## Rides the stage [param count] times in the game from perturbed starts. Returns
 ## `{"ok": int, "times": Array[float], "failures": Array[String]}`.
 ## The first ride is from [param base] itself when [param exact_first] is true.
-static func ride_live(p_game: Node, bot: G2GPlayer, course: RefCounted, pilot: RefCounted,
+static func ride_live(p_game: Node, bot: G2GPlayer, course: DotBotSurfCourse, pilot: DotBotSurfPilot,
 		base: DotFpsState, count: int, seed_value: int, exact_first: bool = false) -> Dictionary:
 	var tree := bot.get_tree()
 	var rng := RandomNumberGenerator.new()
@@ -272,7 +269,7 @@ static func ride_live(p_game: Node, bot: G2GPlayer, course: RefCounted, pilot: R
 			DotTimerZone.Kind.RESPAWN, DotTimerZone.Kind.SLAY:
 				put_back[0] = true
 			DotTimerZone.Kind.TELEPORT:
-				if course.goals.has(zone):
+				if course.goal_zones.has(zone):
 					arrived[0] = true
 				else:
 					put_back[0] = true
@@ -294,7 +291,7 @@ static func ride_live(p_game: Node, bot: G2GPlayer, course: RefCounted, pilot: R
 			fell_at[0] = bot.controller.state.position
 			await tree.physics_frame
 			t += 1
-			if course.event_at(bot.controller.state.position) == G2GSurfSim.Event.GOAL:
+			if course.event_at(bot.controller.state) == DotBotSurfCourse.EVENT_GOAL:
 				arrived[0] = true
 		if arrived[0]:
 			ok += 1
@@ -307,7 +304,7 @@ static func ride_live(p_game: Node, bot: G2GPlayer, course: RefCounted, pilot: R
 
 
 ## [param base] moved sideways and along the course and given a small velocity.
-static func perturbed(base: DotFpsState, course: RefCounted, rng: RandomNumberGenerator) -> DotFpsState:
+static func perturbed(base: DotFpsState, course: DotBotSurfCourse, rng: RandomNumberGenerator) -> DotFpsState:
 	var s := base.duplicate_state()
 	var forward := DotFpsMotor.forward_for(course.reference_yaw())
 	var side := Vector3(-forward.z, 0.0, forward.x)

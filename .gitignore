@@ -80,6 +80,7 @@ screenshots/
 /addons/dot_player_class
 /addons/dot_team
 /addons/dot_lighting
+/addons/dot_bot
 
 # One-off debug scenes a session leaves at the root.
 /_scratch_*

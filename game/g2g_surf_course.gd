@@ -1,55 +1,43 @@
-extends RefCounted
+extends DotBotSurfCourse
 
-## One stage of a map as a surf bot sees it: where it starts, what counts as arriving,
-## what counts as falling, and how far along a position is.
+## One stage of a map as a surf bot sees it, read from the timer's zones: the adapter between
+## this game and dot-bot's surf planner and pilot ([DotBotSurfPlanner], [DotBotSurfPilot]).
 ##
-## [b]Read from the timer's zones, never written per map.[/b] The start is the stage
-## zone's own destination and yaw (what `!s<n>` does to a player); the goal is the next
-## stage's zone, the finish, and every door whose destination lies in one of them (on a
-## staged surf map the way out of a stage is a teleport, and the player is sent into the
-## next stage's zone by it); a pit is every RESPAWN and SLAY zone and every other door.
-## A door that does not lead on is a pit for the bot even when it is a shortcut, because
-## nothing here can tell a shortcut from a way back.
+## [b]Read from the timer's zones, never written per map.[/b] The start is the stage zone's own
+## destination and yaw (what `!s<n>` does to a player); the goal is the next stage's zone, the
+## finish, and every door whose destination lies in one of them (on a staged surf map the way out
+## of a stage is a teleport, and the player is sent into the next stage's zone by it); a pit is
+## every RESPAWN and SLAY zone and every other door. A door that does not lead on is a pit for the
+## bot even when it is a shortcut, because nothing here can tell a shortcut from a way back.
 ##
-## [b]Progress is distance along the line from the start to the goal, plus energy.[/b]
-## On the ramp the bot cannot see the goal's direction in its options -- every action
-## goes roughly the same way -- and what separates a good state from a doomed one is how
-## much height and speed it still has. Energy is height plus v²/2g, in metres: a ride
-## converts one into the other without changing it, a scrub or a clip loses it, and an
-## air strafe adds it. A stage whose line bends far from the straight one (a 180-degree
-## turn) needs a guide polyline here; the straight line is enough for every stage
-## measured so far, which is one.
+## Progress and energy are dot-bot's ([method DotBotSurfCourse.score]). The simulator is
+## dot-player-controller's ([DotFpsSimulator]); what this game runs beside the motor (the map's
+## pushes, gravity volumes and lethal hurt, [G2GMapMechanics]) is its [code]mechanics[/code]
+## hook, on a rider of the simulation's own ([method simulator_for]). The volume modes (water,
+## ladders) come with the motor's registered modes. The rider memory of pushes and sinking
+## blocks is not branched with the state; nothing on a planned stage uses it.
 
-const G2GSurfSim := preload("g2g_surf_sim.gd")
+const G2GMapMechanics := preload("g2g_map_mechanics.gd")
 const G2GUnits := preload("g2g_units.gd")
-
-## How much one metre of energy is worth against one metre of progress.
-const ENERGY_WEIGHT := 0.5
-## How far under the lowest goal or pit floor a player is past saving (units).
-const BELOW_MARGIN_UNITS := 1024.0
 
 var map_id: StringName = &""
 var stage := 1
-var start := Vector3.ZERO
-var start_yaw := 0.0
-var goal_centre := Vector3.ZERO
-var goals: Array[DotTimerZone] = []
-var pits: Array[DotTimerZone] = []
-var floor_y := -INF
-var gravity := 15.24
-var _dir := Vector3.FORWARD
+var goal_zones: Array[DotTimerZone] = []
+var pit_zones: Array[DotTimerZone] = []
 
 
-## The course for stage [param number] of the main track of the map [param game] has
-## loaded (0 is the whole run, from the spawn to the finish). Null, with the reason in
-## [param why], when the map has no such stage.
-static func for_stage(game: Node, number: int, why: Array = []) -> RefCounted:
+## The course for stage [param number] of the main track of the map [param game] has loaded (0 is
+## the whole run, from the spawn to the finish). Null, with the reason in [param why], when the
+## map has no such stage.
+static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCourse:
 	var zones: DotTimerZoneSet = game.timers.zones
 	var track := DotTimerTrack.MAIN
 	var total := zones.stage_count(track)
-	var course: RefCounted = (load("res://game/g2g_surf_course.gd") as GDScript).new()
+	var course: DotBotSurfCourse = (load("res://game/g2g_surf_course.gd") as GDScript).new()
 	course.map_id = game.maps.current.id
 	course.stage = number
+	course.gravity = G2GUnits.to_metres(800.0)
+	course.below_margin = G2GUnits.to_metres(1024.0)
 	var map: Node = game.current_map_node()
 	if number == 0:
 		course.start = map.spawn_for(track)
@@ -61,71 +49,79 @@ static func for_stage(game: Node, number: int, why: Array = []) -> RefCounted:
 			return null
 		course.start = from.destination
 		course.start_yaw = from.destination_yaw
+	var goals: Array[DotTimerZone] = []
+	var pits: Array[DotTimerZone] = []
 	if number > 0 and number < total:
-		course.goals.append(zones.stage_zone(track, number + 1))
+		goals.append(zones.stage_zone(track, number + 1))
 	for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.END, track):
-		course.goals.append(zone)
+		goals.append(zone)
 	for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.TELEPORT):
 		var leads_on := false
-		for goal: DotTimerZone in course.goals.duplicate():
+		for goal: DotTimerZone in goals.duplicate():
 			if goal.contains(zone.destination):
 				leads_on = true
 		if leads_on:
-			course.goals.append(zone)
+			goals.append(zone)
 		else:
-			course.pits.append(zone)
+			pits.append(zone)
 	for kind: DotTimerZone.Kind in [DotTimerZone.Kind.RESPAWN, DotTimerZone.Kind.SLAY]:
 		for zone: DotTimerZone in zones.of_kind(kind):
-			course.pits.append(zone)
-	if course.goals.is_empty():
+			pits.append(zone)
+	if goals.is_empty():
 		why.append("stage %d has nowhere to arrive" % number)
 		return null
-	course._settle()
+	course.goal_zones = goals
+	course.pit_zones = pits
+	course.settle_zones()
 	return course
 
 
-func _settle() -> void:
-	# The door (or line) nearest the start is the one the straight line aims at: a stage's
-	# own exit, not the finish at the far end of the map.
+## The door (or line) nearest the start is the one the straight line aims at: a stage's own exit,
+## not the finish at the far end of the map. The floor is under the lowest goal and every pit but
+## a door.
+func settle_zones() -> void:
 	var best := INF
 	var lowest := INF
-	for goal: DotTimerZone in goals:
+	for goal: DotTimerZone in goal_zones:
 		var d := goal.centre().distance_to(start)
 		if d < best:
 			best = d
 			goal_centre = goal.centre()
 		lowest = minf(lowest, minf(goal.from.y, goal.to.y))
-	for pit: DotTimerZone in pits:
+	for pit: DotTimerZone in pit_zones:
 		if pit.kind != DotTimerZone.Kind.TELEPORT:
 			lowest = minf(lowest, minf(pit.from.y, pit.to.y))
-	floor_y = lowest - G2GUnits.to_metres(BELOW_MARGIN_UNITS)
-	var flat := Vector3(goal_centre.x - start.x, 0.0, goal_centre.z - start.z)
-	_dir = flat.normalized() if flat.length() > 0.01 else DotFpsMotor.forward_for(start_yaw)
+	floor_y = lowest - below_margin
+	var _settled := settle()
 
 
-## What [param position] is: in a goal, in a pit, below the course, or none of those.
-func event_at(position: Vector3) -> G2GSurfSim.Event:
+## What [param state] is in: in a goal zone, in a pit, below the course, or none of those.
+func event_at(state: Variant) -> int:
+	var position: Vector3 = state.position
 	if position.y < floor_y:
-		return G2GSurfSim.Event.BELOW
-	for goal: DotTimerZone in goals:
+		return EVENT_BELOW
+	for goal: DotTimerZone in goal_zones:
 		if goal.contains(position):
-			return G2GSurfSim.Event.GOAL
-	for pit: DotTimerZone in pits:
+			return EVENT_GOAL
+	for pit: DotTimerZone in pit_zones:
 		if pit.contains(position):
-			return G2GSurfSim.Event.PIT
-	return G2GSurfSim.Event.NONE
+			return EVENT_PIT
+	return EVENT_NONE
 
 
-## How far along [param state] is, in metres of progress plus weighted energy.
-func score(state: DotFpsState) -> float:
-	var along := (state.position - start).dot(_dir)
-	var energy := state.position.y + state.velocity.length_squared() / (2.0 * gravity)
-	return along + ENERGY_WEIGHT * energy
-
-
-## The yaw from the start toward the goal: what "forward" is before there is a velocity.
-func reference_yaw() -> float:
-	return rad_to_deg(atan2(-_dir.x, -_dir.z))
+## The simulator the planner and the pilot ride this course on: the player's own motor copied,
+## the map's mechanics run after each tick on a rider of its own (a lethal hurt is a pit), and
+## this course as the oracle.
+func simulator_for(controller: DotFpsController, mechanics: G2GMapMechanics) -> DotFpsSimulator:
+	var sim := controller.simulator()
+	if sim == null:
+		return null
+	if mechanics != null:
+		var rider := G2GMapMechanics.Rider.new()
+		sim.mechanics = func(state: DotFpsState, motor: DotFpsMotor, delta: float, _start: Vector3) -> int:
+			return EVENT_PIT if mechanics.simulate(rider, motor, state, delta) == G2GMapMechanics.Event.HURT else EVENT_NONE
+	sim.oracle = event_at
+	return sim
 
 
 ## The path a course's cache is saved at.
