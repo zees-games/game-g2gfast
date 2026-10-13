@@ -33,6 +33,8 @@ A shot happens on a tick and has to be replayed with that tick's movement, so th
 
 **`only_practice` is on, and it is what makes the feature safe to ship**: a board with one time set over a placed block is a board nobody trusts, and trusting an admin to clear up is a rule enforced by memory. Admin-only by default. **A grab is once and a held prop moves every tick**: a layer that calls `grab` without `hold` leaves the block where it was picked up. `g2g_nudge` is the admin door to the physics gun. This is not a sandbox; game-playground is.
 
+**No toys from dot-props' catalogue, by decision (2026-10-13).** Toys belong in a hub people stand around in, and this game has none: a session is timed runs on imported maps. A toy fixed on a course would be part of the route (something to bounce off is a line through a stage, and a stage nobody else's record used), and a loose set dropped at each imported map's spawn is clutter in the one place every run starts. The practice blocks above are the only props, and they cost the record.
+
 ## Effects
 
 `G2GEffects` splits combat effects (anybody, any time) from movement effects (refused during a ranked run unless `allow_movement_during_runs`, which taints): see [movement.md](movement.md#a-movement-effect-is-a-style-and-a-style-you-did-not-choose-is-a-record-you-did-not-set).
