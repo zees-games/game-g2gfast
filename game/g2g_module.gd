@@ -974,8 +974,10 @@ func _build_netcode() -> DotResult:
 		var session := server.session_by_userid(session_id)
 		if session == null:
 			return false
+		# Level 7 is the map menu that fails closed and counts humans; an older one read an
+		# empty flag as "anybody", so on a host still on it this answers `changemap` alone.
 		var menu_half: Variant = vote.commands.get(&"map_menu") if vote != null and vote.commands != null else null
-		if menu_half is Object and (menu_half as Object).has_method(&"may_change"):
+		if menu_half is Object and DotAddonApi.build_level("dot_vote") >= 7:
 			var ctx := session.make_context("mapmenu", PackedStringArray(), DotCmdContext.Source.CHAT)
 			return bool((menu_half as Object).call(&"may_change", ctx))
 		return DotAdminFlags.granted(session.permissions, DotAdminFlags.CHANGEMAP)
