@@ -22,6 +22,8 @@
 
 `G2GNetBridge._adopt_tick_rate` applies HELLO's `tick_rate` before `sync_from_server`, and **moves every copy together**: `G2GGame.set_tick_rate` (which takes the timer manager with it and reads the rate back), `net.config.tick_rate`, `net.clock.tick_rate` (a copy taken at `setup()` that writing the config does not touch), **and `Engine.physics_ticks_per_second`** (see below). `headless_net` puts its client on 60 deliberately: both halves share one process and one engine rate, so a suite at one rate passes with the chain disconnected.
 
+**HELLO also raises `Engine.max_physics_steps_per_frame`** to a quarter second of ticks (`_keep_up_through_slow_frames`, `SLOW_FRAME_SECONDS`). The engine runs at most that many physics steps a frame and drops the rest without a word; the default 8 covers 133 ms at 60 Hz but only 62.5 ms at 128, so a client under 16 frames a second ran fewer ticks than the server, every command it stamped was late, and the server never moved the player (the stuck-on-the-spawn-pad report in [history](history.md#the-client-and-the-netcode)). dot-net's clock cannot notice, because it is handed the physics step rather than the time that passed. A frame longer than a quarter second still drops time.
+
 ## The client draws between ticks, and the engine runs at the server's rate
 
 A 60 Hz engine against a 128-tick server runs the right ticks in bursts of two and three, and drawing `controller.state` directly moved the camera 74 mm on six frames out of seven and 112 mm on the seventh: a 47% change in apparent speed, eight times a second. Two halves fix it, and **either one alone measures as no better than nothing**:

@@ -167,6 +167,10 @@ var _ready_peers: Dictionary = {}
 ## channel; over ENet with loss the READY can overtake `loaded`, and a READY dropped here left
 ## that client waiting for a world for ever. Admitted when seated.
 var _ready_unseated: Dictionary = {}
+
+## Client: the longest frame whose every tick the engine still simulates. See
+## [method _keep_up_through_slow_frames].
+const SLOW_FRAME_SECONDS := 0.25
 var _tick: int = 0
 var _adding: bool = false
 var _game_ticked_for: int = -1
@@ -1693,6 +1697,7 @@ func _apply_hello(reader: DotNetReader) -> void:
 	# Before `sync_from_server`, because the clock converts its error and its lead
 	# through `tick_rate` and would otherwise do that arithmetic at the old rate.
 	_adopt_tick_rate(int(hello["tick_rate"]))
+	_keep_up_through_slow_frames()
 
 	var rtt := float(rtt_source.call()) if rtt_source.is_valid() else 0.0
 	net.clock.sync_from_server(int(hello["server_tick"]), maxf(0.0, rtt))
@@ -1749,6 +1754,35 @@ func _adopt_tick_rate(rate: int) -> void:
 	DotLog.info(CHANNEL, "adopted the server's tick rate", {
 		"was": before, "now": game.tick_rate, "engine": Engine.physics_ticks_per_second,
 	})
+
+
+## Client: lets the engine run every tick of a slow frame instead of dropping the rest.
+##
+## [b]The engine runs at most `max_physics_steps_per_frame` physics steps a frame, 8 by
+## default, and silently drops the time past that.[/b] 8 steps are 133 ms at 60 Hz but 62.5 ms
+## at this game's 128, so any client below 16 frames a second (a browser's first visit:
+## packs mounting, every material's shader compiling) ran fewer ticks than the server and
+## stamped every command for a tick the server had already simulated. The server discarded
+## each one as late and repeated the last command it had, which for a player who had just
+## spawned is standing still: the timer at 0, the speed under 60 u/s, the predicted
+## jumps and strafes counted, and every snapshot putting the player back on the spawn
+## pad. A refresh, with the shaders cached, ran fast enough and "fixed" it. dot-net's
+## clock cannot see the dropped time either, because it is handed the physics step.
+## docs/history.md has the measurements.
+##
+## Raised to cover [constant SLOW_FRAME_SECONDS] at the server's rate, never lowered: a
+## frame that slow costs more physics steps, which is far cheaper than a player the server
+## cannot move.
+func _keep_up_through_slow_frames() -> void:
+	if net == null or net.is_server or game == null or game.tick_rate <= 0:
+		return
+	var steps := ceili(SLOW_FRAME_SECONDS * float(game.tick_rate))
+	if Engine.max_physics_steps_per_frame < steps:
+		DotLog.info(CHANNEL, "the engine keeps up with slow frames", {
+			"steps_per_frame": steps, "was": Engine.max_physics_steps_per_frame,
+			"tick_rate": game.tick_rate,
+		})
+		Engine.max_physics_steps_per_frame = steps
 
 
 func _apply_movement(reader: DotNetReader) -> void:

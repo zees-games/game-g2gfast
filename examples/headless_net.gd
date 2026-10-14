@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 214
+const CHECKS := 216
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -329,6 +329,9 @@ func _build() -> bool:
 	# rate bug live here. The browser shell genuinely runs at 60, so put the engine
 	# there and make HELLO be what moves it.
 	Engine.physics_ticks_per_second = CLIENT_ENGINE_TICK_RATE
+	# And the engine's default step cap, which is what a shell that sets none runs with:
+	# HELLO must be what raises it (see the slow-frame check below).
+	Engine.max_physics_steps_per_frame = 8
 	_check(
 		Engine.physics_ticks_per_second != _server_game.tick_rate,
 		"and so does the engine, which is what a browser shell that sets none runs at",
@@ -521,6 +524,32 @@ func _test_handshake() -> void:
 		Engine.physics_ticks_per_second == _server_game.tick_rate,
 		"and the ENGINE, so one physics frame is one tick and a renderer can interpolate",
 		"engine %d vs server %d" % [Engine.physics_ticks_per_second, _server_game.tick_rate]
+	)
+	# [b]And every tick of a slow frame.[/b] The engine runs at most
+	# `max_physics_steps_per_frame` steps a frame and drops the rest; the default 8 is
+	# 62.5 ms at 128, so a client under 16 frames a second (a browser's first visit) ran
+	# fewer ticks than the server, every command it sent was late, and the server never
+	# moved the player off the spawn pad. Measured through real slow frames, because a
+	# setting that is written and not obeyed is this family's most repeated bug. Armed:
+	# without `_keep_up_through_slow_frames` both fail (8 steps; about 53 ticks a second).
+	var wanted_steps := ceili(G2GNetBridge.SLOW_FRAME_SECONDS * float(_server_game.tick_rate))
+	_check(
+		Engine.max_physics_steps_per_frame >= wanted_steps,
+		"HELLO lets the engine run a quarter second of ticks in one frame",
+		"%d steps a frame, %d wanted" % [Engine.max_physics_steps_per_frame, wanted_steps]
+	)
+	await get_tree().process_frame
+	var physics_before := Engine.get_physics_frames()
+	var wall_before := Time.get_ticks_usec()
+	for _i in range(6):
+		OS.delay_msec(150)
+		await get_tree().process_frame
+	var ran := Engine.get_physics_frames() - physics_before
+	var owed := float(Time.get_ticks_usec() - wall_before) / 1000000.0 * float(Engine.physics_ticks_per_second)
+	_check(
+		float(ran) >= 0.85 * owed,
+		"through 150 ms frames the engine still runs every tick the server does",
+		"%d physics steps for %.0f ticks of wall time" % [ran, owed]
 	)
 	_check(
 		local_at_hello == [false],

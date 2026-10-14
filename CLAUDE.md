@@ -101,7 +101,7 @@ Short forms; the reasoning is in the linked file.
 **Netcode**
 
 - The movement config travels, snapped to float32 first; both ends derive the tunables. [netcode](docs/netcode.md#the-movement-configuration-travels-not-the-tunables)
-- HELLO's tick rate moves every copy, the engine's included; draw `render_state` between ticks. [netcode](docs/netcode.md#the-client-counts-at-the-servers-tick-rate)
+- HELLO's tick rate moves every copy, the engine's and its step cap included; draw `render_state` between ticks. [netcode](docs/netcode.md#the-client-counts-at-the-servers-tick-rate)
 - Draw the view from the sampler once a frame and add the predictor's `visual_offset`; draw the eye at the clock's `render_alpha` (`_fold_clock`); never interpolate view angles. [netcode](docs/netcode.md#what-a-connected-player-sees)
 - Wait for `player_added`; the local player does not exist when HELLO names it. [netcode](docs/netcode.md#the-local-player-is-adopted-not-looked-up)
 - Event and request kinds are appended; no message script preloads itself. [netcode](docs/netcode.md#wire-rules)
