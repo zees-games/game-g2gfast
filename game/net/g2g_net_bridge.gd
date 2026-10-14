@@ -1761,18 +1761,19 @@ func _adopt_tick_rate(rate: int) -> void:
 ## [b]The engine runs at most `max_physics_steps_per_frame` physics steps a frame, 8 by
 ## default, and silently drops the time past that.[/b] 8 steps are 133 ms at 60 Hz but 62.5 ms
 ## at this game's 128, so any client below 16 frames a second (a browser's first visit:
-## packs mounting, every material's shader compiling) ran fewer ticks than the server and
-## stamped every command for a tick the server had already simulated. The server discarded
-## each one as late and repeated the last command it had, which for a player who had just
-## spawned is standing still: the timer at 0, the speed under 60 u/s, the predicted
-## jumps and strafes counted, and every snapshot putting the player back on the spawn
-## pad. A refresh, with the shaders cached, ran fast enough and "fixed" it. dot-net's
-## clock cannot see the dropped time either, because it is handed the physics step.
-## docs/history.md has the measurements.
+## packs mounting, every material's shader compiling) runs fewer ticks than the server.
+##
+## [b]Not what kept players on the spawn pad, though it was first taken for it.[/b] That was
+## dot-net's clock, which was handed only the steps and never saw the dropped time, so every
+## command was stamped for a tick the server had already simulated (dot-net API 5 credits it
+## from the wall clock; docs/history.md has both). What the cap still buys is a command of the
+## client's own for every tick: at 128 with 150 ms frames and a cap of 8, 57% of the server's
+## ticks had none and repeated the one before, which drops a jump or a strafe shorter than a
+## frame.
 ##
 ## Raised to cover [constant SLOW_FRAME_SECONDS] at the server's rate, never lowered: a
-## frame that slow costs more physics steps, which is far cheaper than a player the server
-## cannot move.
+## frame that slow costs more physics steps, which is far cheaper than inputs the server
+## never hears.
 func _keep_up_through_slow_frames() -> void:
 	if net == null or net.is_server or game == null or game.tick_rate <= 0:
 		return
