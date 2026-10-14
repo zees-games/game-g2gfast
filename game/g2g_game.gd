@@ -1354,7 +1354,13 @@ func ensure_map_content(id: StringName) -> DotResult:
 	if not pinned.is_empty():
 		got = await cloud.call("ensure", StringName(pinned[0]), pinned[1])
 	else:
-		got = await cloud.call("ensure", StringName(config.map_content_id(id)))
+		# Unpinned (solo, or a map typed at the console): ask the origin which version is
+		# newest. `ensure` with no version means `0.0.0`, and the shell's fallback layout
+		# answers that with an unversioned manifest a publish never updates -- a solo game
+		# was handed a surf_mesa from weeks earlier while latest.json named today's.
+		var content_id := config.map_content_id(id)
+		var newest := await _latest_map_version(cloud, content_id)
+		got = await cloud.call("ensure", StringName(content_id), newest)
 
 	if not (got is DotResult):
 		return DotResult.fail(
@@ -1392,6 +1398,34 @@ func ensure_map_content(id: StringName) -> DotResult:
 		"map": String(id), "version": map.content_version, "dir": dir
 	})
 	return DotResult.success(null)
+
+
+## The version the origin's `latest.json` names for [param content_id], or "" when no base
+## answers (an origin without the pointer, or a client with no HTTP bases) -- "" is the
+## old unversioned lookup, so a failure here costs nothing that worked before.
+func _latest_map_version(cloud: Object, content_id: String) -> String:
+	if not cloud.has_method("resolved_http_base_urls"):
+		return ""
+
+	var http := DotHttp.new()
+	http.name = "MapLatest"
+	add_child(http)
+
+	var version := ""
+
+	for base in cloud.call("resolved_http_base_urls"):
+		var url := "%s/%s/latest.json" % [str(base).rstrip("/"), content_id]
+		var res: DotResult = await http.get_json(url)
+
+		if res.ok and res.value is Dictionary:
+			version = str((res.value as Dictionary).get("version", ""))
+			if version != "" and not version.contains("/") and not version.contains(".."):
+				break
+			version = ""
+
+	http.queue_free()
+	DotLog.debug(CHANNEL, "newest published map version", {"content": content_id, "version": version})
+	return version
 
 
 ## Says, on a map that came out of a dot-cloud mount, which content and version it is.
