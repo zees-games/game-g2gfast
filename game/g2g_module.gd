@@ -617,8 +617,11 @@ func _add_server_commands() -> void:
 		DotLog.result(CHANNEL, "the vote's commands", commanded)
 		# The map menu (M), dot-vote's: every map this server has, as the solo list shows them,
 		# changed now through the game's own change (which fetches delivered content first) for
-		# a player holding the owner's `sv_map_menu_flag`; anybody else gets a vote. Read by
-		# name, because a server on a dot-vote older than the menu has no `map_menu`.
+		# a player holding the owner's `sv_map_menu_flag`, or the only human here while
+		# `sv_map_menu_alone` is on; anybody else nominates, and rocks the vote once
+		# `sv_map_menu_vote_min` humans are playing. Humans are the server's sessions, so the
+		# bots never count. Read by name, because a server on a dot-vote older than the menu
+		# has no `map_menu`.
 		var menu_half: Variant = vote.commands.get(&"map_menu") if vote.commands != null else null
 		if menu_half is Object:
 			(menu_half as Object).set(&"change_fn", game.change_map)
@@ -962,16 +965,20 @@ func _build_netcode() -> DotResult:
 		return attached
 
 	bridge.commands_fn = chat_commands
-	# The older client's map list (its own wire, before dot-menu's map menu) asks the same
-	# question the map menu does: the flag the owner named in `sv_map_menu_flag` (staff by
-	# default), or `changemap` on a server whose dot-vote has no such cvar.
+	# The older client's map list (its own wire, before dot-menu's map menu) asks the map
+	# menu's own question, so the two can never disagree: staff by the owner's
+	# `sv_map_menu_flag`, the host's own player, or the only human here under
+	# `sv_map_menu_alone`. Fails closed: with no map menu (a dot-vote older than it) only
+	# `changemap` changes the map. Until 2026-10-14 this read an empty flag as "anybody".
 	bridge.may_change_map_fn = func(session_id: int) -> bool:
 		var session := server.session_by_userid(session_id)
 		if session == null:
 			return false
-		var named := console.find_cvar("sv_map_menu_flag") if console != null else null
-		var flag := named.get_string().strip_edges().to_lower() if named != null else DotAdminFlags.CHANGEMAP
-		return flag == "" or DotAdminFlags.granted(session.permissions, flag)
+		var menu_half: Variant = vote.commands.get(&"map_menu") if vote != null and vote.commands != null else null
+		if menu_half is Object and (menu_half as Object).has_method(&"may_change"):
+			var ctx := session.make_context("mapmenu", PackedStringArray(), DotCmdContext.Source.CHAT)
+			return bool((menu_half as Object).call(&"may_change", ctx))
+		return DotAdminFlags.granted(session.permissions, DotAdminFlags.CHANGEMAP)
 
 	net.messages.seal()
 	# [b]A client whose game messages cannot work with this server's is dropped, in words.[/b]

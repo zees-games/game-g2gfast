@@ -343,6 +343,13 @@ func _voter_ids() -> Array[StringName]:
 		if id == G2GGame.GHOST_ID:
 			continue
 
+		# Bots neither vote nor count: a bot in the count raised every threshold out of the
+		# humans' reach, and one that counted the other way would let a lone player pass a
+		# vote "of two". Keyed `u<n>` like a session, so the flag is the only tell.
+		var player: Variant = game.players[id]
+		if player is Object and is_instance_valid(player) and bool((player as Object).get("is_bot")):
+			continue
+
 		out.append(id)
 
 	return out

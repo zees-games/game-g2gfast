@@ -26,8 +26,8 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## aborts that function; the section counter sees it, and the checks it never reached are
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
-const SECTIONS := 18
-const CHECKS := 205
+const SECTIONS := 19
+const CHECKS := 214
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -82,6 +82,7 @@ func _run() -> void:
 		await _test_services()
 		await _test_browser()
 		_test_vote()
+		await _test_map_menu_permissions()
 		_test_modes()
 		await _test_live_tools()
 		await _test_blind_and_beacon()
@@ -836,6 +837,111 @@ func _test_vote() -> void:
 ## the same bug the HUD had, one screen over. The check goes through the console, which
 ## is how an operator reads it, and asserts the session's clock did NOT move while the
 ## line did: the line moving with the session held still is the line reading the vote.
+## Who may change the map from M, on this server's own sessions (2026-10-14: a guest on a
+## public server pressed M and changed the map). The sessions stand in for what the listener
+## makes for a browser: guests, no permissions, not the host's own player (`local` off).
+func _test_map_menu_permissions() -> void:
+	_section("M: a guest votes, staff and a lone player change")
+	var module := server.modules.get_module("g2gfast")
+	var vote: G2GVote = module.get("vote") if module != null else null
+	var menu: Object = vote.commands.get("map_menu") if vote != null and vote.commands != null else null
+	if menu == null:
+		_check(false, "the map menu is installed")
+		_done()
+		return
+	_check(server.playing_sessions().is_empty(), "nobody else is playing as the section starts",
+		str(server.playing_sessions().size()))
+	var start_map: StringName = game.maps.current.id
+	# Each choice below is made past the start-of-map delay, so a rock-the-vote is counted
+	# rather than refused for time.
+	var guests: Array[DotClientSession] = []
+	for i in 2:
+		var guest := DotClientSession.new()
+		guest.peer_id = 5100 + i
+		guest.userid = 510 + i
+		guest.display_name = "Guest-%d" % i
+		var who := DotGuestIdentity.new()
+		who.uid = "guest:map-menu-%d" % i
+		guest.identity = who
+		var _adopted := server.adopt_session(guest)
+		guest.local = false
+		guest.state = DotClientSession.State.SPAWNED if i == 0 else DotClientSession.State.CONNECTING
+		guests.append(guest)
+	var first := guests[0]
+	var second := guests[1]
+
+	var choose := func(session: DotClientSession, permissions: PackedStringArray = PackedStringArray()) -> Dictionary:
+		var ctx := session.make_context("mapmenu", PackedStringArray(), DotCmdContext.Source.CHAT)
+		ctx.permissions = permissions
+		var target := &""
+		for row: Dictionary in menu.call("rows"):
+			if not bool(row.get("current", false)):
+				target = StringName(str(row["id"]))
+				break
+		var before: StringName = game.maps.current.id
+		vote.director.clock.elapsed = maxf(vote.director.clock.elapsed, vote.director.rules.rtv_delay_sec + 1.0)
+		var result: Dictionary = await menu.call("choose", ctx, target)
+		return {"result": result, "changed": game.maps.current.id != before, "target": target}
+
+	# Alone, with the owner's sv_map_menu_alone off: a vote of one is no vote.
+	_run_command("sv_map_menu_alone 0")
+	var alone_off: Dictionary = await choose.call(first)
+	_check(not alone_off["changed"] and str(alone_off["result"].get("text", "")).contains("needs a vote of the players here")
+		and not vote.director.is_voting(),
+		"one guest, sv_map_menu_alone 0: their M choice does not change the map, and says it needs a vote",
+		str(alone_off["result"].get("text", "")))
+
+	# Alone with it on (the default): nobody to ask, nobody harmed.
+	_run_command("sv_map_menu_alone 1")
+	var alone_on: Dictionary = await choose.call(first)
+	_check(alone_on["changed"] and str(alone_on["result"].get("how", "")) == "changed",
+		"one guest, sv_map_menu_alone 1: their M choice changes the map", str(alone_on["result"].get("text", "")))
+
+	# A second human: a vote again, whatever sv_map_menu_alone says.
+	second.state = DotClientSession.State.SPAWNED
+	var two: Dictionary = await choose.call(first)
+	_check(not two["changed"] and str(two["result"].get("how", "")) == "voted" and not vote.director.is_voting(),
+		"two guests, sv_map_menu_alone 1: the M choice is a nomination and a rock, not a change",
+		str(two["result"].get("text", "")))
+	var _withdrawn := vote.director.clock.unrock(&"u510")
+	_run_command("sv_map_menu_alone 0")
+	var two_off: Dictionary = await choose.call(first)
+	_check(not two_off["changed"], "two guests, sv_map_menu_alone 0: no change either", str(two_off["result"].get("text", "")))
+	_withdrawn = vote.director.clock.unrock(&"u510")
+
+	# The older client's own map list asks the same question through the bridge.
+	var bridge: Object = module.get("bridge")
+	var may: Callable = bridge.get("may_change_map_fn") if bridge != null else Callable()
+	_check(may.is_valid() and not bool(may.call(first.userid)), "the older client's map list refuses the same guest")
+
+	# Staff change it with others here, by the owner's flag.
+	var staff: Dictionary = await choose.call(second, PackedStringArray(["generic"]))
+	_check(staff["changed"] and str(staff["result"].get("how", "")) == "changed",
+		"staff (generic) change the map from M with two players here", str(staff["result"].get("text", "")))
+
+	# Fail closed: an emptied flag is staff, not anybody.
+	_run_command("sv_map_menu_flag \"\"")
+	var emptied: Dictionary = await choose.call(first)
+	_check(not emptied["changed"] and str(menu.call("required_flag")) == "generic",
+		"an emptied sv_map_menu_flag is staff only, not anybody", str(emptied["result"].get("text", "")))
+	_withdrawn = vote.director.clock.unrock(&"u510")
+
+	# The host's own player (a session with no transport) owns the server.
+	first.local = true
+	var host: Dictionary = await choose.call(first)
+	_check(host["changed"], "the host's own player changes the map with others here", str(host["result"].get("text", "")))
+
+	_run_command("sv_map_menu_flag generic")
+	_run_command("sv_map_menu_alone 1")
+	for guest in guests:
+		var _released := server.release_session(guest.peer_id)
+	# Back on the map the sections after this one stand on: the rows this picked from depend on
+	# which map packs are linked, and a course with its start somewhere else fails them.
+	if game.maps.current.id != start_map:
+		var _back: DotResult = await game.change_map(start_map)
+	_done()
+
+
 func _test_status_clock(vote: G2GVote) -> void:
 	var rules := vote.director.rules
 	var clock := vote.director.clock

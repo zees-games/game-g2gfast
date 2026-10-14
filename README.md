@@ -37,7 +37,7 @@ The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` a
 | **R** | Back to the start of the stage you are in (or of the track, outside a stage). **R R** quickly: back to the main start zone, from a bonus too |
 | **C** / **V** | Save a practice checkpoint / go back to it |
 | **Y** / **U** | Chat / team chat |
-| **M** | The map list: every map, 1–7 or a click to change to it, 8 and 9 to turn the page. Offline it changes the map; on a server staff change it (the owner picks the flag with `sv_map_menu_flag`) and anybody else starts a vote for it |
+| **M** | The map list: every map, 1–7 or a click to change to it, 8 and 9 to turn the page. Offline, and on a server you started yourself (`./game.sh online`), it changes the map. On a public server staff change it (the owner picks the flag with `sv_map_menu_flag`), the only player on the server changes it too (`sv_map_menu_alone`, on by default), and anybody else's choice is a vote of the players there (at least `sv_map_menu_vote_min`, 2 by default; bots never count) |
 | **Z** | The zone editor (offline, or an admin): see [Zones](#zones) |
 | **H** | Help: every key and every chat command on the server |
 | **P** | Next HUD theme |
