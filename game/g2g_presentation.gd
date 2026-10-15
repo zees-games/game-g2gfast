@@ -3,6 +3,7 @@ extends Node
 const G2GBindings := preload("g2g_bindings.gd")
 const G2GPaths := preload("g2g_paths.gd")
 const G2GVote := preload("g2g_vote.gd")
+const G2GUnits := preload("g2g_units.gd")
 
 ## Settings, audio, effects and a console, on a client whose whole output is a number.
 ##
@@ -243,6 +244,21 @@ static func schema() -> DotSettingsSchema:
 	# One binding per key the client reads, DEVICE scope, after the chat block above so the
 	# two chat keys keep the ACCOUNT declarations they had first. See G2GBindings.
 	G2GBindings.make().add_to_schema(s)
+
+	# [b]Effects at 0.6, not the stock 1.0 (fgr-g2g-audio-1).[/b] The landing on every hop and
+	# the footsteps sat on top of the bed and the timer's cues at full level, which a runner
+	# hears hundreds of times a minute. Declared before the stock set so it is the one kept;
+	# a player who wants the old level still has the slider.
+	s.add(DotSettingsDef.number(&"sfx_volume", 0.6, 0.0, 1.0, &"audio"))
+	# The wind is the speedometer's second half: the bed's level runs from `snd_wind_min` at
+	# a standstill to `snd_wind_max` at `snd_wind_full_speed` genre units a second, linearly,
+	# so a slow walk is a breeze and a surf at 3000 is a roar. Settings, so each one is a cvar.
+	s.add(DotSettingsDef.number(&"snd_wind_min", 0.3, 0.0, 2.0, &"audio").with_description(
+		"Bed level when standing still."))
+	s.add(DotSettingsDef.number(&"snd_wind_max", 1.1, 0.0, 2.0, &"audio").with_description(
+		"Bed level at snd_wind_full_speed."))
+	s.add(DotSettingsDef.number(&"snd_wind_full_speed", 1500.0, 100.0, 5000.0, &"audio").with_description(
+		"Horizontal speed in units per second at which the bed reaches snd_wind_max."))
 
 	# Everything else a game has: volumes, the window, the frame rate, the mouse, the theme.
 	return DotMenuStock.declare(s)
@@ -865,6 +881,18 @@ func watch_movement(grounded: bool, speed: float, at: Vector3) -> void:
 		audio.play(&"jump")
 	_was_grounded = grounded
 	_last_at = at
+	if ambience != null and settings != null:
+		ambience.level = wind_level(
+			speed * G2GUnits.UNITS_PER_METRE,
+			settings.get_float(&"snd_wind_min", 0.3),
+			settings.get_float(&"snd_wind_max", 1.1),
+			settings.get_float(&"snd_wind_full_speed", 1500.0))
+
+
+## The bed's level for a horizontal speed in genre units a second. Static so the curve can be
+## checked without an audio device, which a headless run does not have.
+static func wind_level(units_per_second: float, level_min: float, level_max: float, full_speed: float) -> float:
+	return lerpf(level_min, level_max, clampf(units_per_second / maxf(full_speed, 1.0), 0.0, 1.0))
 
 
 ## Plays the timer's start, splits and finish for one player.

@@ -272,13 +272,13 @@ const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_oce
 	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 55
+const CHECKS_PER_MAP := 57
 
 ## Sections every map runs, entered against run to their last line. A runtime error inside
 ## a section aborts that function and nothing says so; a section that bailed out after a
 ## failed guard is counted as not finished on purpose, and the two that end early because
 ## a map legitimately has nothing to check (no course, no door) say so first.
-const SECTIONS_PER_MAP := 12
+const SECTIONS_PER_MAP := 13
 
 ## A script error inside a test aborts THAT TEST and not the run, so a suite that has
 ## quietly lost two checks still prints "0 failed" — which is what happened while this
@@ -325,6 +325,7 @@ func _run() -> void:
 		await _test_stands_where_it_sends_you()
 		_test_arrivals_miss_the_pits()
 		_test_a_door_keeps_the_run()
+		await _test_pits_land_at_their_destination()
 		await _test_runs_its_route()
 		await _test_follows_its_recording()
 		await _test_surfs_from_its_cache()
@@ -1463,6 +1464,155 @@ func _test_a_door_keeps_the_run() -> void:
 		% [was_running, moved, timer.run.is_running()])
 	timer.stop()
 	_done()
+
+
+
+## Maps completed by walking every gate (a gate is a pit that lands in the next stage).
+const GATED_COURSES := ["bhop_eazy", "bhop_eazy_v2"]
+
+## Pits sampled per map by [method _test_pits_land_at_their_destination].
+const PIT_SAMPLES := 12
+
+
+## [b]A pit sends the player where its trigger_teleport aims, with the run kept (nightly
+## fgr-g2g-teleports-1).[/b] The zones are checked as data above; this one puts a running
+## player INTO a main-track pit and lets the game's own tick fire it, so the importer, the
+## zone index and `_on_effect_requested` are all in the line. A pit that carries no
+## destination is the spawn (the map's labels name the ones that legitimately do), so only
+## pits that carry one are sampled, and each must land exactly and leave the run going.
+## Then the finish: on a map with gates, one of them must land inside the finish zone, or
+## the gates all work and nobody completes the map.
+func _test_pits_land_at_their_destination() -> void:
+	_section("pits")
+	var zones := game.timers.zones
+	var start := zones.first_of_kind(DotTimerZone.Kind.START, DotTimerTrack.MAIN)
+	var finish := zones.first_of_kind(DotTimerZone.Kind.END, DotTimerTrack.MAIN)
+	if start == null or finish == null:
+		_check(true, "a sampled pit lands at its destination with the run kept", "no run to time")
+		_check(true, "a listed gated course is finished by walking its gates", "no run to time")
+		_done()
+		return
+	var bot: G2GPlayer = game.players.get(&"bot")
+	if bot == null:
+		bot = game.add_player(&"bot", "Bot", true)
+		bot.sampler = null
+	var timer := bot.timer
+	var pits: Array[DotTimerZone] = []
+	for pit in zones.of_kind(DotTimerZone.Kind.RESPAWN, DotTimerTrack.MAIN):
+		if pit.payload.has(G2GBspMap.SENDS_TO):
+			pits.append(pit)
+	var landed: Array = []
+	var hook := func(pid: StringName, zone: DotTimerZone) -> void:
+		if pid == &"bot" and zone.kind == DotTimerZone.Kind.RESPAWN:
+			landed.append([zone, bot.global_position, bot.timer.run.is_active()])
+	game.timers.effect_requested.connect(hook)
+
+	var reasons: Array = []
+	var on_stop := func(_r: DotTimerRun, why: StringName) -> void:
+		reasons.append(why)
+	timer.run_stopped.connect(on_stop)
+	var bad: Array[String] = []
+	var step := maxi(1, pits.size() / PIT_SAMPLES)
+	var sampled := 0
+	for i in range(0, pits.size(), step):
+		var pit := pits[i]
+		timer.stop()
+		_run_up(timer, start)
+		landed.clear()
+		reasons.clear()
+		# The host moved the player on purpose; without this the timer takes the jump
+		# from the spawn for a cheat and stops the run before the pit is even entered.
+		timer.expect_teleport()
+		bot.teleport(pit.centre(), INF, true)
+		for _f in range(4):
+			await get_tree().physics_frame
+			if not landed.is_empty():
+				break
+		# A pit whose middle lies in another pit's volume (a sloped slab round a hub, a
+		# trigger over a trigger) fires whichever the index finds first; that overlap is
+		# the map's, not a wrong destination, so the sample says only that SOME
+		# destination-carrying pit took the player exactly where it aims.
+		if landed.is_empty() or landed[0][0] != pit:
+			if landed.is_empty() or not (landed[0][0] as DotTimerZone).payload.has(G2GBspMap.SENDS_TO):
+				continue
+		sampled += 1
+		var why := ""
+		if (landed[0][1] as Vector3).distance_to((landed[0][0] as DotTimerZone).destination) > 0.05:
+			why = "landed %s" % str(landed[0][1])
+		elif landed[0][0] == pit and not landed[0][2] and not reasons.has(DotTimer.REASON_RESET) \
+				and not start.contains(pit.destination + Vector3(0, 0.46, 0)):
+			# (A pit that sends back into the start line stops the run in any engine, and a
+			# RESET beside it is another zone's respawn in the same tick: bhop_sqee's pit
+			# sits in a volume that sends to the spawn, so the run was ended by that one.)
+			var held: Array[String] = []
+			for z2 in zones.of_kind(DotTimerZone.Kind.START):
+				if z2.contains(pit.centre()) or z2.contains(pit.destination + Vector3(0, 0.46, 0)):
+					held.append("start %d" % z2.track)
+			why = "stopped the run %s %s" % [held, reasons]
+		if why != "":
+			bad.append("%s -> %s: %s" % [str(G2GUnits.vector_to_units(pit.centre()).round()),
+				str(G2GUnits.vector_to_units(pit.destination).round()), why])
+	timer.run_stopped.disconnect(on_stop)
+	_check(bad.is_empty(), "a sampled pit lands at its destination with the run kept",
+		"%d of %d: %s" % [bad.size(), sampled, "; ".join(bad.slice(0, 3))])
+
+
+	# [b]The gates, in order, to the finish.[/b] bhop_eazy and bhop_eazy_v2 are rooms joined
+	# by gates, and the map is completed by being sent through each one: a gate that
+	# fell back to the spawn is a run nobody finishes (nightly fgr-g2g-teleports-1). So
+	# from the start, every gate whose landing is inside the next stage (or the finish) is
+	# walked into in stage order with the run going, and the run must come out finished.
+	var finishes: Array[float] = []
+	var on_finish := func(run: DotTimerRun) -> void:
+		finishes.append(run.time())
+	timer.run_finished.connect(on_finish)
+	timer.stop()
+	_run_up(timer, start)
+	var hops := 0
+	var targets: Array[DotTimerZone] = []
+	for k in range(2, zones.stage_count(DotTimerTrack.MAIN) + 1):
+		var sz := zones.stage_zone(DotTimerTrack.MAIN, k)
+		if sz != null:
+			targets.append(sz)
+	targets.append(finish)
+	for tz in targets:
+		var gate: DotTimerZone = null
+		for pit in pits:
+			if tz.contains(pit.destination) or tz.contains(pit.destination + Vector3(0, 0.46, 0)):
+				gate = pit
+				break
+		if gate == null:
+			continue
+		landed.clear()
+		timer.expect_teleport()
+		bot.teleport(gate.centre(), INF, true)
+		for _f in range(4):
+			await get_tree().physics_frame
+			if not landed.is_empty():
+				break
+		# The timer sees the landing on the tick after it, and a finish on the one after.
+		for _f in range(4):
+			await get_tree().physics_frame
+		hops += 1
+	timer.run_finished.disconnect(on_finish)
+	var gated := GATED_COURSES.has(_map_id)
+	_check(not gated or (finishes.size() == 1 and hops == targets.size()), "a listed gated course is finished by walking its gates",
+		"%d of %d gates walked, %d finishes" % [hops, targets.size(), finishes.size()])
+	game.timers.effect_requested.disconnect(hook)
+	timer.stop()
+	_done()
+
+
+## Starts a run for the timer without walking: stand in the start, leave it. See
+## [method _test_runnable] for why this is done inside one frame.
+func _run_up(timer: DotTimer, start: DotTimerZone) -> void:
+	var sample := DotTimerSample.new()
+	sample.grounded = true
+	var away := start.centre() + Vector3(0.0, start.size().y + 8.0, 0.0)
+	for point in [start.centre(), start.centre(), away]:
+		sample.previous_position = sample.position
+		sample.position = point
+		timer.tick(sample)
 
 
 ## Longest a route may take, in simulated seconds, before the bot is said not to finish.

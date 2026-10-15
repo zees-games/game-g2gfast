@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 201
+const CHECKS := 205
 
 var _passed := 0
 var _failed := 0
@@ -132,6 +132,17 @@ func _test_a_runner_is_not_shaken() -> void:
 		not bool(s.find(&"allow_flashes").default_value),
 		"and so do full-screen flashes"
 	)
+	# fgr-g2g-audio-1: effects are quieter than the stock 1.0, and the wind is cvars.
+	_check(float(s.find(&"sfx_volume").default_value) < 1.0, "effect sounds default below full volume")
+	_check(s.find(&"snd_wind_min") != null and s.find(&"snd_wind_max") != null
+		and s.find(&"snd_wind_full_speed") != null, "the wind curve is three settings")
+	var calm := G2GPresentation.wind_level(0.0, 0.3, 1.1, 1500.0)
+	var half := G2GPresentation.wind_level(750.0, 0.3, 1.1, 1500.0)
+	var full := G2GPresentation.wind_level(9000.0, 0.3, 1.1, 1500.0)
+	_check(is_equal_approx(calm, 0.3) and calm < half and half < full and is_equal_approx(full, 1.1),
+		"the wind rises with speed and stops at snd_wind_max", "%.2f %.2f %.2f" % [calm, half, full])
+	_check(is_equal_approx(G2GPresentation.wind_level(500.0, 0.3, 1.1, 0.0), 1.1),
+		"and a full speed of zero is a step, not a division")
 	_check(
 		s.find(&"shake_scale").max_value > 0.0,
 		"while both are still settings, because the same server runs a deathmatch layer"
