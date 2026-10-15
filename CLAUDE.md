@@ -64,7 +64,7 @@ Short forms; the reasoning is in the linked file.
 - Geometry, zones and the bot read one list per route; `_pad_centre()` answers "where is the finish". [maps](docs/maps.md#geometry-and-zones-come-from-one-description)
 - Every route needs a start, a finish, a spawn and a pit of its own; every zone must hang over something. [maps](docs/maps.md#every-route-has-a-start-a-finish-a-spawn-and-a-pit-of-its-own)
 - The surf bot plans on a second motor (`DotFpsSimulator`), never a model of one; regenerate `maps/routes/<id>.surf.json` (`tools/surf_plan.tscn`) after a movement or collision change. [routes](docs/routes.md#a-surf-bot-planned-on-the-motor)
-- Server bots: `bot_quota` 0 by default, no timer (never filed), put back by the course; the surf pilot with no forecast (`veto_horizon` 0) where a cache exists, else the route bot. [routes](docs/routes.md#bots-on-a-server)
+- Server bots: `bot_quota` 0 by default, no timer (never filed), put back by the course; the surf pilot with no forecast (`veto_horizon` 0) where a cache exists, else the route bot, planned through dot-npc-ai's link annotations (`bot_nav`, `g2g_bot_nav.gd`) when the map has no route file. [routes](docs/routes.md#bots-on-a-server)
 - A new bonus is a RUN route sized inside `G2GReach`, declared with `add_course`, driven pad to finish with no reset and a pace check. [routes](docs/routes.md#how-the-bots-drive)
 - There is no list of maps anywhere; discover. [map-delivery](docs/map-delivery.md#maps-are-dropped-in-not-listed)
 

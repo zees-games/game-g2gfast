@@ -1,6 +1,7 @@
 extends Node
 
 const G2GGame := preload("g2g_game.gd")
+const G2GPaths := preload("g2g_paths.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GRouteBot := preload("g2g_route_bot.gd")
 const G2GSurfCourse := preload("g2g_surf_course.gd")
@@ -56,6 +57,18 @@ var veto_horizon: int = 0
 ## wall) and starts over.
 const RIDE_SECONDS := 30.0
 
+## What the route planner may spend of one tick, microseconds. Until it is done the bots go
+## straight at the finish as they always did, so planning is never a wait; a tick is 7.8 ms at
+## 128 Hz and one step of the annotator can overrun this (docs/routes.md).
+const NAV_BUDGET_USEC := 2000
+
+## Whether a map with no route file is planned through dot-npc-ai's navigation annotations
+## (`g2g_bot_nav.gd`) instead of aimed straight at the finish. The `bot_nav` cvar. Off by itself
+## when dot-npc-ai is not in the project (a delivered shell may not carry it).
+var use_nav: bool = true
+## Where annotations are cached, by their own key.
+var nav_cache_dir := "user://g2g_nav"
+
 var game: G2GGame = null
 
 ## Bot player ids, oldest first.
@@ -77,6 +90,10 @@ var _course_map: StringName = &""
 ## The cache's lookup, loaded once a map and shared by every bot's pilot.
 var _cache: DotBotSurfPilot = null
 var _route_points: Array[Dictionary] = []
+## The planner for this map, or null (off, no dot-npc-ai, or the map has a route file).
+var nav: RefCounted = null
+## Whether the route is still being planned; the bots stand until it is.
+var _planning := false
 var _next_session := FIRST_SESSION
 
 
@@ -112,6 +129,7 @@ func drive(step: float) -> void:
 	if ids.is_empty():
 		return
 	_ensure_course()
+	_step_nav()
 	for id: StringName in ids:
 		var player: G2GPlayer = game.players.get(id)
 		var rider: Dictionary = _riders.get(id, {})
@@ -150,6 +168,12 @@ func drive(step: float) -> void:
 		rider["driven"] = int(rider["driven"]) + 1
 		rider["ticks"] = int(rider["ticks"]) + 1
 		player.controller.apply_command(command)
+		# The farthest from the start a ride got, as the crow flies, in metres: what a map nobody
+		# can finish is measured by, and what `bot_nav` is judged on.
+		var away := player.controller.state.position.distance_to(course.start)
+		if away > float(rider["far_ride"]):
+			rider["far_ride"] = away
+			rider["far"] = maxf(float(rider["far"]), away)
 
 
 ## Builds the course for the map that is loaded, once per map. Every bot is put back on it,
@@ -167,6 +191,7 @@ func _ensure_course() -> void:
 	mode = &""
 	_cache = null
 	_route_points = []
+	_end_nav()
 
 	var data := _stage_data(id)
 	var why: Array = []
@@ -182,6 +207,8 @@ func _ensure_course() -> void:
 		if course != null:
 			_route_points = G2GRouteBot.load_points(id, [])
 			mode = &"route"
+			if _route_points.is_empty():
+				_begin_nav()
 	if course == null:
 		DotLog.info(CHANNEL, "no stage for the bots on this map; they stand at the spawn", {
 			"map": String(id), "why": "; ".join(PackedStringArray(why.map(func(w: Variant) -> String: return str(w))))
@@ -196,12 +223,78 @@ func _ensure_course() -> void:
 			_put_back(player, _riders[bot_id])
 
 
+## Starts planning a route for this map, when the planner can run here.
+func _begin_nav() -> void:
+	if use_nav:
+		_planning = true
+
+
+func _start_nav() -> void:
+	var path := G2GPaths.rebase("res://game/g2g_bot_nav.gd")
+	var have := false
+	for entry: Dictionary in ProjectSettings.get_global_class_list():
+		if entry["class"] == &"DotNpcAiNavAnnotator":
+			have = true
+			break
+	if not have:
+		DotLog.info(CHANNEL, "dot-npc-ai is not in this project; bots go straight at the finish")
+		_planning = false
+		return
+	var script := load(path) as GDScript
+	var player: G2GPlayer = game.players.get(ids[0])
+	var map := game.current_map_node()
+	if script == null or player == null or map == null:
+		_planning = false
+		return
+	nav = script.new()
+	nav.begin(map, map.get_world_3d(), player.controller.tunables, course.start, course.goal_centre,
+		PackedVector3Array([course.start]), nav_cache_dir, _in_a_pit)
+
+
+## Whether a bot at [param at] would be put back by the course: in a pit, or under the floor.
+func _in_a_pit(at: Vector3) -> bool:
+	var probe := DotFpsState.new()
+	probe.position = at
+	var event := course.event_at(probe)
+	return event == DotBotSurfCourse.EVENT_PIT or event == DotBotSurfCourse.EVENT_BELOW
+
+
+## Steps the planner inside its share of the tick, and adopts the route when it has one.
+func _step_nav() -> void:
+	if not _planning:
+		return
+	if nav == null:
+		_start_nav()
+		return
+	if nav.step(NAV_BUDGET_USEC):
+		return
+	_planning = false
+	_route_points = nav.points
+	# Counted afresh: what a bot rode on the straight line while the plan was made is not what
+	# the plan gets it.
+	for bot_id: StringName in ids:
+		var rider: Dictionary = _riders.get(bot_id, {})
+		var player: G2GPlayer = game.players.get(bot_id)
+		if player != null and not rider.is_empty():
+			_count_from_zero(rider)
+			_put_back(player, rider)
+
+
+func _end_nav() -> void:
+	if nav != null:
+		nav.cancel()
+	nav = null
+	_planning = false
+
+
 ## The counts describe() reports are this map's: a cost averaged over two maps' rides (one a
 ## route bot's raycasts, one a pilot's forecast) is nobody's cost.
 static func _count_from_zero(rider: Dictionary) -> void:
 	for key in ["rides", "arrived", "fell", "stuck", "usec", "driven"]:
 		rider[key] = 0
 	rider["best"] = 0.0
+	rider["far"] = 0.0
+	rider["far_ride"] = 0.0
 	rider["worst_usec"] = 0
 
 
@@ -226,6 +319,7 @@ func _stage_data(id: StringName) -> Dictionary:
 ## Back to the stage's start, standing, facing the way the stage faces, on a new ride.
 func _put_back(player: G2GPlayer, rider: Dictionary) -> void:
 	rider["ticks"] = 0
+	rider["far_ride"] = 0.0
 	rider["rides"] = int(rider["rides"]) + 1
 	if course == null:
 		rider["pilot"] = null
@@ -261,16 +355,22 @@ func describe() -> Dictionary:
 		var entry := {
 			"id": String(id),
 			"rides": r.get("rides", 0), "arrived": r.get("arrived", 0), "fell": r.get("fell", 0),
-			"stuck": r.get("stuck", 0), "best_sec": r.get("best", 0.0),
+			"stuck": r.get("stuck", 0), "best_sec": r.get("best", 0.0), "far_m": r.get("far", 0.0),
 			"usec_per_tick": float(r.get("usec", 0)) / float(maxi(int(r.get("driven", 0)), 1)),
 			"worst_usec": r.get("worst_usec", 0),
 			"ticks_driven": r.get("driven", 0),
 		}
 		if pilot != null:
 			entry["pilot"] = pilot.describe()
+		var route: G2GRouteBot = r.get("route")
+		if route != null:
+			entry["route"] = {"index": route.index, "points": route.points.size(), "target": route.target()}
+			var player: G2GPlayer = game.players.get(id)
+			if player != null:
+				entry["route"]["at"] = player.controller.state.position
 		bots.append(entry)
 	return {"map": String(_course_map), "mode": String(mode), "stage": stage,
-		"cache_entries": _cache.size() if _cache != null else 0, "bots": bots}
+		"cache_entries": _cache.size() if _cache != null else 0, "nav": nav.describe() if nav != null else {}, "bots": bots}
 
 
 func describe_lines() -> PackedStringArray:
@@ -278,6 +378,6 @@ func describe_lines() -> PackedStringArray:
 	var out := PackedStringArray(["bots         %d on %s, %s stage %d" % [
 		ids.size(), d["map"] if d["map"] != "" else "-", d["mode"] if d["mode"] != "" else "standing", d["stage"]]])
 	for b: Dictionary in d["bots"]:
-		out.append("  %s  %d rides, %d arrived (best %.2f s), %d fell, %d stuck; %.0f us a tick, worst %d" % [
-			b["id"], b["rides"], b["arrived"], b["best_sec"], b["fell"], b["stuck"], b["usec_per_tick"], b["worst_usec"]])
+		out.append("  %s  %d rides, %d arrived (best %.2f s), %d fell, %d stuck, farthest %.0f m; %.0f us a tick, worst %d" % [
+			b["id"], b["rides"], b["arrived"], b["best_sec"], b["fell"], b["stuck"], b["far_m"], b["usec_per_tick"], b["worst_usec"]])
 	return out

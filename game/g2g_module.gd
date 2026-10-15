@@ -124,6 +124,11 @@ func _module_load() -> DotResult:
 	# its operator asks. A records community runs a server for people; a bot riding the first
 	# stage is a demonstration somebody chooses, not a crowd somebody is sold.
 	_quota = DotBotQuota.install(self, 0)
+	add_cvar("bot_nav", "1", "Bots on a map without a route file plan one through the navigation annotations (0 aims them straight at the finish).").changed.connect(
+		func(_old: String, new_value: String) -> void:
+			if game.bots != null:
+				game.bots.set("use_nav", new_value != "0")
+	)
 
 	add_cvar("sv_allow_thirdperson", "1" if game.config.allow_thirdperson else "0",
 		"Whether players may use third person.").changed.connect(

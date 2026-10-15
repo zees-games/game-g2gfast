@@ -22,8 +22,8 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ## wedges on the first ramp's ridge and never arrives) and by dropping `bots.drive` from
 ## `G2GGame._simulate_tick` (every bot stands still and nothing arrives).
 
-const SECTIONS := 4
-const CHECKS := 16
+const SECTIONS := 5
+const CHECKS := 21
 
 const SERVER_DIR := "user://g2g_bots"
 const SURF_MAP := &"surf_beginner"
@@ -31,6 +31,22 @@ const SURF_MAP := &"surf_beginner"
 ## is a pilot that rides, and a stuck one runs out of it.
 const SURF_SECONDS := 40.0
 const SURF_ARRIVALS := 3
+
+## Maps with no route file and no surf cache, where a bot only ever had the straight line, and
+## how long each is ridden. The farthest a bot got from its start (metres, as the crow flies) is
+## compared with `bot_nav` 0 and 1.
+const NAV_MAPS: Array[StringName] = [&"bhop_fur", &"bhop_mario_fxd", &"bhop_elate"]
+const NAV_SECONDS := 20.0
+## The most a single planning step may take, milliseconds, a bound that catches a step that grew
+## with the map. The tick is 7.8 ms at 128 Hz and the planner is given 2 ms of it; the one step
+## that overruns is a single item of dot-npc-ai's annotator, measured 30 to 100 ms on these maps
+## (docs/routes.md), which is why this is not 8.
+## The most ticks a plan is waited for (it is made in the background, 2 ms of each tick).
+const NAV_PLAN_TICKS := 20000
+const NAV_STEP_LIMIT_MS := 150.0
+## Annotations are kept between runs here (by their own key, so a changed setting is a new file),
+## which a cold run of the biggest of those maps would otherwise spend half a minute making.
+const NAV_CACHE := "user://g2g_bots_nav_cache"
 
 var server: DotServer = null
 var game: G2GGame = null
@@ -56,6 +72,7 @@ func _run() -> void:
 	if game != null:
 		await _test_a_bot_without_a_cache()
 		await _test_a_bot_rides_the_surf_stage()
+		await _test_nav_routes_get_further()
 		await _test_quota_zero_takes_them_away()
 
 	await _shut_down()
@@ -191,6 +208,60 @@ func _test_a_bot_rides_the_surf_stage() -> void:
 		"%d arrived of %d rides in %.1f s" % [first.get("arrived", 0), first.get("rides", 0), float(t) / 128.0])
 	_check(float(first.get("usec_per_tick", 0.0)) > 0.0 and int(first.get("ticks_driven", 0)) > 0,
 		"and its driving cost is measured", "%.0f us a tick over %d ticks" % [first.get("usec_per_tick", 0.0), first.get("ticks_driven", 0)])
+	_done()
+
+
+func _test_nav_routes_get_further() -> void:
+	_section("bots plan through the navigation annotations: farthest reached, bot_nav 0 against 1")
+	_run_command("bot_quota 1")
+	game.bots.set("nav_cache_dir", NAV_CACHE)
+	var far := {}
+	var worst_step := 0.0
+	var planned := 0
+	for use in [0, 1]:
+		_run_command("bot_nav %d" % use)
+		for map_id in NAV_MAPS:
+			if not DirAccess.dir_exists_absolute("res://maps/imported/%s" % map_id):
+				far[[use, map_id]] = -1.0
+				continue
+			var changed: DotResult = await game.change_map(map_id)
+			if not changed.ok:
+				far[[use, map_id]] = -1.0
+				continue
+			if use == 1:
+				# Planned first, then ridden: the cache is warm from the run before and a
+				# plan is a few seconds of ticks; the bots' count starts when it is adopted.
+				for _t in range(NAV_PLAN_TICKS / 64):
+					await _ticks(64)
+					var nav_state: Dictionary = (game.bots.call("describe") as Dictionary)["nav"]
+					if nav_state.is_empty() or nav_state["state"] in ["ready", "failed"]:
+						break
+			await _ticks(int(NAV_SECONDS * 128.0))
+			var d: Dictionary = game.bots.call("describe")
+			var bots: Array = d["bots"]
+			far[[use, map_id]] = float(bots[0]["far_m"]) if not bots.is_empty() else 0.0
+			if use == 1 and d["nav"] is Dictionary and not (d["nav"] as Dictionary).is_empty():
+				var n: Dictionary = d["nav"]
+				print("        %s nav: %s" % [map_id, str(n)])
+				worst_step = maxf(worst_step, float(n["worst_step_ms"]))
+				if n["state"] == "ready":
+					planned += 1
+	for map_id in NAV_MAPS:
+		var before: float = far[[0, map_id]]
+		var after: float = far[[1, map_id]]
+		print("        %-22s farthest %6.1f m without, %6.1f m with" % [map_id, before, after])
+		_check(before < 0.0 or after >= before - 1.0, "%s: planning reaches about as far as the straight line, or further" % map_id,
+			"%.1f m against %.1f m" % [after, before])
+	var gain := 0.0
+	for map_id in NAV_MAPS:
+		gain += maxf(float(far[[1, map_id]]) - float(far[[0, map_id]]), 0.0)
+	_check(gain > 10.0, "and on the whole it reaches clearly further", "%.1f m gained over %d maps" % [gain, NAV_MAPS.size()])
+	_check(planned > 0 and worst_step < NAV_STEP_LIMIT_MS, "the planner finishes, a step at a time",
+		"%d planned, worst step %.1f ms" % [planned, worst_step])
+	_run_command("bot_nav 1")
+	game.bots.set("nav_cache_dir", "user://g2g_nav")
+	_run_command("bot_quota 0")
+	await _ticks(10)
 	_done()
 
 
