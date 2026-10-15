@@ -261,35 +261,13 @@ func _send_snapshots_timed(net: DotNetManager, tick: int, identities: Array[DotN
 			behaviour.end_snapshot_reads()
 
 
+## Calls the manager's own `_send_to_peer` and times it as one lap. This used to be a hand
+## copy of it, which went stale twice (snapshot parts, the unchanged list); dot-net has no
+## timing hook, so the per-phase split inside a peer's send is gone rather than wrong.
 func _send_to_peer_timed(net: DotNetManager, peer_id: int, tick: int,
 		relevant: Array[DotNetIdentity], t: int) -> int:
-	var writer := DotNetWriter.new()
-	writer.write_uint(tick, 32)
-	writer.write_uint(0, 12)
-	var acked_tick := int(net._acks.get(peer_id, 0))
-	var strict := bool(net._ack_wired.get(peer_id, false))
-	var oldest_pending: int = tick - net.config.ack_window_snapshots * net.config.ticks_per_snapshot()
-	for identity in relevant:
-		var estimated := 0
-		for behaviour in identity.behaviours:
-			estimated += behaviour.estimated_bits(peer_id)
-		t = _lap("  estimated_bits", t)
-		var predicted_by_peer := identity.owner_peer_id == peer_id \
-			and identity.authority == DotNetIdentity.Authority.SHARED
-		writer.write_uint(identity.net_id, DotNetRegistry.ID_BITS)
-		writer.write_uint(identity.behaviours.size(), 6)
-		for behaviour in identity.behaviours:
-			behaviour.sync_peer_acks(peer_id, acked_tick, strict)
-			t = _lap("  sync_peer_acks", t)
-			behaviour.trim_pending(peer_id, oldest_pending)
-			t = _lap("  trim_pending", t)
-			var dirty := behaviour.collect_dirty(peer_id, false, predicted_by_peer)
-			t = _lap("  collect_dirty", t)
-			behaviour.write_state(writer, dirty, peer_id, tick)
-			t = _lap("  write_state", t)
-	var payload := writer.to_bytes()
-	_on_send(&"snapshot", peer_id, payload)
-	return _lap("  to_bytes+send", t)
+	net._send_to_peer(peer_id, tick, relevant)
+	return _lap("  _send_to_peer", t)
 
 
 func _lap(name: String, since: int) -> int:

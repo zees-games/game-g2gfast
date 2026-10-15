@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 216
+const CHECKS := 217
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -377,6 +377,11 @@ func _build() -> bool:
 	_client_bridge.rtt_source = func() -> float:
 		return 40.0
 
+	# start() announced the client's schema before the loopback existed, so it went nowhere
+	# and the server kept the pre-list snapshot format. Announce again now it can arrive;
+	# it is delivered with the rest of _to_server once the loop runs.
+	_client_net.announce_schema(1)
+
 	_check(_server_game.external_tick, "the server game hands its tick to the bridge")
 	_check(_client_game.external_tick, "and so does the client's, which predicts and interpolates instead")
 
@@ -486,6 +491,11 @@ func _test_handshake() -> void:
 	_exchange()
 
 	_check(_server_net.peers().has(CLIENT_PEER), "asking admits them")
+	# The client's announce reached the server, so snapshots to it carry the unchanged list.
+	# By the constant map, so this parses against a dot-net from before the feature.
+	var runs_bit := int((DotNetMessageRegistry as Script).get_script_constant_map().get("FEATURE_UNCHANGED_RUNS", 0))
+	_check(runs_bit == 0 or _server_net.messages.peer_supports(CLIENT_PEER, runs_bit),
+		"the server knows its client reads the unchanged list")
 	_check(hellos == [SESSION], "and the client is told who it is", str(hellos))
 	_check(_client_bridge.local_player_id == SESSION, "which the bridge remembers")
 
