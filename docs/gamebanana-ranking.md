@@ -139,7 +139,7 @@ What the importer learned from them: boosters (a thin `trigger_multiple` whose O
 
 ## Extended 2026-10-13: the next most liked, and the next by views
 
-Both lists above were used up, so chk-maps fetched pages 1-4 (200 maps) of each category by views and by likes (595 distinct maps, all Counter-Strike: Source, every BSP downloaded VBSP 20; no CS:GO/CS2 file among them). The ten most liked that we did not have were the batch:
+Both lists above were used up, so chk-maps fetched pages 1-4 (200 maps) of each category by views and by likes (595 distinct maps, every BSP downloaded VBSP 20 from the genre's classic map format; no newer-format file among them). The ten most liked that we did not have were the batch:
 
 | Page | Map | Category | Views | Likes | Status |
 | --- | --- | --- | ---: | ---: | --- |
