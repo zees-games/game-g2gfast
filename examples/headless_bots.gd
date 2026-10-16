@@ -25,6 +25,10 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 const SECTIONS := 5
 const CHECKS := 21
 
+## Checks the navigation section did not make because the maps were absent; the count above
+## holds for a checkout with g2gfast-maps linked.
+var _skipped_checks := 0
+
 const SERVER_DIR := "user://g2g_bots"
 const SURF_MAP := &"surf_beginner"
 ## Rides on surf_beginner's stage 1 take about four seconds; three arrivals inside this many
@@ -86,8 +90,8 @@ func _run() -> void:
 		print("ERROR: %d sections entered and %d completed, %d expected." % [_entered, _completed, SECTIONS])
 		get_tree().quit(1)
 		return
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS])
+	if _passed + _failed != CHECKS - _skipped_checks:
+		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS - _skipped_checks])
 		get_tree().quit(1)
 		return
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -224,6 +228,7 @@ func _test_nav_routes_get_further() -> void:
 		# Third-party maps are not redistributable, so CI checks out without g2gfast-maps.
 		# Nothing to plan over is not a planner failure, and saying so beats a false green.
 		print("        SKIP  navigation planning: none of %s is in maps/imported (g2gfast-maps not linked)" % str(NAV_MAPS))
+		_skipped_checks += NAV_MAPS.size() + 2
 		_done()
 		return
 	var worst_step := 0.0
