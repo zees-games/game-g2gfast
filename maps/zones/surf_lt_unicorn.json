@@ -17,8 +17,9 @@
  },
  "conditional_teleports": {
   "filters": [
-   "filter_b2_cp2"
+   "filter_b2_cp2",
+   "filter_b_rr_cheater"
   ],
-  "note": "bonus 2's second-checkpoint pit, which fires only for a player the checkpoint trigger has named b2_cp2: it sends to bonus_dest_02_cp2, inside the portal to bonus_plat_02_cp2, which stands inside this pit's own box, so as a box it is a loop. Dropped, a fall there is caught by the unfiltered bonus 2 pit under it and goes back to the bonus start, as it does in Source for anybody who has not reached the checkpoint."
+  "note": "bonus 2's second-checkpoint pit, which fires only for a player the checkpoint trigger has named b2_cp2: it sends to bonus_dest_02_cp2, inside the portal to bonus_plat_02_cp2, which stands inside this pit's own box, so as a box it is a loop. Dropped, a fall there is caught by the unfiltered bonus 2 pit under it and goes back to the bonus start, as it does in Source for anybody who has not reached the checkpoint. filter_b_rr_cheater is the 32,000-unit teleport (x -15616..16352, y -4096..16352, z -16352..-6656) to bonus_dest_03, which fires only for a player the map has flagged as a cheater; nobody is flagged here, and as a pit it sent any main-track player below z -6656 to bonus 3's start (the main finish box itself reaches z -7776 inside that footprint). The ordinary main-track pits stay."
  }
 }
