@@ -159,6 +159,8 @@ func _ready() -> void:
 	config.authoritative = _offline
 	config.initial_map = config.initial_map if _offline else &""
 	game.config = config
+	if _offline:
+		_offer_solo_maps()
 	add_child(game)
 
 	# Connected before anything can create a player. `JOIN` is what creates the local
@@ -1313,7 +1315,24 @@ func cycle_spectate(forward: bool) -> void:
 	bridge.ask_spectate(G2GEvents.SPECTATE_NEXT if forward else G2GEvents.SPECTATE_PREVIOUS)
 
 
+## Inside the browser shell's solo session (`dot_solo`), a pack's courses are named by the
+## stock list and fetched from the shell's origin on demand, under its owner. A no-op
+## anywhere else, so a desktop offline game lists what it holds.
+func _offer_solo_maps() -> void:
+	if G2GSoloMaps.session() == null:
+		return
+	if game.config.map_content_owner.strip_edges().is_empty():
+		game.config.map_content_owner = G2GSoloMaps.OWNER
+	game.offered_maps = G2GSoloMaps.IDS
+
+
 func _leave() -> void:
+	# Solo in the shell: the way back is the shell's menu. A page cannot close its tab, and
+	# a quit there is a frozen canvas.
+	var solo := G2GSoloMaps.session()
+	if _offline and solo != null and solo.has_method(&"leave"):
+		solo.call(&"leave")
+		return
 	if not _offline and link != null and link.has_method("disconnect_from_server"):
 		link.call("disconnect_from_server", "Left the server")
 		return
@@ -1486,6 +1505,9 @@ func menu_where() -> String:
 func menu_leave_label() -> String:
 	if not _offline:
 		return "Disconnect"
+	var solo := G2GSoloMaps.session()
+	if solo != null and solo.has_method(&"leave"):
+		return "Back to menu"
 	# A browser tab cannot be closed by the page in it, and a quit there is a frozen canvas.
 	return "" if DotPlatform.is_web() else "Quit game"
 

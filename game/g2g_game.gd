@@ -113,6 +113,11 @@ var _map_content_seen: Dictionary = {}
 ## map id -> [content id, version]. See [method _adopt_descriptor_maps].
 var _pinned_maps: Dictionary = {}
 
+## Map ids offered on M although this build has not fetched them: choosing one downloads it
+## (see [method ensure_map_content]). A solo game in the browser sets it ([G2GSoloMaps]);
+## empty everywhere else, so desktop and servers list what they hold.
+var offered_maps: PackedStringArray = PackedStringArray()
+
 ## Whether [method fetch_content_maps] is already sweeping the configured set.
 var _fetching_content_maps: bool = false
 
@@ -886,6 +891,8 @@ static func menu_rows(rows: Array) -> Array:
 		var tags: Array = []
 		if str(m.get("kind", "")) == "arena":
 			tags.append("combat")
+		if bool(m.get("download", false)):
+			tags.append("downloads when chosen")
 		var rotating := bool(m.get("rotation", true))
 		if not rotating:
 			tags.append("not in rotation")
@@ -910,6 +917,14 @@ func map_rows() -> Array:
 			"kind": String(map.kind), "rotation": bool(map.meta.get("in_rotation", map.enabled)),
 			"current": map.id == current,
 		})
+	for raw in offered_maps:
+		if maps.catalogue.has(StringName(raw)):
+			continue
+		out.append({
+			"id": raw, "name": raw, "tier": 0, "kind": "", "rotation": true,
+			"current": false, "download": true,
+		})
+	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["id"]) < str(b["id"]))
 	return out
 
 

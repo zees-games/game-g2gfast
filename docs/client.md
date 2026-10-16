@@ -56,6 +56,10 @@ The Escape menu, help, the map list, "Move HUD elements", the key rebinder, the 
 - **The Tab board is a timer server's**: style, best time and rank on this map, time connected and ping, fastest first. Online, names, pings and times are dot-server's roster (sent only while a player holds Tab) and the columns are `G2GModule`'s `scoreboard_fields` from `G2GGame.board_fields`, the standing already worked out for the HUD, so a held board costs no store reads. The module sets the hooks only on a dot-server that has them and takes them back on unload.
 - `tools/screenshot_menus.sh` keeps its settings in memory: a client writes `user://g2g_settings` on every change, and a tool that flips the theme would otherwise change the player's own game.
 
+## Solo in the browser shell: Leave and the course list
+
+Inside the shell's solo session (a `dot_solo` service in `DotRegistry`, duck-typed; see `G2GSoloMaps`) Leave reads "Back to menu" and calls the session's `leave()`, because a page cannot close its tab; anywhere else offline it is still "Quit game" on desktop and hidden on web. The same service makes M list every g2gfast course in dot-server-deploy's `cfg.example/content.yml` (kept in `game/g2g_solo_maps.gd`, and `headless_client` fails when the two drift), fetched under owner `gamemann` the first time one is chosen, the way the first map is. The browser itself was not driven for this change.
+
 ## The HUD
 
 `G2GHud` draws the clock, the keys, speed in u/s, the standing line, PRACTICE, the spectator list and an admin's blind.
