@@ -216,6 +216,16 @@ func _test_nav_routes_get_further() -> void:
 	_run_command("bot_quota 1")
 	game.bots.set("nav_cache_dir", NAV_CACHE)
 	var far := {}
+	var held_maps := 0
+	for map_id in NAV_MAPS:
+		if DirAccess.dir_exists_absolute("res://maps/imported/%s" % map_id):
+			held_maps += 1
+	if held_maps == 0:
+		# Third-party maps are not redistributable, so CI checks out without g2gfast-maps.
+		# Nothing to plan over is not a planner failure, and saying so beats a false green.
+		print("        SKIP  navigation planning: none of %s is in maps/imported (g2gfast-maps not linked)" % str(NAV_MAPS))
+		_done()
+		return
 	var worst_step := 0.0
 	var planned := 0
 	for use in [0, 1]:

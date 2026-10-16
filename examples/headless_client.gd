@@ -407,6 +407,8 @@ func _test_solo_in_the_shell() -> void:
 		if not _client.game.maps.catalogue.has(StringName(id)):
 			missing.append(id)
 	missing.append("zz_unfetched_course")
+	# map_rows() sorts by id; with no maps linked (CI) every id is missing, so match the order.
+	missing.sort()
 	_check(offered == missing and "zz_unfetched_course" in offered and G2GSoloMaps.IDS.size() == 26,
 		"M offers every stock course the catalogue lacks", "%d offered, %d missing" % [offered.size(), missing.size()])
 	var held := 0

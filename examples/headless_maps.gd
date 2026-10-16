@@ -283,6 +283,9 @@ func _test_rescan() -> void:
 	var config := G2GConfig.new()
 	config.records_directory = ""
 	config.map_seconds = 0.0
+	# The default first map is an imported one, which a checkout without g2gfast-maps (CI)
+	# does not hold; that logs an ERR for a map this section never looks at.
+	config.initial_map = &"bhop_g2g_intro"
 	game = G2GGame.new()
 	game.config = config
 	add_child(game)
