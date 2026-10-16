@@ -84,6 +84,18 @@ func _run() -> void:
 		print("[surf] %s: %s" % [id, why[0]])
 		get_tree().quit(1)
 		return
+	# `--guide "x,y,z;x,y,z"`: a polyline in genre units (Godot axes) after the start that
+	# progress is measured along, for a stage that bends far from the straight line. Saved
+	# with the stage so the pilot's veto scores futures along the same line.
+	var guide_units: Array = []
+	var guide_at := args.find("--guide")
+	if guide_at >= 0 and guide_at + 1 < args.size():
+		for part in args[guide_at + 1].split(";"):
+			var xyz := part.split(",")
+			guide_units.append([float(xyz[0]), float(xyz[1]), float(xyz[2])])
+		course.guide = PackedVector3Array([course.start])
+		for g: Array in guide_units:
+			course.guide.append(G2GUnits.vector_to_metres(Vector3(g[0], g[1], g[2])))
 	var bot := game.add_player(&"bot", "Bot", true)
 	bot.sampler = null
 	await get_tree().physics_frame
@@ -103,6 +115,22 @@ func _run() -> void:
 			failed += 1
 
 	var path := ProjectSettings.globalize_path(G2GSurfCourse.cache_path(id))
+	# `--trace`: one search from the stage's own arrival, the beam's best line printed every
+	# half second, and nothing saved. How a stage that finds no ride is diagnosed: where the
+	# best line dies says which guide (or which mechanic) it wants.
+	if args.has("--trace"):
+		var tracer := DotBotSurfPlanner.new()
+		tracer.seconds = RIDE_SECONDS
+		tracer.width = _opt(args, "--width", tracer.width)
+		tracer.trace = func(depth: int, best: Dictionary) -> void:
+			if depth % 4 == 0:
+				var st: DotFpsState = best["state"]
+				print("[surf]   %.1f s best %s u, velocity %s u/s, score %.1f" % [(depth + 1) * tracer.hold / 128.0,
+					str(G2GUnits.vector_to_units(st.position).round()), str(G2GUnits.vector_to_units(st.velocity).round()), float(best["score"])])
+		var found: Dictionary = tracer.search(base, course, sim)
+		print("[surf] traced search: %s %s" % [found["found"], found["why"]])
+		get_tree().quit(0)
+		return
 	if plan:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 1000 + number
@@ -118,11 +146,19 @@ func _run() -> void:
 		var steps_before: int = sim.steps
 		var planner := DotBotSurfPlanner.new()
 		planner.seconds = RIDE_SECONDS
+		planner.width = _opt(args, "--width", planner.width)
 		var repair_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 		var repair_pilot := DotBotSurfPilot.new()
 		repair_pilot.rolling = not args.has("--no-rolling")
-		var built: Dictionary = planner.build(from_starts, repair_starts, rounds, course, sim, repair_sim,
-			func(line: String) -> void: print("[surf]   " + line), repair_pilot)
+		var resume := args.has("--resume")
+		var keep: Dictionary = _read(path).get("stages", {}).get(str(number), {}) if resume else {}
+		var built: Dictionary = _build_saving(planner, from_starts, repair_starts, rounds, course, sim, repair_sim,
+			func(line: String) -> void: print("[surf]   " + line), repair_pilot, keep,
+			func(snapshot: Dictionary) -> void:
+				_save_stage(path, id, number, course, snapshot, guide_units if guide_at >= 0 else
+					_read(path).get("stages", {}).get(str(number), {}).get("guide", []),
+					{"starts": starts, "repairs": repairs, "rounds": snapshot["rounds"], "searches": snapshot["searches"],
+					"seconds": snappedf((Time.get_ticks_msec() - started) / 1000.0, 0.1)}))
 		var rides: PackedFloat32Array = built["rides"]
 		var seconds: Array = built["seconds"]
 		var spent := (Time.get_ticks_msec() - started) / 1000.0
@@ -133,23 +169,6 @@ func _run() -> void:
 		if seconds.is_empty():
 			get_tree().quit(1)
 			return
-		var cache := _read(path)
-		var stages: Dictionary = cache.get("stages", {})
-		stages[str(number)] = {
-			"reference_yaw": snappedf(course.reference_yaw(), 0.01),
-			"start": _units(course.start),
-			"rides": seconds,
-			"lengths": Array(built["lengths"]),
-			"planned": {"starts": starts, "repairs": repairs, "rounds": built["rounds"],
-				"searches": built["searches"], "seconds": snappedf(spent, 0.1), "motor_ticks": motor_ticks},
-			"entries": DotBotSurfPilot.entries_to_rows(rides, G2GUnits.METRES_PER_UNIT),
-		}
-		cache["id"] = String(id)
-		cache["note"] = "Written by tools/surf_plan.gd: per stage, every tick of every ride the planner found on the real motor, as [x, y, z, vx, vy, vz, action] in genre units (Godot axes). The pilot (dot-bot's DotBotSurfPilot) takes the action of the nearest entry. Regenerate after a movement or collision change."
-		cache["stages"] = stages
-		var f := FileAccess.open(path, FileAccess.WRITE)
-		f.store_string(JSON.stringify(cache, "", false))
-		f.close()
 		print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
 
 	var data: Dictionary = _read(path).get("stages", {}).get(str(number), {})
@@ -206,6 +225,112 @@ func _run() -> void:
 			failed += 1
 
 	get_tree().quit(1 if failed > 0 else 0)
+
+
+## [method DotBotSurfPlanner.build], saving as it goes. The addon's returns only when every
+## round is done, and a stage that takes an hour to plan lost all of it to the tool's own timeout
+## (surf_beginner stage 2); here the cache on disk grows with each ride found, and
+## [code]--resume[/code] ([param keep]) continues from what an interrupted run left. Same
+## search and same repair rounds, so what is found is what the addon would have found.
+func _build_saving(planner: DotBotSurfPlanner, starts: Array, repairs: Array, rounds: int, course: DotBotSurfCourse,
+		sim: DotFpsSimulator, ride_sim: DotFpsSimulator, say: Callable, pilot: DotBotSurfPilot, keep: Dictionary,
+		save: Callable) -> Dictionary:
+	var rides := PackedFloat32Array()
+	var lengths := PackedInt32Array()
+	var ride_seconds: Array = []
+	# A lambda captures a number by value, so the counters the snapshot reads live in one array.
+	var counts: Array[int] = [0, 0]
+	var per_round: Array = []
+	var delta: float = sim.delta
+	var snapshot := func() -> Dictionary:
+		return {"rides": rides, "lengths": lengths, "seconds": ride_seconds, "searches": counts[0],
+			"found": counts[1], "rounds": per_round}
+	if not keep.is_empty():
+		for row: Array in keep.get("entries", []):
+			rides.append_array([float(row[0]) * G2GUnits.METRES_PER_UNIT, float(row[1]) * G2GUnits.METRES_PER_UNIT,
+				float(row[2]) * G2GUnits.METRES_PER_UNIT, float(row[3]) * G2GUnits.METRES_PER_UNIT,
+				float(row[4]) * G2GUnits.METRES_PER_UNIT, float(row[5]) * G2GUnits.METRES_PER_UNIT, float(row[6])])
+		for n: Variant in keep.get("lengths", []):
+			lengths.append(int(n))
+		ride_seconds.append_array(keep.get("rides", []))
+		say.call("resumed with %d rides" % lengths.size())
+	else:
+		for i in range(starts.size()):
+			counts[0] += 1
+			var t0 := Time.get_ticks_msec()
+			var ride: Dictionary = planner._search_ride(starts[i], course, sim)
+			if ride.is_empty():
+				say.call("start %d: no ride, %.1f s searching" % [i, (Time.get_ticks_msec() - t0) / 1000.0])
+				continue
+			counts[1] += 1
+			rides.append_array(ride["entries"])
+			lengths.append(int(ride["ticks"]))
+			ride_seconds.append(snappedf(float(ride["ticks"]) * delta, 0.01))
+			say.call("start %d: a ride of %.2f s, %.1f s searching" % [i, float(ride["ticks"]) * delta, (Time.get_ticks_msec() - t0) / 1000.0])
+			save.call(snapshot.call())
+	var max_ticks := int(planner.seconds / delta)
+	for round in range(rounds):
+		if lengths.is_empty():
+			break
+		pilot.load_entries(rides, lengths, course.reference_yaw())
+		pilot.sim = sim
+		pilot.score = course.score
+		var failures := 0
+		for j in range(repairs.size()):
+			var r := pilot.ride(repairs[j], ride_sim, max_ticks)
+			if int(r["event"]) == DotBotSurfCourse.EVENT_GOAL:
+				continue
+			failures += 1
+			var trail: Array = r["trail"]
+			var at := trail.size() - 1
+			for back in [planner.repair_back, planner.repair_back * 2, 1 << 30]:
+				var k := maxi(0, at - back / 16)
+				counts[0] += 1
+				var t0 := Time.get_ticks_msec()
+				var ride: Dictionary = planner._search_ride(trail[k], course, sim)
+				if ride.is_empty():
+					if k == 0:
+						say.call("round %d, ride %d: failed and no ride from its start either" % [round, j])
+						break
+					continue
+				counts[1] += 1
+				rides.append_array(ride["entries"])
+				lengths.append(int(ride["ticks"]))
+				ride_seconds.append(snappedf(float(ride["ticks"]) * delta, 0.01))
+				pilot.load_entries(rides, lengths, course.reference_yaw())
+				say.call("round %d, ride %d: %s at %.2f s; a ride of %.2f s from %.2f s in, %.1f s searching" % [
+					round, j, "fell" if int(r["event"]) != DotBotSurfCourse.EVENT_NONE else "stalled",
+					float(r["ticks"]) * delta, float(ride["ticks"]) * delta, float(k * 16) * delta,
+					(Time.get_ticks_msec() - t0) / 1000.0])
+				save.call(snapshot.call())
+				break
+		per_round.append(failures)
+		say.call("round %d: %d of %d rides failed; the cache has %d entries" % [round, failures, repairs.size(), rides.size() / DotBotSurfPilot.STRIDE])
+		if failures == 0:
+			break
+	return snapshot.call()
+
+
+## Writes [param snapshot] ([method _build_saving]'s) as stage [param number] of the map's cache.
+static func _save_stage(path: String, id: StringName, number: int, course: DotBotSurfCourse, snapshot: Dictionary,
+		guide_units: Array, planned: Dictionary) -> void:
+	var cache := _read(path)
+	var stages: Dictionary = cache.get("stages", {})
+	stages[str(number)] = {
+		"reference_yaw": snappedf(course.reference_yaw(), 0.01),
+		"start": _units(course.start),
+		"rides": snapshot["seconds"],
+		"lengths": Array(snapshot["lengths"]),
+		"planned": planned,
+		"guide": guide_units,
+		"entries": DotBotSurfPilot.entries_to_rows(snapshot["rides"], G2GUnits.METRES_PER_UNIT),
+	}
+	cache["id"] = String(id)
+	cache["note"] = "Written by tools/surf_plan.gd: per stage, every tick of every ride the planner found on the real motor, as [x, y, z, vx, vy, vz, action] in genre units (Godot axes). The pilot (dot-bot's DotBotSurfPilot) takes the action of the nearest entry. Regenerate after a movement or collision change."
+	cache["stages"] = stages
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(cache, "", false))
+	f.close()
 
 
 ## The checks the simulator stands on. Each is `[ok, what, detail]`.

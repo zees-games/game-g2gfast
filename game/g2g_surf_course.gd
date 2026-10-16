@@ -21,6 +21,13 @@ const G2GMapMechanics := preload("g2g_map_mechanics.gd")
 const G2GPaths := preload("g2g_paths.gd")
 const G2GUnits := preload("g2g_units.gd")
 
+## How far under the lowest goal a ride is given up on, genre units. The floor is measured from
+## the goals alone, not under every pit slab as it once was: a line that fell to the water at
+## the bottom of a stage and skimmed along it toward a door 450 units above scored as progress
+## and filled the beam (surf_beginner stage 3). A door is only ever reached from above or level: nothing on these
+## stages rises 256 units.
+const BELOW_UNITS := 256.0
+
 var map_id: StringName = &""
 var stage := 1
 var goal_zones: Array[DotTimerZone] = []
@@ -38,7 +45,7 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 	course.map_id = game.maps.current.id
 	course.stage = number
 	course.gravity = G2GUnits.to_metres(800.0)
-	course.below_margin = G2GUnits.to_metres(1024.0)
+	course.below_margin = G2GUnits.to_metres(BELOW_UNITS)
 	var map: Node = game.current_map_node()
 	if number == 0:
 		course.start = map.spawn_for(track)
@@ -54,8 +61,11 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 	var pits: Array[DotTimerZone] = []
 	if number > 0 and number < total:
 		goals.append(zones.stage_zone(track, number + 1))
-	for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.END, track):
-		goals.append(zone)
+	# The finish is a goal only of the last stage: from any other it is at the far end of the map,
+	# and as a goal it dragged the floor down to its own height.
+	if number == 0 or number >= total:
+		for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.END, track):
+			goals.append(zone)
 	for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.TELEPORT):
 		var leads_on := false
 		for goal: DotTimerZone in goals.duplicate():
@@ -74,24 +84,79 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 	course.goal_zones = goals
 	course.pit_zones = pits
 	course.settle_zones()
+	course.guide = guide_from_cache(course.map_id, number, course.start)
 	return course
 
 
-## The door (or line) nearest the start is the one the straight line aims at: a stage's own exit,
-## not the finish at the far end of the map. The floor is under the lowest goal and every pit but
-## a door.
+## The guide polyline a stage's cache carries (genre units, Godot axes, in `"guide"`), from
+## [param start] on, in metres; empty for a stage that runs straight.
+##
+## [b]Why it lives in the cache, not in code.[/b] Progress is distance along the start-to-goal
+## line, so a stage that turns far from that line (a hairpin) scores its own correct ride as
+## going backwards and the beam drops it. The points are a property of the ride the planner
+## was given, so they are saved with its rides, and the pilot's veto, which scores futures with
+## the same course, reads them back from the same place.
+static func guide_from_cache(id: StringName, number: int, start: Vector3) -> PackedVector3Array:
+	var out := PackedVector3Array()
+	var path := ProjectSettings.globalize_path(cache_path(id))
+	if not FileAccess.file_exists(path):
+		return out
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return out
+	var data: Dictionary = (parsed as Dictionary).get("stages", {}).get(str(number), {})
+	var points: Array = data.get("guide", [])
+	if points.size() < 1:
+		return out
+	out.append(start)
+	for p: Array in points:
+		out.append(G2GUnits.vector_to_metres(Vector3(float(p[0]), float(p[1]), float(p[2]))))
+	return out
+
+
+## Metres along the guide, measured on the floor plan only. The base class takes the nearest
+## point of the polyline in three dimensions, which on a stage that doubles back lets a line
+## that falls off the first ramp land nearer the last segment in height than the ramp it left in
+## plan, and score as if it had ridden the whole stage (surf_beginner stage 3, 2.6 s: 80 against
+## 21 for the line that stayed on the ramp). Drops are not progress, so height is left to the
+## energy term.
+func progress(p: Vector3) -> float:
+	if guide.size() < 2:
+		return super.progress(p)
+	var flat := Vector3(p.x, 0.0, p.z)
+	var best_d := INF
+	var best := 0.0
+	var along := 0.0
+	for i in range(guide.size() - 1):
+		var a := Vector3(guide[i].x, 0.0, guide[i].z)
+		var b := Vector3(guide[i + 1].x, 0.0, guide[i + 1].z)
+		var seg := b - a
+		var length := seg.length()
+		var t := clampf((flat - a).dot(seg) / maxf(length * length, 0.0001), 0.0, 1.0)
+		var d := flat.distance_squared_to(a + seg * t)
+		if d < best_d:
+			best_d = d
+			best = along + t * length
+		along += length
+	return best
+
+
+## The door nearest the start is what the straight line aims at: a stage's own exit, not the
+## finish at the far end of the map. The next stage's zone is only the room a door lands in, so
+## it is aimed at only when no door leads on (the last stage's finish): on surf_beginner stage 2
+## the room is 230 units above the start and 2,200 away, the door that sends you there is 1,000
+## units below it and 1,700 away in another direction. The floor is [constant BELOW_UNITS] under
+## the lowest goal.
 func settle_zones() -> void:
 	var best := INF
 	var lowest := INF
+	var has_door := goal_zones.any(func(z: DotTimerZone) -> bool: return z.kind == DotTimerZone.Kind.TELEPORT)
 	for goal: DotTimerZone in goal_zones:
 		var d := goal.centre().distance_to(start)
-		if d < best:
+		if d < best and (goal.kind == DotTimerZone.Kind.TELEPORT or not has_door):
 			best = d
 			goal_centre = goal.centre()
 		lowest = minf(lowest, minf(goal.from.y, goal.to.y))
-	for pit: DotTimerZone in pit_zones:
-		if pit.kind != DotTimerZone.Kind.TELEPORT:
-			lowest = minf(lowest, minf(pit.from.y, pit.to.y))
 	floor_y = lowest - below_margin
 	var _settled := settle()
 
