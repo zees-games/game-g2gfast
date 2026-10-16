@@ -13,6 +13,7 @@ A bunny-hop and surf timer server in the competitive-shooter shape: the genre's 
 | [docs/maps.md](docs/maps.md) | a hand-built map, its zones, `export_zones`, the survey |
 | [docs/routes.md](docs/routes.md) | a bonus route, reach, the bots, the replay follower |
 | [docs/imported-maps.md](docs/imported-maps.md) | the importer, zones files, pits, spawns, collision, props |
+| [docs/stock-props.md](docs/stock-props.md) | stock-model props: counted, not drawn; the ranked list and decisions |
 | [docs/brush-entities.md](docs/brush-entities.md) | handling a brush entity class |
 | [docs/map-rendering.md](docs/map-rendering.md) | lighting, shaders, textures, skies, `bsp_preview` |
 | [docs/map-delivery.md](docs/map-delivery.md) | the catalogue, owners, pack versions, map changes, rotation |
