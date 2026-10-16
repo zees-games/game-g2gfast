@@ -1161,7 +1161,8 @@ func _on_client_spawn(event: DotEvent) -> void:
 			return
 
 	var added := bridge.add_player(
-		session.peer_id, session.userid, session.display_name, _avatar_for(session)
+		session.peer_id, session.userid, session.display_name, _avatar_for(session),
+		_record_key_for(session)
 	)
 	if not added.ok:
 		log_warn("could not add a player", {"userid": session.userid, "error": str(added.error)})
@@ -1238,6 +1239,18 @@ func _player_id(session: DotClientSession) -> StringName:
 	return StringName("u%d" % session.userid)
 
 
+## The key this seat's records, board rows and statistics are filed under: the account's
+## uid (a guest's is per device), never the session's userid, which is a server-local
+## counter that restarts at 1. Empty when the session has no identity, and then the seat
+## is known by its userid, a key [method G2GGame.is_legacy_key] reads as unranked.
+func _record_key_for(session: DotClientSession) -> StringName:
+	var uid := session.uid()
+	if uid == "":
+		log_warn("a session has no identity; its runs are not ranked", {"userid": session.userid})
+		return &""
+	return StringName(uid)
+
+
 func _caller_id(ctx: DotCmdContext) -> StringName:
 	return _player_id(ctx.session) if ctx.session != null else &""
 
@@ -1310,7 +1323,7 @@ func _cmd_track(ctx: DotCmdContext) -> void:
 	if track < 0:
 		ctx.reply("No such track: %s" % " ".join(Array(ctx.args)))
 		return
-	game.timers.set_player_track(id, track)
+	game.timers.set_player_track(game.record_key(id), track)
 	game.spawn_player(id)
 	ctx.reply("Track: %s" % DotTimerTrack.name_of(track))
 
@@ -1319,7 +1332,7 @@ func _cmd_top(ctx: DotCmdContext) -> void:
 	if game.maps.current == null or game.timers.store == null:
 		ctx.reply("No records here.")
 		return
-	var timer := game.timers.timer_for(_caller_id(ctx))
+	var timer := game.timers.timer_for(game.record_key(_caller_id(ctx)))
 	var track := timer.track if timer != null else DotTimerTrack.MAIN
 	var style: StringName = timer.style.id if timer != null and timer.style != null else &"normal"
 	var listed: DotResult = await game.timers.store.top(game.maps.current.id, track, style, 10)
@@ -1348,7 +1361,7 @@ func _cmd_top(ctx: DotCmdContext) -> void:
 
 ## The board the caller is on: this map, their track and style.
 func _board_of(ctx: DotCmdContext) -> Dictionary:
-	var timer := game.timers.timer_for(_caller_id(ctx))
+	var timer := game.timers.timer_for(game.record_key(_caller_id(ctx)))
 	return {
 		"map": game.maps.current.id if game.maps.current != null else &"",
 		"track": timer.track if timer != null else DotTimerTrack.MAIN,
@@ -1367,12 +1380,12 @@ func _no_records(ctx: DotCmdContext) -> bool:
 func _find_player(ctx: DotCmdContext, text: String) -> Dictionary:
 	if text.strip_edges() == "":
 		var me := _caller(ctx)
-		return {"id": _caller_id(ctx), "name": me.display_name if me != null else String(_caller_id(ctx))}
+		return {"id": game.record_key(_caller_id(ctx)), "name": me.display_name if me != null else String(_caller_id(ctx))}
 	var wanted := text.strip_edges().to_lower()
 	for id in game.players:
 		var p: G2GPlayer = game.players[id]
 		if p.display_name.to_lower().contains(wanted) or String(id) == text.strip_edges():
-			return {"id": id, "name": p.display_name}
+			return {"id": game.record_key(id), "name": p.display_name}
 	return {"id": StringName(text.strip_edges()), "name": text.strip_edges()}
 
 
@@ -1561,7 +1574,7 @@ func _cmd_end(ctx: DotCmdContext) -> void:
 	if not game.players.has(id):
 		ctx.reply("Only a player can go to the end.")
 		return
-	var res := game.timers.request_end(id)
+	var res := game.timers.request_end(game.record_key(id))
 	if not res.ok:
 		ctx.reply_error(res)
 		return
@@ -1571,13 +1584,13 @@ func _cmd_end(ctx: DotCmdContext) -> void:
 
 
 func _cmd_pause(ctx: DotCmdContext) -> void:
-	var res := game.timers.pause_player(_caller_id(ctx))
+	var res := game.timers.pause_player(game.record_key(_caller_id(ctx)))
 	ctx.reply("Paused." if res.ok else res.error.message)
 
 
 func _cmd_unpause(ctx: DotCmdContext) -> void:
 	var id := _caller_id(ctx)
-	var res := game.timers.resume_player(id)
+	var res := game.timers.resume_player(game.record_key(id))
 	if not res.ok:
 		ctx.reply(res.error.message)
 		return
@@ -1589,7 +1602,7 @@ func _cmd_unpause(ctx: DotCmdContext) -> void:
 
 func _cmd_restore(ctx: DotCmdContext) -> void:
 	var id := _caller_id(ctx)
-	var res := game.timers.restore_player(id)
+	var res := game.timers.restore_player(game.record_key(id))
 	if not res.ok:
 		ctx.reply(res.error.message)
 		return
@@ -1601,11 +1614,11 @@ func _cmd_restore(ctx: DotCmdContext) -> void:
 
 func _cmd_auto_restart(ctx: DotCmdContext) -> void:
 	var id := _caller_id(ctx)
-	var player := game.timers.player(id)
+	var player := game.timers.player(game.record_key(id))
 	if player == null:
 		ctx.reply("Only a player can do that.")
 		return
-	game.timers.set_auto_restart(id, not player.auto_restart)
+	game.timers.set_auto_restart(game.record_key(id), not player.auto_restart)
 	ctx.reply("Auto-restart %s." % ("on" if player.auto_restart else "off"))
 
 

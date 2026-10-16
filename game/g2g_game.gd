@@ -318,6 +318,7 @@ func _ready() -> void:
 
 	if authoritative:
 		await _open_records_store()
+		await retire_legacy_records()
 
 	set_physics_process(true)
 
@@ -575,14 +576,14 @@ func _build_timers() -> void:
 	timers.run_filed.connect(_on_timer_filed)
 	timers.practice_finished.connect(_on_practice_finished)
 	timers.start_refused.connect(
-		func(id: StringName, reason: String) -> void: announced.emit(id, reason, false)
+		func(id: StringName, reason: String) -> void: announced.emit(match_id(id), reason, false)
 	)
 	# Restarts only: `!end` asks for the end zone and the command puts the player there
 	# itself. Spawning first would spend a start site's cooldown on a player leaving it.
 	timers.teleport_requested.connect(
 		func(id: StringName, _zone: DotTimerZone, why: StringName) -> void:
 			if why != &"end":
-				spawn_player(id)
+				spawn_player(match_id(id))
 	)
 	timers.points_changed.connect(_on_points_changed)
 	timers.effect_requested.connect(_on_effect_requested)
@@ -644,6 +645,67 @@ func _open_records_store() -> void:
 		DotTimerStoreFile.at(config.records_directory) if config.records_directory.strip_edges() != ""
 		else DotTimerStoreMemory.new()
 	)
+
+
+## Moves aside every record filed under a [method is_legacy_key] player.
+##
+## Before records were keyed by account they were keyed by the session's `u<userid>`, a
+## server-local counter. Such a row cannot be mapped back to an account (the number was
+## reused after every restart, so even "the same u12" is not one person), and left in
+## place it ranks a stranger's time as a runner who can never be reached again and lets a
+## new seat that draws the same number inherit it. So the rows are written to
+## `legacy_records.jsonl` (in [member G2GConfig.records_directory], else `user://`) and
+## then removed with [method DotTimerManager.wipe_player], which re-scores every board
+## and total they touched. Nothing is lost silently and nothing is deleted before it is
+## written; the store needs no migration of its own, because the test is the key's shape
+## and a store of any kind answers [code]records_on_map[/code].
+##
+## Idempotent: a second run finds nothing. Returns how many rows were moved.
+func retire_legacy_records() -> int:
+	if not authoritative or timers == null or timers.store == null:
+		return 0
+	var store := timers.store
+	var listed: DotResult = await store.maps()
+	if not listed.ok:
+		return 0
+	var legacy := {}
+	for row in (listed.value as Array):
+		var on_map: DotResult = await store.records_on_map(StringName(str((row as Dictionary).get("map", ""))))
+		if not on_map.ok:
+			continue
+		for record in (on_map.value as Array):
+			if is_legacy_key((record as DotTimerRecord).player_id):
+				legacy[(record as DotTimerRecord).player_id] = true
+	if legacy.is_empty():
+		return 0
+
+	var base := config.records_directory.strip_edges()
+	var path := (base if base != "" else "user://").path_join("legacy_records.jsonl")
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var out := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+	if out == null:
+		DotLog.error(CHANNEL, "legacy records could not be archived; they stay where they are", {
+			"path": path, "why": error_string(FileAccess.get_open_error()),
+		})
+		return 0
+	out.seek_end()
+
+	var moved := 0
+	for key in legacy:
+		var theirs: DotResult = await store.records_of(key, {"stage": -1})
+		if not theirs.ok:
+			continue
+		for record in (theirs.value as Array):
+			out.store_line(JSON.stringify((record as DotTimerRecord).to_dictionary()))
+		out.flush()
+		var wiped: DotResult = await timers.wipe_player(key)
+		if wiped.ok:
+			moved += int(wiped.value)
+	out.close()
+	DotLog.info(CHANNEL, "records keyed by a session number were moved aside", {
+		"players": legacy.size(), "records": moved, "archive": path,
+	})
+	return moved
 
 
 ## Statistics and achievements, if this instance keeps any.
@@ -1010,12 +1072,68 @@ func apply_movement() -> void:
 
 # --- Players ---------------------------------------------------------------
 
+## match id -> record key, for the players who have one. See [method record_key].
+var _record_keys: Dictionary = {}
+## record key -> match id, the other way, for what the timer manager reports back.
+var _match_ids: Dictionary = {}
+
+
+## The key the timers, the records, the boards and the statistics know a player by.
+##
+## [b]Not the match id.[/b] The match id (`u<userid>`) is dot-server's sequential,
+## server-local counter: it names a seat for the length of one connection, and the same
+## account reconnecting is a new number (and a restarted server hands the old numbers to
+## strangers). A record keyed by it was a different runner at every connection, and could
+## be inherited. The key is the account's [code]session.uid()[/code] (a guest's is per
+## device), given to [method add_player]. A player added without one (a solo game, the
+## ghost, a client's copy, a test) is known by the match id, which is then also the key.
+## A display name is never a key.
+func record_key(id: StringName) -> StringName:
+	return _record_keys.get(id, id)
+
+
+## The match id a timer-manager key belongs to; the key itself when none does.
+func match_id(key: StringName) -> StringName:
+	return _match_ids.get(key, key)
+
+
+## True for a key that is a server-local session number (`u<digits>`): the keying records
+## carried before they were keyed by account. See [method retire_legacy_records].
+static func is_legacy_key(key: StringName) -> bool:
+	var text := String(key)
+	return text.length() > 1 and text.begins_with("u") and text.substr(1).is_valid_int() and not text.contains("-")
+
+
+func _claim_record_key(id: StringName, key: StringName) -> void:
+	if key == &"" or key == id:
+		return
+	if _match_ids.has(key) and _match_ids[key] != id:
+		# The same account twice at once would share one timer, and the second seat's
+		# runs would be filed under the first's. It keeps its match id as its key: a
+		# legacy-shaped key, which is never ranked.
+		DotLog.warn(CHANNEL, "an account is already playing; this seat has no records", {
+			"player": String(id), "key": String(key),
+		})
+		return
+	_record_keys[id] = key
+	_match_ids[key] = id
+
+
+func _release_record_key(id: StringName) -> void:
+	var key: StringName = _record_keys.get(id, &"")
+	_record_keys.erase(id)
+	if key != &"":
+		_match_ids.erase(key)
+
+
 func add_player(
 	id: StringName, display_name: String, local: bool = false, avatar: DotAvatar = null,
-	bot: bool = false
+	bot: bool = false, p_record_key: StringName = &""
 ) -> G2GPlayer:
 	if players.has(id):
 		return players[id]
+
+	_claim_record_key(id, p_record_key)
 
 	var player := G2GPlayer.new()
 	player.name = "Player_" + String(id)
@@ -1032,13 +1150,13 @@ func add_player(
 	player.base_tunables = tunables
 	add_child(player)
 
-	var added := timers.add_player(id, display_name)
+	var added := timers.add_player(record_key(id), display_name)
 	if not added.ok:
 		DotLog.warn(CHANNEL, "could not give a player a timer", {
 			"player": String(id), "why": added.error.message
 		})
 
-	player.timer = timers.timer_for(id)
+	player.timer = timers.timer_for(record_key(id))
 	player.set_style(movement_styles[&"normal"], timers.style_for(&"normal"))
 
 	# A bot (`g2g_bots.gd`) runs no timer and counts towards nothing, as the ghost does: its
@@ -1046,7 +1164,7 @@ func add_player(
 	# one nobody trusts.
 	player.is_bot = bot
 	if bot:
-		timers.remove_player(id)
+		timers.remove_player(record_key(id))
 		player.timer = null
 
 	if player.camera != null:
@@ -1140,12 +1258,14 @@ func remove_player(id: StringName) -> void:
 		return
 
 	maps.time_limit.unrock(id)
-	timers.remove_player(id)
+	timers.remove_player(record_key(id))
 	(players[id] as G2GPlayer).queue_free()
 	players.erase(id)
 	_samples.erase(id)
 	_standings.erase(id)
 	player_removed.emit(id)
+	# After the signal: the statistics layer files the player's last readings under it.
+	_release_record_key(id)
 
 
 func spawn_player(id: StringName) -> void:
@@ -1302,7 +1422,7 @@ func _feed_timers() -> void:
 		var sample: DotTimerSample = _samples[id]
 		player.fill_sample(sample)
 		timers.tick_player(
-			id, sample.position, sample.velocity, sample.grounded, sample.alive,
+			record_key(id), sample.position, sample.velocity, sample.grounded, sample.alive,
 			player.controller.state.yaw, player.controller.state.pitch, sample.buttons,
 			player.replay_flags()
 		)
@@ -1628,7 +1748,8 @@ func rock_the_vote(player_id: StringName) -> bool:
 
 # --- Timer events ----------------------------------------------------------
 
-func _on_effect_requested(player_id: StringName, zone: DotTimerZone) -> void:
+func _on_effect_requested(timer_key: StringName, zone: DotTimerZone) -> void:
+	var player_id := match_id(timer_key)
 	var player: G2GPlayer = players.get(player_id)
 	if player == null:
 		return
@@ -1677,7 +1798,8 @@ func _on_map_event(event: int, index: int, player_id: StringName) -> void:
 ## half. [b]Nothing listened until 2026-09-28[/b], so every stage destination on every
 ## map -- authored, imported, and checked for standability by `headless_imported` -- was
 ## a spot no command ever sent anybody to.
-func _on_stage_requested(player_id: StringName, _number: int, zone: DotTimerZone) -> void:
+func _on_stage_requested(timer_key: StringName, _number: int, zone: DotTimerZone) -> void:
+	var player_id := match_id(timer_key)
 	var player: G2GPlayer = players.get(player_id)
 	if player == null:
 		return
@@ -1695,20 +1817,20 @@ func request_stage(id: StringName, number: int) -> DotResult:
 	if why != null:
 		return DotResult.fail(DotError.CODE_UNSUPPORTED,
 			"Stage %d has no start to send you to: %s" % [number, why])
-	return timers.request_stage(id, number)
+	return timers.request_stage(record_key(id), number)
 
 
 ## Sends a player back to the start of the stage they are in (stage 1 before the first
 ## line). Shavit's `!rs`. In a stage with no restart, the start of the nearest stage
 ## before it that has one -- the section that stage line splits.
 func restart_stage(id: StringName) -> DotResult:
-	var found := timers.player(id)
+	var found := timers.player(record_key(id))
 	if found == null:
-		return timers.restart_stage(id)
+		return timers.restart_stage(record_key(id))
 	var number := maxi(found.timer.run.stage, 1)
 	while number > 1 and _no_restart_reason(id, number) != null:
 		number -= 1
-	return timers.request_stage(id, number)
+	return timers.request_stage(record_key(id), number)
 
 
 ## R, and R twice. [param mode] is one of `G2GEvents.RESTART_*`:
@@ -1730,7 +1852,7 @@ func restart(id: StringName, mode: int) -> DotResult:
 	if spectate != null and spectate.is_spectating(id):
 		spectate.stop(id)
 
-	var found := timers.player(id) if timers != null else null
+	var found := timers.player(record_key(id)) if timers != null else null
 	var track := found.timer.track if found != null else DotTimerTrack.MAIN
 
 	match mode:
@@ -1741,7 +1863,7 @@ func restart(id: StringName, mode: int) -> DotResult:
 				return restart_stage(id)
 		G2GEvents.RESTART_MAIN:
 			if track != DotTimerTrack.MAIN:
-				var _switched := timers.set_player_track(id, DotTimerTrack.MAIN)
+				var _switched := timers.set_player_track(record_key(id), DotTimerTrack.MAIN)
 
 	spawn_player(id)
 	return DotResult.success(null)
@@ -1749,7 +1871,7 @@ func restart(id: StringName, mode: int) -> DotResult:
 
 ## The reason stage [param number] on [param id]'s track cannot be restarted, or null.
 func _no_restart_reason(id: StringName, number: int) -> Variant:
-	var found := timers.player(id)
+	var found := timers.player(record_key(id))
 	if found == null or timers.zones == null:
 		return null
 	var zone := timers.zones.stage_zone(found.timer.track, number)
@@ -1758,8 +1880,8 @@ func _no_restart_reason(id: StringName, number: int) -> Variant:
 	return str(zone.payload[G2GBspMap.NO_RESTART])
 
 
-func _on_player_finished(player_id: StringName, run: DotTimerRun) -> void:
-	var player: G2GPlayer = players.get(player_id)
+func _on_player_finished(timer_key: StringName, run: DotTimerRun) -> void:
+	var player: G2GPlayer = players.get(match_id(timer_key))
 	if player == null:
 		return
 
@@ -1769,7 +1891,7 @@ func _on_player_finished(player_id: StringName, run: DotTimerRun) -> void:
 	stats["avg_speed"] = G2GUnits.to_units(float(stats.get("avg_speed", 0.0)))
 	stats["max_jump_speed"] = G2GUnits.to_units(float(stats.get("max_jump_speed", 0.0)))
 
-	timers.note_stats(player_id, stats)
+	timers.note_stats(timer_key, stats)
 	player.controller.stats.reset()
 	player.finished.emit(run)
 
@@ -1779,7 +1901,13 @@ func _on_record_accepted(record: DotTimerRecord, _previous: DotTimerRecord, rank
 		"map": String(record.map_id), "track": str(record.track), "style": String(record.style_id),
 	}
 
-	await boards.submit(&"fastest", scope, record.player_id, record.player_name, record.time)
+	# A seat with no account (no identity, or the account already playing) keeps its session
+	# number as its key, and a session number is nobody: its time stands for this process
+	# only and is moved aside at the next start, so the boards never get a row for it (the run itself is still announced).
+	var ranked := not is_legacy_key(record.player_id)
+
+	if ranked:
+		await boards.submit(&"fastest", scope, record.player_id, record.player_name, record.time)
 
 	# Completions are a counter. Points are NOT: they used to be added here too, record
 	# by record, so every improvement added the run's whole worth on top of what the
@@ -1788,24 +1916,25 @@ func _on_record_accepted(record: DotTimerRecord, _previous: DotTimerRecord, rank
 	# down a player's list) and is filed in `_on_timer_filed`.
 	var totals := DotStatSet.new()
 	totals.add(&"completions", 1.0)
-	await boards.add_stats(record.player_id, totals)
+	if ranked:
+		await boards.add_stats(record.player_id, totals)
 
 	var who := timers.player(record.player_id)
 	if who != null:
-		run_filed.emit(record.player_id, who.last_finished, rank, "")
+		run_filed.emit(match_id(record.player_id), who.last_finished, rank, "")
 		# The ghost chases the server record: a new one replaces it on the spot.
 		if rank == 1 and who.last_replay != null and replays.offer(who.last_replay, record):
 			if maps.current != null and record.map_id == maps.current.id:
 				spawn_ghost(record.track, record.style_id)
 
 
-func _on_record_refused(player_id: StringName, run: DotTimerRun, reason: String) -> void:
-	run_filed.emit(player_id, run, 0, reason)
+func _on_record_refused(timer_key: StringName, run: DotTimerRun, reason: String) -> void:
+	run_filed.emit(match_id(timer_key), run, 0, reason)
 
 
 ## Says what a finish meant, and moves the player's standing and points.
 func _on_timer_filed(result: Dictionary) -> void:
-	var id: StringName = result["player"]
+	var id := match_id(result["player"])
 	var record: DotTimerRecord = result["record"]
 	var previous: DotTimerRecord = result["previous"]
 	var leader: DotTimerRecord = result["previous_record"]
@@ -1855,7 +1984,8 @@ func _on_points_changed(player_ids: Array) -> void:
 		await boards.replace_async(&"points", {}, id, name, float(standing.value["points"]))
 
 
-func _on_practice_finished(id: StringName, run: DotTimerRun, would: int, total: int, reason: String) -> void:
+func _on_practice_finished(timer_key: StringName, run: DotTimerRun, would: int, total: int, reason: String) -> void:
+	var id := match_id(timer_key)
 	if would > 0:
 		announced.emit(id, "%s — not recorded (%s). It would have placed %d / %d." % [
 			run.formatted_time(), reason.trim_suffix("."), would, total + 1,
@@ -1873,9 +2003,10 @@ func refresh_standing(id: StringName) -> void:
 	var track: int = player.timer.track
 	var style: StringName = player.timer.run.style_id
 	var store := timers.store
-	var best: DotResult = await store.best_for(map_id, track, style, id)
+	var key := record_key(id)
+	var best: DotResult = await store.best_for(map_id, track, style, key)
 	var top: DotResult = await store.top(map_id, track, style, 1)
-	var rank: DotResult = await store.rank_of(map_id, track, style, id)
+	var rank: DotResult = await store.rank_of(map_id, track, style, key)
 	var total: DotResult = await store.count_on(map_id, track, style)
 	if not players.has(id):
 		return

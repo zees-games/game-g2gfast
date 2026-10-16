@@ -131,7 +131,7 @@ func _build() -> DotResult:
 
 	achievements.unlocked.connect(
 		func(player: String, achievement: DotAchievement) -> void:
-			award_unlocked.emit(StringName(player), achievement)
+			award_unlocked.emit(_game.match_id(StringName(player)), achievement)
 	)
 
 	# The differencer between a session total and a lifetime total. See
@@ -153,6 +153,12 @@ func _build() -> DotResult:
 
 # --- Players ---------------------------------------------------------------
 
+## The key statistics and achievements are filed under: the game's record key (the
+## account), where the match id would be a different player at every connection.
+func _key(player_id: StringName) -> StringName:
+	return _game.record_key(player_id) if _game != null else player_id
+
+
 ## Starts counting for a player.
 ##
 ## A coroutine, because an achievement store may be remote. Dropping the await is
@@ -163,13 +169,13 @@ func begin(player_id: StringName, display_name: String = "") -> void:
 	if not _attached:
 		return
 
-	stats.begin(player_id, display_name)
+	stats.begin(_key(player_id), display_name)
 
 	_movement_baseline[player_id] = {}
 	_playtime[player_id] = 0.0
 	_last_position.erase(player_id)
 
-	var began: DotResult = await achievements.begin(String(player_id))
+	var began: DotResult = await achievements.begin(String(_key(player_id)))
 
 	if not began.ok:
 		DotLog.warn(CHANNEL, "achievement progress could not be loaded", {
@@ -190,14 +196,14 @@ func leave(player_id: StringName) -> void:
 		record(player_id, G2GStats.DISTANCE, owed)
 	_distance_owed.erase(player_id)
 
-	stats.end(player_id)
-	link.forget(String(player_id))
+	stats.end(_key(player_id))
+	link.forget(String(_key(player_id)))
 
 	_movement_baseline.erase(player_id)
 	_last_position.erase(player_id)
 	_playtime.erase(player_id)
 
-	var ended: DotResult = await achievements.end(String(player_id))
+	var ended: DotResult = await achievements.end(String(_key(player_id)))
 
 	if not ended.ok:
 		DotLog.debug(CHANNEL, "achievement progress could not be saved", {
@@ -207,15 +213,15 @@ func leave(player_id: StringName) -> void:
 
 func record(player_id: StringName, stat_id: StringName, value: float = 1.0) -> void:
 	if _attached:
-		stats.record(player_id, stat_id, value)
+		stats.record(_key(player_id), stat_id, value)
 
 
 func session_values(player_id: StringName) -> DotStatsValues:
-	return stats.session_values(player_id) if _attached else DotStatsValues.new()
+	return stats.session_values(_key(player_id)) if _attached else DotStatsValues.new()
 
 
 func points_of(player_id: StringName) -> int:
-	return achievements.points_of(String(player_id)) if _attached else 0
+	return achievements.points_of(String(_key(player_id))) if _attached else 0
 
 
 # --- Sampling --------------------------------------------------------------
@@ -355,10 +361,11 @@ func _flush_playtime(player_id: StringName, all_of_it: bool) -> void:
 # --- Events ----------------------------------------------------------------
 
 func _on_started(player_id: StringName, _run: DotTimerRun) -> void:
-	record(player_id, G2GStats.RUNS_STARTED)
+	record(_game.match_id(player_id), G2GStats.RUNS_STARTED)
 
 
-func _on_finished(player_id: StringName, run: DotTimerRun) -> void:
+func _on_finished(timer_key: StringName, run: DotTimerRun) -> void:
+	var player_id := _game.match_id(timer_key)
 	record(player_id, G2GStats.RUNS_FINISHED)
 	record(player_id, G2GStats.RUN_SECONDS, run.time())
 
@@ -372,10 +379,11 @@ func _on_finished(player_id: StringName, run: DotTimerRun) -> void:
 func _on_record(
 	record_row: DotTimerRecord, _previous: DotTimerRecord, rank: int
 ) -> void:
-	record(record_row.player_id, G2GStats.RECORDS_SET)
+	var who := _game.match_id(record_row.player_id)
+	record(who, G2GStats.RECORDS_SET)
 
 	if rank == 1:
-		record(record_row.player_id, G2GStats.WORLD_RECORDS)
+		record(who, G2GStats.WORLD_RECORDS)
 
 
 ## The map changed. Everybody present played it.

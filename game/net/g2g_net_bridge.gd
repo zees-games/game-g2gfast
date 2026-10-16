@@ -333,14 +333,15 @@ func _tell(peer_id: int, kind: int, body: PackedByteArray) -> void:
 ## Adds a player and makes them a replicated entity. [param session_id] is the id
 ## everything is keyed by; a peer id is reassigned on reconnect.
 func add_player(
-	peer_id: int, session_id: int, display_name: String, avatar: DotAvatar = null
+	peer_id: int, session_id: int, display_name: String, avatar: DotAvatar = null,
+	record_key: StringName = &""
 ) -> DotResult:
 	if net == null or not net.is_server:
 		return DotResult.fail(DotError.CODE_FORBIDDEN, "Only the server adds players.")
 
 	var id := _player_key(session_id)
 	_adding = true
-	var player := game.add_player(id, display_name, false, avatar)
+	var player := game.add_player(id, display_name, false, avatar, false, record_key)
 	_adding = false
 
 	if player == null:
@@ -1137,15 +1138,15 @@ func _send_timer(session_id: int, to_peer: int = 0) -> void:
 
 
 func _on_run_started(id: StringName, _run: DotTimerRun) -> void:
-	_send_timer(session_of(id))
+	_send_timer(session_of(game.match_id(id)))
 
 
 func _on_run_stopped(id: StringName, _run: DotTimerRun, _reason: StringName) -> void:
-	_send_timer(session_of(id))
+	_send_timer(session_of(game.match_id(id)))
 
 
 func _on_staged(id: StringName, number: int, split: float) -> void:
-	var session_id := session_of(id)
+	var session_id := session_of(game.match_id(id))
 	_tell(peer_for_player(session_id), G2GEvents.Kind.NOTICE, G2GEvents.write_text(
 		session_id, "Stage %d — %s" % [number, DotTimerRun.format_time(split)]
 	))
@@ -1495,7 +1496,7 @@ func _on_request(message: DotNetMessage) -> void:
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 		G2GEvents.Ask.TRACK:
 			var track := G2GEvents.read_int(reader)
-			if DotTimerTrack.is_valid(track) and game.timers.set_player_track(id, track):
+			if DotTimerTrack.is_valid(track) and game.timers.set_player_track(game.record_key(id), track):
 				game.spawn_player(id)
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 		G2GEvents.Ask.AVATAR:
@@ -1529,7 +1530,7 @@ func _on_request(message: DotNetMessage) -> void:
 
 
 func _track_of(id: StringName) -> int:
-	var found := game.timers.player(id) if game != null and game.timers != null else null
+	var found := game.timers.player(game.record_key(id)) if game != null and game.timers != null else null
 	return found.timer.track if found != null else DotTimerTrack.MAIN
 
 
@@ -1576,7 +1577,7 @@ func _on_maps_asked(peer_id: int, session_id: int, id: String) -> void:
 
 func _checkpoint(id: StringName, action: int) -> void:
 	var player: G2GPlayer = game.players.get(id)
-	var checkpoints := game.timers.checkpoints_for(id)
+	var checkpoints := game.timers.checkpoints_for(game.record_key(id))
 	if player == null or checkpoints == null:
 		return
 	var s := player.controller.state
@@ -1823,7 +1824,7 @@ func _apply_join(reader: DotNetReader) -> void:
 		# event will ever correct what a mirror started on its own by watching the
 		# ghost leave the start pad.
 		if session_id == G2GGame.GHOST_SESSION:
-			game.timers.remove_player(id)
+			game.timers.remove_player(game.record_key(id))
 			player.timer = null
 
 		var identity := _build_entity(player, peer_id)
@@ -1838,7 +1839,7 @@ func _apply_join(reader: DotNetReader) -> void:
 			player.rig.dress(join["avatar"], game.avatar_schema, game.avatar_catalogue)
 
 	game.set_player_style(id, _style_id(int(join["style_index"])))
-	game.timers.set_player_track(id, int(join["track"]))
+	game.timers.set_player_track(game.record_key(id), int(join["track"]))
 
 	roster_changed.emit(session_id)
 
