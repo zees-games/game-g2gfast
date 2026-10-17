@@ -2,7 +2,18 @@
 
 A map's pakfile carries only the models its mapper added; a prop that names a model from the original game's archives is counted and not drawn (see [imported-maps.md](imported-maps.md#static-props)). `tools/stock_props_survey.py` ranks them from the `.bsp` files (model names are data; nothing is read from the private reference). Run on 2026-10-16: **345 stock models, 2083 placements, 1610 solid**.
 
-**The finding that matters: 1,610 of 2,083 placements are solid.** A solid stock prop is neither drawn nor collided, so a route that depends on one (a crate to stand on, a rail, a fence) differs from the original. Most of the solid count is light fixtures and foliage, which no route uses; the rest is the list below, to be checked against routes before any Kenney stand-in is placed. Decision so far: light fixtures are `none` (not a surface anyone reads a route from), foliage is `none` unless a map's look depends on it, and boxes, fences and rails get a Kenney stand-in only where they are solid and on a route. No stand-in has been placed yet.
+**The finding that matters: 1,610 of 2,083 placements are solid.** A solid stock prop was neither drawn nor collided, so a route that depends on one (a crate to stand on, a rail, a fence) differed from the original. Most of the solid count is light fixtures and foliage, which no route uses.
+
+## What is done (2026-10-17, `tools/stock_standins.py`)
+
+- **Lights and foliage: `none`.** A lamp is not a surface anyone stands on, and foliage is decor (the survey's rules list bramble, cattail, fern, ivy, shrub, grass, trees and bushes by name).
+- **Solid mass: a box, drawn and collided.** Crates, pallets, fences, rails, barrels, vehicles, train cars, containers, poles, pilings, concrete blocks and barriers, and rocks (`stock_standins.RULES`) become one axis box of the model's own hull, in a stand-in material (`wood/`, `metal/`, `concrete/`, `models/props_wasteland/rockcliff_standin`) that `textures/stock/substitutes.json` already maps to Kenney or ambientCG CC0 art, so the box is drawn as wood, metal, concrete or rock and takes the map's measured tint. It collides as `solid` 2 (the model's bounding box, which `prop_hulls` already builds), so what you see is what you stand on. The manifest's `static_props.stock_standins` counts them and `headless_imported` checks they were drawn.
+- **Everything else is a written `none`, each with its why** (the last column of the survey): a window, arch or door has an opening a bbox would wall up; a pipe, truss or corner is far smaller than its box; a ladder is climbed (the map's `func_ladder` is the real one); a ramp's bbox is a block; the rest is small interior detail.
+- **Not "on a route".** The 2026-10-16 decision said stand-ins only where solid and on a route. The importer cannot know a route on a map that winds, and an off-route solid box is what the original had, so every solid-mass prop with a hull gets one. Light and foliage carry the "none unless the look depends on it" half.
+
+**The size comes from the archives, and only the size.** The hull is read from the MDL header in `/extra` at import time (`stock_archives.original`); no vertex, texture or collision shape is read and nothing read is written anywhere but the box's eight corners. A machine without the archives gets no stand-ins, as before.
+
+**What this cannot do yet:** `/extra` has only `cstrike_pak`, and the base engine's models (`props_wasteland/exterior_fence*`, `props_c17/handrail*`, `payphone001a`, `rockcliff*`, `rock_riverbed*`, `concrete_barrier001a`, vehicles, `dock01_pole*`) are in its `hl2_misc_*.vpk`. Those are the larger half of the solid-mass placements (279 of 510 with a stand-in rule) and keep being absent until that archive is on `/extra`; then re-import and the rules above apply to them unchanged. Maps re-imported so far: surf_lore, surf_dust2_2008_final, bhop_tesquo_v2; the rest pick the boxes up the next time they are imported (the importer is not run over every map here because `g2gfast-maps` is released as a whole).
 
 | placed | solid | maps | model |
 | --- | --- | --- | --- |
@@ -47,4 +58,4 @@ A map's pakfile carries only the models its mapper added; a prop that names a mo
 | 12 | 12 | 3 | `models/props/de_train/pallet_barrels.mdl` |
 | 12 | 12 | 2 | `models/props_canal/rock_riverbed01d.mdl` |
 
-The rest are in the tool's output.
+The rest, with each model's class and decision, are in the tool's output.

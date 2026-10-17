@@ -272,7 +272,7 @@ const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_oce
 	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 57
+const CHECKS_PER_MAP := 58
 
 ## Sections every map runs, entered against run to their last line. A runtime error inside
 ## a section aborts that function and nothing says so; a section that bailed out after a
@@ -496,6 +496,14 @@ func _test_geometry() -> void:
 			prop_surfaces += (child as MeshInstance3D).mesh.get_surface_count()
 	_check(carried <= 0 or (int(manifest_props.get("drawn", 0)) > 0 and prop_surfaces > 0),
 		"and the static props its pakfile carried are drawn",
+		"%s; %d prop surfaces drawn" % [manifest_props, prop_surfaces])
+
+	# [b]A stock-model prop with a written stand-in is drawn as its box (2026-10-17).[/b]
+	# `stock_standins` is how many the importer boxed, out of the same lump `drawn` counts;
+	# a map that boxed some and drew fewer props than that, or no prop surface, lost them.
+	var boxed := int(manifest_props.get("stock_standins", 0))
+	_check(boxed == 0 or (int(manifest_props.get("drawn", 0)) >= boxed and prop_surfaces > 0),
+		"and its stock-model stand-in boxes are drawn",
 		"%s; %d prop surfaces drawn" % [manifest_props, prop_surfaces])
 
 	# [b]And a 3D skybox is a backdrop, not a miniature (2026-09-27).[/b] Ten maps have one;

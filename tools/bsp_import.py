@@ -48,6 +48,7 @@ import vtf  # noqa: E402
 import stock_archives  # noqa: E402
 import bsp_mechanics  # noqa: E402
 import bsp_props  # noqa: E402
+import stock_standins  # noqa: E402
 
 LUMP_LIGHTING, LUMP_PAKFILE, LUMP_PLANES = 8, 40, 1
 ATLAS_W = 1024
@@ -892,6 +893,23 @@ def build_mesh(bsp, lm_place, lm_w, lm_h, textured, cos_limit, prototype, drawn=
     return surfaces, bytes(blob)
 
 
+def stock_standin(pr):
+    """(prop, [box mesh]) for a solid stock-model prop that has a written stand-in, else None.
+
+    The box is the model's own hull and its collision is that same box (`solid` 2, the
+    model's bounding box, which `prop_hulls` already builds from the drawn mesh): a stand-in
+    you can see is a stand-in you can stand on, and the other way round. See
+    tools/stock_standins.py for which models, why the rest are `none`, and what it reads.
+    """
+    if pr["solid"] not in (2, 6) or pr.get("skybox") or pr["flags"] & 0x4:
+        return None
+    mat = stock_standins.material_for(pr["model"])
+    box = stock_standins.hull(pr["model"]) if mat else None
+    if box is None:
+        return None
+    return dict(pr, solid=2, standin=True), [stock_standins.box_mesh(box[0], box[1], mat)]
+
+
 def load_props(bsp, pak, notes, extra=()):
     """The static props this map can draw: [(prop, meshes)], plus what was skipped.
 
@@ -901,6 +919,7 @@ def load_props(bsp, pak, notes, extra=()):
     """
     props = bsp_props.static_props(bsp) + list(extra)
     cache, drawn, stock = {}, [], collections.Counter()
+    standins = collections.Counter()
     for pr in props:
         if not pr["model"]:
             continue
@@ -913,9 +932,13 @@ def load_props(bsp, pak, notes, extra=()):
                 cache[path] = None
         if cache[path] is None:
             stock[path] += 1
+            box = stock_standin(pr)
+            if box is not None:
+                drawn.append(box)
+                standins[path] += 1
             continue
         drawn.append((pr, cache[path]))
-    return props, drawn, stock
+    return props, drawn, stock, standins
 
 
 def prop_materials(pak, drawn):
@@ -3424,7 +3447,7 @@ def main(argv=None):
     # Static props, and one light probe per prop drawn -- they have to be known before
     # the atlas is packed, because their light goes into it, and before the 3D skybox is
     # placed, because how far its props reach decides the scale it is drawn at.
-    all_props, props_drawn, props_stock = load_props(bsp, pak, notes, sky_dynamic_props(bsp, sky))
+    all_props, props_drawn, props_stock, props_standin = load_props(bsp, pak, notes, sky_dynamic_props(bsp, sky))
     sky_scale, sky_near, sky_far = sky_drawn_scale(bsp, sky, drawn, props_drawn) or (None, 0.0, 0.0)
     if sky is not None:
         o, k, box = sky[0], sky_scale, sky[2]
@@ -3572,6 +3595,9 @@ def main(argv=None):
             "placed": len(all_props),
             "drawn": len(props_drawn),
             "stock_models": sum(props_stock.values()),
+            # Of those, the solid ones drawn and collided as a box (tools/stock_standins.py);
+            # stock_models still counts them, because the model itself was not carried.
+            "stock_standins": sum(props_standin.values()),
             "surfaces": len(prop_surfaces),
             # Prototype prop surfaces painted a brush texture's colour (by name, or by a
             # material word), and props lit by the open-sky floor light for want of a lit

@@ -12,7 +12,7 @@ class each belongs to by name rule. Reads only the maps; nothing from the privat
 import collections, fnmatch, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import bsp_import, bsp_props  # noqa: E402
+import bsp_import, bsp_props, stock_standins  # noqa: E402
 
 # name rule -> (class, decision). First match wins; the decision is what to do, with why.
 RULES = [
@@ -20,6 +20,12 @@ RULES = [
     ("*lamp*", "light fixture", "none: as for lights"),
     ("*fluorescent*", "light fixture", "none: as for lights"),
     ("*florescent*", "light fixture", "none: as for lights"),
+    ("*bramble*", "foliage", "none: as trees"),
+    ("*cattail*", "foliage", "none: as trees"),
+    ("*fern*", "foliage", "none: as trees"),
+    ("*ivy*", "foliage", "none: as trees"),
+    ("*shrub*", "foliage", "none: as trees"),
+    ("*grass*", "foliage", "none: as trees"),
     ("*tree*", "foliage", "none: Kenney Nature Kit has trees; place only where the map's look depends on it"),
     ("*bush*", "foliage", "none: as trees"),
     ("*plant*", "foliage", "none: as trees"),
@@ -31,11 +37,28 @@ RULES = [
 ]
 
 def classify(name):
+    """(class, decision). Lights and foliage are `none` first; then a model with a written
+    stand-in (tools/stock_standins.py) says so; then the name rules above."""
     base = name.rsplit("/", 1)[-1]
     for pat, cls, decision in RULES:
-        if fnmatch.fnmatch(base, pat):
+        if cls in ("light fixture", "foliage") and fnmatch.fnmatch(base, pat):
             return cls, decision
-    return "other", "unclassified: look at one placement before deciding"
+    mat = stock_standins.material_for(name)
+    if mat:
+        return "solid mass", "box stand-in %s, sized from the archive's hull (none where the archive lacks the model)" % mat
+    for pat, cls, decision in RULES:
+        if fnmatch.fnmatch(base, pat):
+            return cls, "none: " + stock_standins_why(base)
+    return "other", "none: not a faithful box (hollow, thin, small or climbed); see stock_standins.RULES"
+
+
+def stock_standins_why(base):
+    name = base[:-4] if base.endswith(".mdl") else base
+    for pat, mat, why in stock_standins.RULES:
+        if mat is None and fnmatch.fnmatch(name, pat):
+            return why
+    return "decor"
+
 
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
