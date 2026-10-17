@@ -561,6 +561,7 @@ func _water_material(s: Dictionary, lightmap: Texture2D) -> ShaderMaterial:
 		var c := Color(float(colour[0]), float(colour[1]), float(colour[2]))
 		if c.s > 0.25 and c.v > 0.04:
 			mat.set_shader_parameter("tint", Color(c.r, c.g, c.b, 1.0).lightened(0.15))
+			mat.set_meta(&"water", true)
 			return mat
 	# [b]Otherwise the sky it reflects.[/b] The shader's fixed teal drew surf_summit's
 	# pale blue river as saturated cyan (52,159,178 against the footage's 121,167,207);
