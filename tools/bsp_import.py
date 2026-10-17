@@ -3133,6 +3133,34 @@ def _numbers(value, count):
     return out if len(out) == count else None
 
 
+def tonemap_exposure(bsp):
+    """{"min", "max"} of the auto-exposure range a map sets on its `env_tonemap_controller`.
+
+    Maps set it from a `logic_auto`'s `OnMapSpawn` (`@tonemap,SetAutoExposureMin,0.2,...`),
+    never on the controller itself, so every entity's outputs are scanned for a call on a
+    controller's targetname. Empty when the map does not say. Why it is read: the engine's
+    exposure sits between min and max, and a map that caps max at 0.2-1 is darker than the
+    lightmap alone says. surf_aquaflow's floor measured 136 in ours and 85 in the footage.
+    """
+    names = {str(e.get("targetname", "")) for e in bsp.entities
+             if e.get("classname") == "env_tonemap_controller" and e.get("targetname")}
+    got = {}
+    for e in bsp.entities:
+        for value in e.values():
+            if not isinstance(value, str):
+                continue
+            for line in value.split("\n"):
+                parts = line.split(",")
+                if len(parts) >= 3 and parts[0] in names:
+                    key = {"setautoexposuremin": "min", "setautoexposuremax": "max"}.get(parts[1].lower())
+                    if key:
+                        try:
+                            got[key] = float(parts[2])
+                        except ValueError:
+                            pass
+    return got if len(got) == 2 else {}
+
+
 def lighting_of(bsp):
     """The lighting the map already describes, as a document a renderer can read.
 
@@ -3201,6 +3229,10 @@ def lighting_of(bsp):
         fog["enabled"] = str(fog_ent.get("fogenable", "0")).strip() in ("1", "true")
         if len(fog) > 1:
             out["fog"] = fog
+
+    exposure = tonemap_exposure(bsp)
+    if exposure:
+        out["exposure"] = exposure
 
     world = next((e for e in bsp.entities if e.get("classname") == "worldspawn"), None)
     if world is not None and world.get("skyname"):

@@ -97,6 +97,8 @@ var manifest: Dictionary = {}
 var _bounds_min := Vector3.ZERO
 var _bounds_max := Vector3.ZERO
 var _built := false
+## Half the mean of the packed sky's four side faces, or a zero alpha when the map has none. Water with no measured colour of its own reflects the sky, so it takes that.
+var _water_sky := Color(0, 0, 0, 0)
 
 
 ## Nothing is built on entering the tree.
@@ -160,6 +162,7 @@ func _construct() -> void:
 	# height onto every spawn, which reads as the map being badly made.
 	fallback_spawn_units = _vec(spawn.get("origin", [0, 64, 0]))
 
+	_water_sky = _sky_water_tint(manifest.get("lighting", {}), dir)
 	var lm_info: Dictionary = manifest.get("lightmap", {})
 	var lightmap: Texture2D = _load_texture(dir.path_join(str(lm_info.get("file", ""))))
 
@@ -558,6 +561,12 @@ func _water_material(s: Dictionary, lightmap: Texture2D) -> ShaderMaterial:
 		var c := Color(float(colour[0]), float(colour[1]), float(colour[2]))
 		if c.s > 0.25 and c.v > 0.04:
 			mat.set_shader_parameter("tint", Color(c.r, c.g, c.b, 1.0).lightened(0.15))
+			return mat
+	# [b]Otherwise the sky it reflects.[/b] The shader's fixed teal drew surf_summit's
+	# pale blue river as saturated cyan (52,159,178 against the footage's 121,167,207);
+	# half the side faces' mean through the same lightmap path lands on the footage.
+	if _water_sky.a > 0.0:
+		mat.set_shader_parameter("tint", _water_sky)
 	mat.set_meta(&"water", true)
 	return mat
 
@@ -605,6 +614,34 @@ func _apply_packed_sky(lighting: Dictionary, dir: String) -> void:
 			env.sky = Sky.new()
 		env.sky.sky_material = mat
 		env.background_mode = Environment.BG_SKY
+
+
+## What water reflects: half the mean colour of the packed sky's four side faces (the
+## horizon band is what a surface seen at a grazing angle mirrors; the top face is the
+## zenith, bluer than any water). Alpha 0 when the map has no packed sky, so the shader's
+## own default stands. Measured on surf_summit's footage: the side mean is (0.58, 0.79,
+## 0.99), the footage's river (0.47, 0.65, 0.81), and the pipeline's lightmap factor
+## for that scene is 1.65, so 0.5 of the side mean is what reproduces it.
+func _sky_water_tint(lighting: Dictionary, dir: String) -> Color:
+	var faces: Variant = lighting.get("sky_faces", null)
+	if not (faces is Dictionary) or (faces as Dictionary).size() < 6:
+		return Color(0, 0, 0, 0)
+	var sum := Vector3.ZERO
+	for suffix: String in ["rt", "lf", "bk", "ft"]:
+		var tex := _load_texture(dir.path_join("textures").path_join(str((faces as Dictionary).get(suffix, ""))))
+		var img: Image = tex.get_image() if tex != null else null
+		if img == null:
+			return Color(0, 0, 0, 0)
+		if img.is_compressed():
+			img.decompress()
+		img.convert(Image.FORMAT_RGB8)
+		img.resize(4, 4, Image.INTERPOLATE_BILINEAR)
+		for y in 4:
+			for x in 4:
+				var c := img.get_pixel(x, y)
+				sum += Vector3(c.r, c.g, c.b) / 16.0
+	sum *= 0.5 / 4.0
+	return Color(sum.x, sum.y, sum.z, 1.0)
 
 
 func _load_texture(path: String) -> Texture2D:

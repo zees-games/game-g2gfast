@@ -15,7 +15,7 @@ extends RefCounted
 ## Applies the lighting a manifest carries and returns the sun.
 static func apply(parent: Node3D, lighting: Dictionary) -> DirectionalLight3D:
 	var sun := DotLightRig.apply(
-		parent, DotLightDocument.from_dictionary(lighting), profile()
+		parent, DotLightDocument.from_dictionary(lighting), profile_for(lighting)
 	)
 	_recolour_white_sky(parent, lighting)
 	_darken_black_sky(parent, lighting)
@@ -215,6 +215,24 @@ static func profile() -> DotLightProfile:
 	# level wants turned every glance down between two ramps into a floor that is not
 	# there. Measured against the source game's own screenshot of surf_kitsune.
 	p.sky_below_horizon = true
+	return p
+
+
+## [method profile] with the map's own exposure range applied. A map that caps its
+## auto-exposure at 1 or less (`lighting.exposure`, from its `env_tonemap_controller`;
+## tools/bsp_import.py tonemap_exposure) is darker than its lightmap alone says: the engine
+## adapts between min and max, and these maps are bright, so it sits low. The geometric
+## mean is the scale. Measured on surf_aquaflow (0.2 to 1): the footage's floor is 0.36 of
+## ours in linear light, and the mean is 0.45. A max above 1 is not applied: it brightens a
+## dark scene, and no footage has measured one.
+static func profile_for(lighting: Dictionary) -> DotLightProfile:
+	var p := profile()
+	var ex: Variant = lighting.get("exposure", null)
+	if ex is Dictionary:
+		var lo := float((ex as Dictionary).get("min", 1.0))
+		var hi := float((ex as Dictionary).get("max", 1.0))
+		if lo > 0.0 and hi > 0.0 and hi <= 1.0:
+			p.exposure *= sqrt(lo * hi)
 	return p
 
 
