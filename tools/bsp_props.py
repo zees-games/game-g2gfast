@@ -501,18 +501,39 @@ class GroundLight:
                     lit.append(v)
         if not lit:
             return None
-        lum = lambda v: 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
-        lit.sort(key=lum)
-        # The BRIGHTNESS is the `share` luxel's, and the COLOUR is the average of the
-        # bright half. One luxel's own colour was used at first, and on surf_arcade that
-        # luxel is a cyan neon floor, (0, 62, 62) in the atlas: every prop without a lit
-        # floor took zero red, and its purple cabinets drew navy. A neon strip says what
-        # colour that strip is, not what colour the open air of the map is.
-        target = lum(lit[min(len(lit) - 1, int(len(lit) * share))])
-        band = lit[len(lit) // 2:]
-        mean = tuple(sum(v[c] for v in band) / len(band) for c in range(3))
-        scale = target / lum(mean) if lum(mean) > 0 else 0.0
-        return tuple(c * scale for c in mean)
+        return _typical(lit, share)
+
+    def local(self, point, radius=640.0, share=0.5):
+        """The typical light on the lit upward faces within `radius` of `point` (horizontally),
+        or None with fewer than three.
+
+        [b]For a box standing where no baked light is under it.[/b] `at` reads the one
+        floor beneath a prop, which is the wrong floor for a box on a roof, on sand or on
+        a surface the compiler gave no lightmap: it finds the interior a storey down, 1000
+        times dimmer than the sun on the sand (surf_dust2's crates drew black in full
+        sun), and a prop with no floor at all drew unlit, white. What is lit around it, at
+        the median, is what the map says about the light at that spot without being
+        decided by one luxel."""
+        x, y, _z = point
+        r0, r1 = int((x - radius) // self.CELL), int((x + radius) // self.CELL)
+        c0, c1 = int((y - radius) // self.CELL), int((y + radius) // self.CELL)
+        seen, lit = set(), []
+        for cx in range(r0, r1 + 1):
+            for cy in range(c0, c1 + 1):
+                for f, pts, pl in self.grid.get((cx, cy), []):
+                    if id(f) in seen:
+                        continue
+                    seen.add(id(f))
+                    c = (sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts),
+                         sum(p[2] for p in pts) / len(pts))
+                    if (c[0] - x) ** 2 + (c[1] - y) ** 2 > radius * radius:
+                        continue
+                    v = self._luxel(f, c)
+                    if v is not None:
+                        lit.append(v)
+        if len(lit) < 3:
+            return None
+        return _typical(lit, share)
 
     def _luxel(self, f, p):
         ti = self.bsp.texinfo[f[5]]
@@ -525,6 +546,18 @@ class GroundLight:
         if o + 4 > len(self.light):
             return None
         return _rgbe(self.light, o)
+
+
+def _typical(lit, share):
+    """One colour for a set of luxels: the `share` luxel's brightness, in the average colour
+    of the bright half (see GroundLight.open_sky for why not one luxel's colour)."""
+    lum = lambda v: 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    lit = sorted(lit, key=lum)
+    target = lum(lit[min(len(lit) - 1, int(len(lit) * share))])
+    band = lit[len(lit) // 2:]
+    mean = tuple(sum(v[c] for v in band) / len(band) for c in range(3))
+    scale = target / lum(mean) if lum(mean) > 0 else 0.0
+    return tuple(c * scale for c in mean)
 
 
 def _inside_xy(pts, x, y):

@@ -222,7 +222,7 @@ static func profile() -> DotLightProfile:
 ## auto-exposure at 1 or less (`lighting.exposure`, from its `env_tonemap_controller`;
 ## tools/bsp_import.py tonemap_exposure) is darker than its lightmap alone says: the engine
 ## adapts between min and max, and these maps are bright, so it sits low. The geometric
-## mean is the scale. Measured on surf_aquaflow (0.2 to 1): the footage's floor is 0.36 of
+## mean is the scale, not below 0.4. Measured on surf_aquaflow (0.2 to 1): the footage's floor is 0.36 of
 ## ours in linear light, and the mean is 0.45. A max above 1 is not applied: it brightens a
 ## dark scene, and no footage has measured one.
 static func profile_for(lighting: Dictionary) -> DotLightProfile:
@@ -232,7 +232,9 @@ static func profile_for(lighting: Dictionary) -> DotLightProfile:
 		var lo := float((ex as Dictionary).get("min", 1.0))
 		var hi := float((ex as Dictionary).get("max", 1.0))
 		if lo > 0.0 and hi > 0.0 and hi <= 1.0:
-			p.exposure *= sqrt(lo * hi)
+			# Floored at 0.4: bhop_tesquo_v2 (0.15 to 0.7) came out at 0.32, a grey room
+			# that reads as a black one when played. Every other map is above 0.45.
+			p.exposure *= maxf(sqrt(lo * hi), 0.4)
 	return p
 
 

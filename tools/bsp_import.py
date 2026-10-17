@@ -941,6 +941,66 @@ def load_props(bsp, pak, notes, extra=()):
     return props, drawn, stock, standins
 
 
+# How far under a stand-in's base a floor may be, and how far into it, and still carry it.
+STANDIN_SUPPORT_BELOW = 24.0
+STANDIN_SUPPORT_ABOVE = 12.0
+
+
+def drop_unsupported_standins(bsp, props_drawn, notes):
+    """The drawn props, less every stock stand-in box with nothing under it.
+
+    [b]A box the original did not obviously stand on is a wall the original did not
+    have.[/b] A stand-in is the hull of a model whose floor we never see: on surf_lore a
+    row of warehouse shelves hung in a room whose floor is a field of broken tiles a
+    level below, and a box there drew as a slab in the middle of the route. So a box is
+    kept only where some floor -- a world brush, a displacement triangle, or an already
+    kept box -- spans the height of its base under its footprint. The test is on boxes
+    (brush bounds), which over-accepts a ramp's low end and never rejects a real floor.
+    """
+    _blob, _info, _skipped, solids = build_collision(bsp, [], [])
+    floors = list(solids)
+    for f in bsp.faces:
+        if f[6] < 0 or bsp.face_material(f)[1] & SKIP_MASK:
+            continue
+        for t in bsp.displacement_tris(f):
+            floors.append(([min(p[a] for p in t) for a in range(3)],
+                           [max(p[a] for p in t) for a in range(3)]))
+
+    def world_box(pr, meshes):
+        m = bsp_props.angle_matrix(pr["angles"])
+        pts = [bsp_props.transform(m, q) for mesh in meshes for q in mesh["positions"]]
+        o, sc = pr["origin"], pr["scale"]
+        pts = [(w[0] * sc + o[0], w[1] * sc + o[1], w[2] * sc + o[2]) for w in pts]
+        return ([min(q[a] for q in pts) for a in range(3)], [max(q[a] for q in pts) for a in range(3)])
+
+    def carried(box):
+        lo, hi = box
+        base = lo[2]
+        cx, cy = (lo[0] + hi[0]) * 0.5, (lo[1] + hi[1]) * 0.5
+        ins = lambda a, b: a + (b - a) * 0.2
+        probes = [(cx, cy)] + [(ins(lo[0], cx) if i & 1 == 0 else ins(hi[0], cx),
+                                ins(lo[1], cy) if i & 2 == 0 else ins(hi[1], cy)) for i in range(4)]
+        for flo, fhi in floors:
+            if fhi[2] < base - STANDIN_SUPPORT_BELOW or flo[2] > base + STANDIN_SUPPORT_ABOVE:
+                continue
+            for x, y in probes:
+                if flo[0] <= x <= fhi[0] and flo[1] <= y <= fhi[1]:
+                    return True
+        return False
+
+    standins = [(i, world_box(pr, ms)) for i, (pr, ms) in enumerate(props_drawn) if pr.get("standin") and not pr.get("skybox")]
+    standins.sort(key=lambda e: e[1][0][2])
+    dropped = set()
+    for i, box in standins:
+        if carried(box):
+            floors.append(box)
+        else:
+            dropped.add(i)
+    if dropped:
+        notes.append("%d stand-in boxes dropped for having no floor under them" % len(dropped))
+    return [e for i, e in enumerate(props_drawn) if i not in dropped]
+
+
 def prop_materials(pak, drawn):
     """{(model path, mesh index, skin): material name} -- the first candidate the pak has.
 
@@ -1038,6 +1098,14 @@ def prop_colours(bsp, materials):
         colour = surface_colour(refl, mat)
         if colour is not None:
             out[mat] = (colour, how)
+    # A stand-in box has no name to look up, and 0.5 grey drew a crate darker than the
+    # sand it stands on (surf_dust2). It takes the mean of what this map's brushes are made of.
+    refls = [r for _n, r in names if max(r) > 0.004]
+    if refls:
+        mean = surface_colour(tuple(sum(r[c] for r in refls) / len(refls) for c in range(3)))
+        for mat in materials:
+            if "standin_" in mat and mat not in out and mean is not None:
+                out[mat] = (mean, "map")
     return out
 
 
@@ -3473,15 +3541,27 @@ def main(argv=None):
                 pr["skybox"] = True
                 pr["origin"] = tuple((pr["origin"][a] - o[a]) * k for a in range(3))
                 pr["scale"] = pr["scale"] * k
+    props_drawn = drop_unsupported_standins(bsp, props_drawn, notes)
     probes = bsp_props.AmbientProbes(bsp)
     ground = bsp_props.GroundLight(bsp, faces, bsp._lump(LUMP_LIGHTING)) if props_drawn else None
     blocks, block_of, block_index = [], [], {}
     open_sky = ground.open_sky() if ground is not None else None
     props_open_sky = 0
     for pr, _meshes in props_drawn:
-        under = ground.at(pr["lighting_origin"])
-        probe = probes.cube(pr["lighting_origin"])
-        if under is None and probe is not None:
+        # A stand-in box takes the typical light around it (`GroundLight.local`), never the
+        # floor `at` finds under it: on surf_dust2 that was an interior a storey down for a
+        # crate on a roof or on sand, 1000 times dimmer than the sun, and a box with no probe
+        # at all drew unlit, white, beside a basket lit black. The same number for every
+        # box of a spot is what makes them read as part of it.
+        if pr.get("standin"):
+            under = ground.local(pr["lighting_origin"], share=0.75) or open_sky
+            # No probe either: a leaf's cube adds to the ground light, so a crate in a
+            # sunlit leaf drew pale beside its neighbour in a dark one, same texture.
+            probe = None
+        else:
+            under = ground.at(pr["lighting_origin"])
+            probe = probes.cube(pr["lighting_origin"])
+        if under is None and probe is not None and not pr.get("standin"):
             # A probe and nothing lit under it: a 3D-skybox prop over its sky room's tool
             # walls, one hanging in the open, or one on displacement terrain, which `at`
             # cannot see. Lit by the cube alone it was a black silhouette -- 583 of
@@ -3597,7 +3677,7 @@ def main(argv=None):
             "stock_models": sum(props_stock.values()),
             # Of those, the solid ones drawn and collided as a box (tools/stock_standins.py);
             # stock_models still counts them, because the model itself was not carried.
-            "stock_standins": sum(props_standin.values()),
+            "stock_standins": sum(1 for pr, _m in props_drawn if pr.get("standin")),
             "surfaces": len(prop_surfaces),
             # Prototype prop surfaces painted a brush texture's colour (by name, or by a
             # material word), and props lit by the open-sky floor light for want of a lit
