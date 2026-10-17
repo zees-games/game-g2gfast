@@ -1,4 +1,3 @@
-class_name G2GSoloMaps
 extends RefCounted
 
 ## The courses a solo game in the browser offers on M, beside the ones it ships.

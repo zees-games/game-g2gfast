@@ -15,6 +15,7 @@ const G2GMenuPages := preload("ui/g2g_menu_pages.gd")
 const G2GNetBridge := preload("net/g2g_net_bridge.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GPresentation := preload("g2g_presentation.gd")
+const G2GSoloMaps := preload("g2g_solo_maps.gd")
 const G2GUnits := preload("g2g_units.gd")
 
 ## A playable g2gfast: one local player, a camera, a HUD, and the keys.

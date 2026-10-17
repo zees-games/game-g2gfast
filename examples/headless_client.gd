@@ -4,6 +4,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GEvents := preload("../game/net/g2g_events.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
+const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 
 ## The real client, offline: what a player's keys do, rather than what the pieces do.
 ##
