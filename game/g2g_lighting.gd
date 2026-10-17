@@ -121,7 +121,7 @@ const SKY_TOPS := {
 ## [b]Four maps had a white sky.[/b] dot-lighting takes the top of the procedural sky from
 ## the map's `_ambient`, which in Source is the colour the sky lit the map with. A mapper who
 ## never set it compiles with the editor's default `255 255 255`, and surf_beginner2, bhop_aztec,
-## bhop_mario_fxd and bhop_evolve are drawn under a blank white dome. That white is not a
+## bhop_platformer_fxd and bhop_evolve are drawn under a blank white dome. That white is not a
 ## statement about the sky, so here the sky is looked up by its name instead (the name is
 ## in the file; the texture set is another game's and is not). Only the sky changes: the
 ## rest of the environment keeps the map's ambient as it stands.

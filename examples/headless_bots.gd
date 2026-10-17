@@ -39,7 +39,7 @@ const SURF_ARRIVALS := 3
 ## Maps with no route file and no surf cache, where a bot only ever had the straight line, and
 ## how long each is ridden. The farthest a bot got from its start (metres, as the crow flies) is
 ## compared with `bot_nav` 0 and 1.
-const NAV_MAPS: Array[StringName] = [&"bhop_fur", &"bhop_mario_fxd", &"bhop_elate"]
+const NAV_MAPS: Array[StringName] = [&"bhop_fur", &"bhop_platformer_fxd", &"bhop_elate"]
 const NAV_SECONDS := 20.0
 ## The most a single planning step may take, milliseconds, a bound that catches a step that grew
 ## with the map. The tick is 7.8 ms at 128 Hz and the planner is given 2 ms of it; the one step

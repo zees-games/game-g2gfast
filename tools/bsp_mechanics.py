@@ -503,7 +503,7 @@ def trap_blocks(bsp, traps, origin_of, destinations):
     `trigger_multiple` on each block fires every hundredth of a second while somebody
     touches it and renames them -- `!activator,AddOutput,targetname activator,0.09,-1` --
     and a teleport on the block fires only for that name (bhop_badges, bhop_badges_mini,
-    bhop_mario_fxd: 0.09 s; bhop_ananas 0.6 s). Stand there that long and you are sent
+    bhop_platformer_fxd: 0.09 s; bhop_ananas 0.6 s). Stand there that long and you are sent
     back. This game does not run the logic, so the teleport was dropped and standing cost
     nothing. It is a block now: the teleport's own brushes, the delay the map's output
     waits, and where the teleport sends you. `touch` because the box is the teleport's

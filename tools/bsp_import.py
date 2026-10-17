@@ -165,7 +165,7 @@ def read_pak(bsp, notes):
 
     [b]Read one entry at a time, and let a broken one be missing rather than fatal.[/b]
     The obvious version is a dict comprehension over `namelist()`, and it was one until
-    `bhop_mario_fxd` -- a fifteen-year-old map whose pakfile has a bad CRC on a single
+    `bhop_platformer_fxd` -- a fifteen-year-old map whose pakfile has a bad CRC on a single
     soundscape .txt that nothing here reads. `ZipFile.read` raises on that entry, the
     comprehension propagates it, and 121 MB of perfectly good geometry imports as a
     traceback. At one map a person re-packs the zip by hand; at fifty, one bad byte in a

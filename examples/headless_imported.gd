@@ -188,7 +188,7 @@ const STOCK_DRAWN := {
 	"bhop_japan": 0.94,  # 97.4% on 2026-10-11; 55.9% own: looked at from the spawn (sheet stock_floors_before_1)
 	"bhop_lego2": 0.96,  # 99.0% on 2026-10-11; 99.0% own: looked at from the spawn (sheet stock_floors_before_1)
 	"bhop_lego3": 0.91,  # 94.7% on 2026-10-11; 94.7% own: looked at from the spawn (sheet stock_floors_before_1)
-	"bhop_mario_fxd": 0.89,  # 92.9% on 2026-10-11; 87.5% own: looked at from the spawn (sheet stock_floors_before_2)
+	"bhop_platformer_fxd": 0.89,  # 92.9% on 2026-10-11; 87.5% own: looked at from the spawn (sheet stock_floors_before_2)
 	"bhop_ocean": 0.96,  # 99.2% on 2026-10-11; 31.1% own: looked at from the spawn (sheet stock_floors_before_2)
 	"bhop_overthinker": 0.88,  # 91.2% on 2026-10-11; 91.2% own: looked at from the spawn (sheet stock_floors_before_2)
 	"bhop_pandora2_fix": 0.96,  # 99.4% on 2026-10-11; 99.3% own: looked at from the spawn (sheet stock_floors_before_2)
@@ -750,7 +750,7 @@ func _test_lighting() -> void:
 
 	# [b]No sky is a blank white dome.[/b] The procedural sky's top is the map's `_ambient`,
 	# and four maps never set theirs and carry the editor's default 255 255 255 (surf_beginner2,
-	# bhop_aztec, bhop_mario_fxd, bhop_evolve); G2GLighting looks those up by sky name.
+	# bhop_aztec, bhop_platformer_fxd, bhop_evolve); G2GLighting looks those up by sky name.
 	# Armed by taking that out: it fires on exactly those four.
 	var top := Color(0, 0, 0)
 	var world := node.get_node_or_null("Lighting") as WorldEnvironment

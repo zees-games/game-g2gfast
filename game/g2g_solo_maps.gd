@@ -38,7 +38,7 @@ const IDS: PackedStringArray = [
 	"bhop_fury_2",
 	"bhop_grove",
 	"bhop_interloper",
-	"bhop_mario_fxd",
+	"bhop_platformer_fxd",
 	"bhop_monster_jam",
 	"bhop_pandora2_fix",
 	"bhop_pit",
