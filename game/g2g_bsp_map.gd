@@ -470,6 +470,10 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 	# filtering because it is pixel art, at a tile size the table sets. Here rather than in
 	# the importer so the packs already published get it. See G2GStockSubstitutes.
 	var stand_in := G2GStockSubstitutes.for_material(str(s.get("material", "")))
+	if stand_in.is_empty() and s.has("base"):
+		# The material is the mapper's own VMT over a stock texture (a model's glass);
+		# the table knows the stock name. See `base` in tools/bsp_import.py.
+		stand_in = G2GStockSubstitutes.for_material(str(s["base"]))
 	if not stand_in.is_empty() and G2GStockSubstitutes.is_glass(stand_in):
 		# Glass: the grid in the map's colour, see-through, as the original was. A new
 		# material on the translucent twin, because the pass is the shader's, not a
