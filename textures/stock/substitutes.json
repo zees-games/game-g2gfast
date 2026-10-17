@@ -1741,6 +1741,636 @@
    "match": "*{cxarrow*",
    "none": true,
    "why": "a painted direction-arrow decal; as decals/*. Added 2026-10-11, when the importer stopped drawing the copies mappers had packed [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/door*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_cbble/door*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/dudoor",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/ducrtlrgtp",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/sandwlldoor2",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/pdoor1",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "a wooden door or crate lid by name and surfaceprop wood: planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_tides/tides_roof_*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop wood or a boarded surface (roof boards, parquet, billboard backing, box): planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/ceiling02",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop wood or a boarded surface (roof boards, parquet, billboard backing, box): planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/wfloor-sn*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop wood or a boarded surface (roof boards, parquet, billboard backing, box): planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_train/train_blank_billboard",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop wood or a boarded surface (roof boards, parquet, billboard backing, box): planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "props/cardboardbox*",
+   "texture": "floor_wood_planks.png",
+   "mean": [
+    0.349,
+    0.281,
+    0.24
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop wood or a boarded surface (roof boards, parquet, billboard backing, box): planks. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/stonestep*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/stairoutdoor*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/inftrima",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infwllftopedge",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_tides/tides_floor_stone_*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/chatcolumn*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "surfaceprop stone or rock (steps, trims, columns): rubble stone. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/wallpaper*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/cellarwall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/ceiling*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/cuiceila",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/iceilb*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/iwlld*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/wall0*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/extcol*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/extwall*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/dusandwlltrim*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/templewall02a",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_tides/tides_wall_*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_wall_*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukmetwallp",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infflrd",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "props/acousticceiling*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "props/plasticceiling*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_italy/pwtrim*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "plaster, painted wall, ceiling or smooth floor by name and surfaceprop (plaster, paper, concrete): smooth concrete. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/roofa",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop tile (a tiled roof or floor): large tan tiles. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/iflrd",
+   "texture": "floor_tiles_tan_large.png",
+   "mean": [
+    0.697,
+    0.641,
+    0.605
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop tile (a tiled roof or floor): large tan tiles. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_ceiling_02",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_beam_01",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nuke_officedoor_01",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukdoorsb",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/cs_assault/pylon",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/cs_assault/de_train_handrails_*",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "surfaceprop metal (ceiling plate, beam, door, pylon, handrail): metal plates. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*ivy*",
+   "none": true,
+   "why": "alpha-tested ivy leaf cards: foliage, Kenney has no leaf texture. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*/{*",
+   "none": true,
+   "why": "alpha-tested fence, curtain or grate cards (the '{' prefix): see-through in the original, the opaque grid would wall off a route. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/miltree*",
+   "none": true,
+   "why": "a distant tree billboard. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/inftreelinea",
+   "none": true,
+   "why": "a distant tree-line billboard. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/treeline*",
+   "none": true,
+   "why": "a distant tree-line billboard. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/milmountains*",
+   "none": true,
+   "why": "a distant mountain billboard. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/cloud*",
+   "none": true,
+   "why": "a cloud card. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "fakesky/*",
+   "none": true,
+   "why": "a sky helper brush. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "*fakeskybox*",
+   "none": true,
+   "why": "a sky helper brush. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "props/sign*",
+   "none": true,
+   "why": "a street or exit sign: a printed picture. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "props/*button*",
+   "none": true,
+   "why": "a button panel: a printed picture. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "black",
+   "none": true,
+   "why": "flat black. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "grey",
+   "none": true,
+   "why": "flat grey. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "comp/fadetoblack",
+   "none": true,
+   "why": "a fade overlay. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_train/train_*arrow*",
+   "none": true,
+   "why": "a painted direction-arrow decal. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_train/train_*bombsite*",
+   "none": true,
+   "why": "a painted bombsite marker decal. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_assault/*decal*",
+   "none": true,
+   "why": "a window decal. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "vgui/*",
+   "none": true,
+   "why": "a UI image. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
   }
  ]
 }
