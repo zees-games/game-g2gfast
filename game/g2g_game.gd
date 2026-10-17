@@ -2020,6 +2020,11 @@ func refresh_standing(id: StringName) -> void:
 	standing_changed.emit(id, standing)
 
 
+## The standing [method refresh_standing] last worked out for [param id], or empty.
+func standing_of(id: StringName) -> Dictionary:
+	return _standings.get(id, {})
+
+
 ## What the Tab board says about [param id]: their style, their best on this map and
 ## track, and where it places them. From the standing [method refresh_standing] last worked
 ## out — which runs on every spawn, style change and filing — so a board held open twice a

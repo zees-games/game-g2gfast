@@ -816,6 +816,15 @@ func _admit(peer_id: int) -> void:
 
 	_tell(peer_id, G2GEvents.Kind.RULES, G2GEvents.write_rules(rules_body()))
 
+	# The joiner's own standing, again. The join's spawn already worked it out, but inside
+	# `game.add_player` — before this peer was mapped to its player, and before it was
+	# ready — so a store that answers from its cache emitted it to nobody, and a returning
+	# player's timer showed no best and no record until their next finish (while the Tab
+	# board, which reads the same standing on the server, showed both).
+	var standing := game.standing_of(_player_key(session_id))
+	if not standing.is_empty():
+		_tell(peer_id, G2GEvents.Kind.STANDING, G2GEvents.write_standing(session_id, standing))
+
 	# Every hunter already out on the course. A runner joining a server whose hunters were
 	# released an hour ago would otherwise be hit by things it was never told about.
 	for instance_id in _hunter_nets.keys():

@@ -37,6 +37,8 @@ var game: G2GGame = null
 var player: G2GPlayer = null
 var hud: G2GHud = null
 var net: DotNetManager = null
+## The last standing the server sent this player, for a HUD made after it arrived.
+var _standing: Dictionary = {}
 var bridge: G2GNetBridge = null
 var link: Node = null
 
@@ -366,6 +368,10 @@ func _watch(id: StringName) -> void:
 	if bridge != null:
 		hud.clock_view = bridge.clock_view
 	apply_client_settings()
+	# Likewise the standing: kept from whenever it came, so a HUD made after it still
+	# shows the best and the record.
+	if not _standing.is_empty():
+		hud.apply_standing(_standing)
 	_say_click_to_play()
 
 	# By id, like the HUD, and for the same reason: HELLO names us before JOIN makes us.
@@ -508,7 +514,10 @@ func _build_netcode() -> DotResult:
 			hud.notice(text)
 	)
 	bridge.standing_received.connect(func(pid: int, standing: Dictionary) -> void:
-		if hud != null and pid == bridge.local_player_id:
+		if pid != bridge.local_player_id:
+			return
+		_standing = standing
+		if hud != null:
 			hud.apply_standing(standing)
 	)
 	# A hit of ours the server applied: the marker and the number on the body. Only sent to

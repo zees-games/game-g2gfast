@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 217
+const CHECKS := 218
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -484,6 +484,8 @@ func _test_handshake() -> void:
 
 	var loaded: Array[String] = []
 	_client_bridge.map_loaded.connect(func(m: DotMapDef) -> void: loaded.append(String(m.id)))
+	var standings := []
+	_client_bridge.standing_received.connect(func(id: int, _standing: Dictionary) -> void: standings.append(id))
 
 	var added := _server_bridge.add_player(CLIENT_PEER, SESSION, "Ada")
 	_check(added.ok, "the server adds the player", str(added.error) if not added.ok else "")
@@ -498,6 +500,11 @@ func _test_handshake() -> void:
 		"the server knows its client reads the unchanged list")
 	_check(hellos == [SESSION], "and the client is told who it is", str(hellos))
 	_check(_client_bridge.local_player_id == SESSION, "which the bridge remembers")
+	# The join's spawn works the standing out inside `game.add_player`, before the peer is
+	# mapped, so with a store that answers from memory it went to nobody: a reconnecting
+	# record holder's timer showed no best and no record while Tab showed both.
+	_check(standings.has(SESSION), "and is sent its standing, which the join worked out before it had a peer",
+		str(standings))
 
 	# HELLO has carried the server's tick rate since it was written and `read_hello`
 	# has always decoded it; until this was fixed, nothing read it back out. All three
