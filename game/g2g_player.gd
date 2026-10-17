@@ -1,6 +1,5 @@
 extends Node3D
 
-const G2GBeacon := preload("g2g_beacon.gd")
 const G2GCamera := preload("g2g_camera.gd")
 const G2GConfig := preload("g2g_config.gd")
 const G2GLadderMode := preload("g2g_ladder_mode.gd")
@@ -143,7 +142,7 @@ var held_weapon: StringName = &""
 
 ## The marker [member beacon] draws, while it does. Client side; built and freed by
 ## [method present].
-var beacon_marker: G2GBeacon = null
+var beacon_marker: DotFxBeacon = null
 
 
 func _ready() -> void:
@@ -483,7 +482,7 @@ func present(delta: float) -> void:
 ## Draws [member beacon], and says when it pings.
 ##
 ## Placed at the DRAWN position — the render state on the local player, the interpolated
-## one on a remote player — for the reason [G2GBeacon] is top level.
+## one on a remote player — for the reason [DotFxBeacon] is top level.
 ##
 ## [b]Not hidden on a death, where game-arena's is.[/b] A runner here has no death a
 ## client can see: the deathmatch layer's health is the server's, a body that dies stays
@@ -497,7 +496,7 @@ func _present_beacon(delta: float, at: Vector3) -> void:
 		return
 
 	if beacon_marker == null:
-		beacon_marker = G2GBeacon.new()
+		beacon_marker = _new_beacon_marker()
 		beacon_marker.name = "Beacon"
 		add_child(beacon_marker)
 
@@ -506,6 +505,24 @@ func _present_beacon(delta: float, at: Vector3) -> void:
 
 	if beacon_marker.advance(delta):
 		beacon_pulsed.emit(at)
+
+
+## The marker, sized to this game's hull: a runner is 32 units across, 0.61 m, and a ring as
+## wide as the stock one would read as a mark beside them rather than under them. The column
+## starts above a standing runner's head (72 units, 1.37 m) so it never crosses the body.
+##
+## [b]The ping is off on purpose.[/b] It plays through the game's own dot-audio catalogue
+## (`G2GPresentation.BEACON_SOUND`, from [signal beacon_pulsed]), which the volume sliders
+## and the hide-others setting already govern; the stock voice would be heard twice and obey
+## neither. Red-orange because no prototype texture is, so it reads as a mark on any map.
+func _new_beacon_marker() -> DotFxBeacon:
+	var marker := DotFxBeacon.new()
+	marker.ring_radius = 0.56
+	marker.column_height = 14.0
+	marker.column_base = 1.7
+	marker.colour = Color(1.0, 0.28, 0.18)
+	marker.ping_enabled = false
+	return marker
 
 
 ## Settles what the owner's own camera draws of their own rig.

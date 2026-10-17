@@ -18,7 +18,7 @@ const G2GPlayer := preload("g2g_player.gd")
 ## Blind and beacon are the two that are about a SCREEN rather than a body, and each is one
 ## flag on [G2GPlayer] that `G2GPlayerNet` replicates — the blind to its owner alone, the
 ## beacon to everybody — and that the client draws: `G2GHud` blacks the owner's screen out,
-## `G2GBeacon` rings the runner on every screen and pings. Neither taints a run: a blind
+## `DotFxBeacon` rings the runner on every screen and pings. Neither taints a run: a blind
 ## can only cost a runner time, like a freeze, and a beacon changes nothing they can feel.
 ## Both outlive a respawn without anything re-applying them, because a respawn here is a
 ## teleport of the same player rather than a new body.
