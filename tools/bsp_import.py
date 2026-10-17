@@ -3471,13 +3471,21 @@ def main(argv=None):
     a = ap.parse_args(argv)
 
     map_id = (a.id or os.path.splitext(os.path.basename(a.bsp))[0]).lower()
-    d = os.path.join(a.out_dir, map_id)
-    os.makedirs(d, exist_ok=True)
-
     zones_dir = a.zones_dir
     if zones_dir is None:
         zones_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "maps", "zones")
     doc = load_overrides(zones_dir, map_id)
+
+    out_dir = a.out_dir
+    if doc.get("kind") == "arena" and os.path.basename(os.path.normpath(out_dir)) == "imported":
+        # A combat map is not a course and is not kept in g2gfast-maps (2026-10-17): it goes
+        # to the repository game-arena links at its own maps/imported, so the .import
+        # markers written here still match the path they are mounted at.
+        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..",
+                               "arena-surf-dm-maps", "maps")
+        print("  kind arena: written to %s" % os.path.normpath(out_dir))
+    d = os.path.join(out_dir, map_id)
+    os.makedirs(d, exist_ok=True)
 
     uncredited = attribution_problem(doc, map_id)
     if uncredited is not None:
@@ -3614,6 +3622,18 @@ def main(argv=None):
         if "alpha_offset" in s:
             s["texture2"] = blends[s["material"]]
         s["translucent"] = translucent and not s["prototype"]
+        # [b]A stock material hides behind a map-local name.[/b] A model's materials are
+        # the mapper's own VMTs (`models/comp/aaramp/unbreakable`), which name the
+        # source game's texture (`glass/unbreakable`) as their $basetexture. The stand-in
+        # table is keyed by the stock name, so it never matched the model's, and the ramp of
+        # surf_arcade's stage 1 -- glass over purple and green stripes -- was an opaque
+        # black grid with the stripes buried under it. The base is recorded so the
+        # stand-in lookup can try it second; only on a surface left in the grid.
+        if s["prototype"]:
+            pvmt = pak.get("materials/%s.vmt" % s["material"])
+            pbase = vmt_basetexture(pvmt)[0] if pvmt is not None else None
+            if pbase and pbase != s["material"]:
+                s["base"] = pbase
         # Drawn added, not over: see vmt_additive. Only a surface that has its own texture --
         # an additive material whose picture did not ship has nothing to add, and the grid
         # in its measured colour is the honest stand-in. Written only when true, so the

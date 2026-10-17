@@ -44,31 +44,16 @@ const SurfPlan := preload("../tools/surf_plan.gd")
 ##   map does not have. `bhop_eazy` was here for the same reason until 2026-10-08, when its
 ##   teleport graph was read through (its last gate is the only arrival nothing in a section
 ##   leads back to: a hub of menu teleports) and it got a zones file.
-## - `surf_grave_reloaded` is a combat surf map: weapon stashes behind doors in both spawn
-##   rooms, a bomb target, and every teleport aims back at a spawn, the prison or the cliff
-##   top. A loop to fight on, with no line anywhere that a run could end at.
-## - The rest of gb-maps-1's first ranked batch (2026-10-05) is the same thing, which is what
-##   the most-viewed surf maps on the download site turn out to be: `surf_10x_final`,
-##   `surf_10x_reloaded_fixed`, `surf_forbidden_ways_reloaded`, `surf_mai_remix`,
-##   `surf_greatriver_xdre4m`, `surf_ski_2` and `surf_110b_austinpowers` are combat surf
-##   (buyzones or weapon buttons, jails, every teleport back to a spawn or a ramp top);
-##   `surf_xiv_v2a` is a set of minigames the round picks between; and `surf_fruits` plays one
-##   of ten stages a round and ends every one in a fight. Each zones file says which.
+## - Combat surf maps (zones file `kind: arena`) are not imported here at all since 2026-10-17:
+##   they live in `../arena-surf-dm-maps`, and this list used to carry all of them.
 ##
 ## [b]The exemption is checked in both directions, which is what stops it being a mute
 ## button.[/b] A map in here that turns out to HAVE a runnable main track fails — because
 ## the reason it is listed has stopped being true and the list is now the lie. That is the
 ## same bargain every skip in this family makes: it is allowed to skip a check, it is not
 ## allowed to stop asking the question.
-const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "surf_grave_reloaded",
-	"surf_10x_final", "surf_10x_reloaded_fixed", "surf_forbidden_ways_reloaded", "surf_mai_remix",
-	"surf_greatriver_xdre4m", "surf_ski_2", "surf_110b_austinpowers", "surf_xiv_v2a", "surf_fruits",
-	"surf_legends", "kz_bhop_yonkoma", "surf_akai_final", "surf_bathroom_final", "surf_buck_wild",
-	"surf_forbidden_ways_2nd", "surf_greatriver", "surf_greatriver_v4", "surf_rebel_resistance_final3", "bunnyhop_pro",
-	"surf_29_12_06", "surf_dust2_2008_final", "surf_machine2", "surf_machine_remix_final", "surf_matrix_v8",
-	"surf_ski_2_source", "surf_skyworld", "surf_the_gloaming", "surf_thriller", "surf_adverse", "surf_japan_ptad", "surf_animals",
-	"surf_ny_advance", "surf_pavilion", "surf_torque2", "surf_velocity", "kz_bhop_lucid",
-	"surf_ny_bigloop_2008a", "surf_parrot_selector", "surf_pox"]
+const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "kz_bhop_yonkoma", "bunnyhop_pro", "surf_animals",
+	"kz_bhop_lucid"]
 
 ## The imported maps with no pit, which is a different question from having no finish.
 ##
@@ -144,34 +129,11 @@ const STOCK_DRAWN := {
 	"bhop_monster_jam": 0.76,  # 79.3% on 2026-10-10 (stand-ins from the reference sheet); 77.5% on 2026-10-09; 1.9% before: dark rock, looked at from the finish
 	"surf_year3000": 0.81,  # 86.1% on 2026-10-09; 0.8% before: CC0 concrete and metal (2026-10-09)
 	"surf_mesa": 0.94,  # 99.9% on 2026-10-09; 91.8% before: concrete walls and ramps, against the WR run
-	"surf_10x_final": 0.79,  # 82.4% on 2026-10-10 (fifth batch: parquet, glass); 74.1% earlier on 2026-10-10; 58.1% on 2026-10-09; 0% before: grass, concrete, rock by name, looked at from the spawn
-	"surf_10x_reloaded_fixed": 0.80,  # 83.8% on 2026-10-10 (stand-ins from the reference sheet); 76.2% on 2026-10-09; 0%: ground as dirt, stone, looked at from the spawn
-	"surf_mai_remix": 0.83,  # 86.3% on 2026-10-10 (glass see-through, effects as glass); 69.9% earlier on 2026-10-10 (stand-ins from the reference sheet); 59.6% on 2026-10-09; 0%: tiles, rock, glass panes, looked at from the spawn
-	"surf_grave_reloaded": 0.91,  # 94.5% on 2026-10-10 (fifth batch: interior stone walls, glass); 84.9% earlier on 2026-10-10; 73.8% on 2026-10-09; 0%: cobbles, concrete, looked at from the spawn
 	"bhop_exodus": 0.84,  # 87.5% on 2026-10-11 (sixth batch: its aoki dev blends listed, stone floors); 81.3% on 2026-10-10 (stand-ins from the reference sheet); 74.7% on 2026-10-09; 10.7%: planks, concrete, looked at from the spawn
-	"surf_greatriver_xdre4m": 0.77,  # 80.5% on 2026-10-10 (city facades as concrete); 36.2% on 2026-10-09; 0%: wood, metal, concrete kerbs, looked at from the spawn
-	"surf_thriller": 0.74,  # 77.4% on 2026-10-10; 47.8% before: the citadel panelling as dark metal plate, looked at from the spawn
 	"bunnyhop_pro": 0.66,  # 69.7% on 2026-10-10 (glass fence see-through); 66.1% before the fifth batch; 53.1% before: sand floor, stone walls, concrete courtyard, looked at from the spawn
-	"surf_rebel_resistance_final3": 0.94,  # 97.0% on 2026-10-10 (fifth batch); 96.8% before it; 0% own: white concrete and snow, looked at from the spawn
 	"surf_eclipse": 0.95,  # 98.7% on 2026-10-10 (fifth batch); 96.7% before it; 0% own: tiles, metal, glass walls over the sky, looked at from the spawn
-	"surf_ski_2": 0.93,  # 96.6% on 2026-10-10 (fifth batch); 96.4% before it; 0% own: snow ramps and pillars, looked at from the spawn
-	"surf_legends": 0.96,  # 99.1% on 2026-10-10 (fifth batch); 94.6% before it; 0.2% own: aztec sandstone courses and planks, the red lamp glass, looked at from the spawn
-	"surf_forbidden_ways_reloaded": 0.94,  # 97.7% on 2026-10-10 (fifth batch); 97.6% before it; 3.3% own: concrete floor, rock walls, glass roof, looked at from the spawn
-	"surf_forbidden_ways_2nd": 0.95,  # 98.7% on 2026-10-10 (fifth batch); 93.9% before it; 0% own: white metal and glass rails, looked at from the spawn
-	"surf_japan_ptad": 0.90,  # 93.8% on 2026-10-10 (fifth batch); 93.3% before it; 0.1% own: wooden walls and ceiling, grass, looked at from the spawn
 	"surf_beginner": 0.88,  # 91.4% on 2026-10-10 (fifth batch); 91.3% before it; 0% own: plank floor, concrete walls, looked at from the spawn
-	"surf_buck_wild": 0.89,  # 92.1% on 2026-10-10 (fifth batch); 91.8% before it; 2.0% own: grass, concrete walls, metal trim, looked at from the spawn
-	"surf_machine_remix_final": 0.92,  # 95.7% on 2026-10-10 (fifth batch); 89.2% before it; 0% own: tiles, concrete, glass, looked at from the spawn
-	"surf_skyworld": 0.85,  # 88.5% on 2026-10-10 (fifth batch); 88.5% before it; 0% own: stone walls, marble tiles, looked at from the spawn
-	"surf_xiv_v2a": 0.91,  # 94.0% on 2026-10-10 (fifth batch); 91.7% before it; 3.9% own: concrete gallery and tiles, looked at from the spawn
-	"surf_ny_advance": 0.84,  # 87.5% on 2026-10-10 (fifth batch); 87.1% before it; 0% own: concrete and dark metal panels, looked at from the spawn
-	"surf_greatriver": 0.88,  # 91.9% on 2026-10-10 (fifth batch); 86.6% before it; 0% own: tiles, stone pillars, glass roof, looked at from the spawn
-	"surf_the_gloaming": 0.91,  # 94.5% on 2026-10-10 (fifth batch); 86.2% before it; 0% own: concrete room, glass ceiling, looked at from the spawn
-	"surf_ski_2_source": 0.88,  # 91.5% on 2026-10-10 (fifth batch); 83.6% before it; 0% own: concrete, the shield as glass, looked at from the spawn
-	"surf_machine2": 0.87,  # 90.0% on 2026-10-10 (fifth batch); 83.4% before it; 0% own: concrete, glass slot windows, looked at from the spawn
 	"surf_lore": 0.83,  # 86.3% on 2026-10-10 (fifth batch); 84.5% before it; 1.5% own: metal panels, concrete, sandstone steps, looked at from the spawn
-	"surf_29_12_06": 0.79,  # 82.9% on 2026-10-10 (fifth batch); 82.4% before it; 0% own: stone walls and floor, looked at from the spawn
-	"surf_greatriver_v4": 0.91,  # 94.4% on 2026-10-10 (fifth batch); 78.6% before it; 0.6% own: the glass spawn box see-through, tiles, rock, looked at from the spawn
 	"bhop_ananas": 0.67,  # 70.2% on 2026-10-11; 3.6% own: looked at from the spawn (sheet stock_floors_before_0)
 	"bhop_arcane_v2": 0.91,  # 94.1% on 2026-10-11 after its packed copies of the source game's textures were dropped (54.2% own; 96.3% own before): dirt, plaster, stone as stand-ins, the stock trees listed; looked at from the spawn (sheet stock_packed_dropped_before_after)
 	"bhop_badges": 0.66,  # 69.6% on 2026-10-11; 68.3% own: looked at from the spawn (sheet stock_floors_before_0)
@@ -199,31 +161,21 @@ const STOCK_DRAWN := {
 	"kz_bhop_badg3s": 0.88,  # 91.3% on 2026-10-11; 83.8% own: looked at from the spawn (sheet stock_floors_before_3)
 	"kz_bhop_lucid": 0.88,  # 91.8% on 2026-10-11; 57.5% own: looked at from the spawn (sheet stock_floors_before_3)
 	"kz_bhop_yonkoma": 0.08,  # 11.2% on 2026-10-11; 11.2% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_3)
-	"surf_110b_austinpowers": 0.95,  # 98.9% on 2026-10-11; 52.8% own: looked at from the spawn (sheet stock_floors_before_3)
-	"surf_adverse": 0.67,  # 70.2% on 2026-10-11; 0.1% own: looked at from the spawn (sheet stock_floors_before_3)
-	"surf_akai_final": 0.00,  # 0.5% on 2026-10-11; 0.0% own: flat developer textures held on purpose, UNLISTED_LIMIT is its check (sheet stock_floors_before_3)
 	"surf_animals": 0.95,  # 98.0% on 2026-10-11; 2.2% own: looked at from the spawn (sheet stock_floors_before_3)
 	"surf_aquaflow": 0.95,  # 98.6% on 2026-10-11; 97.8% own: looked at from the spawn (sheet stock_floors_before_3)
 	"surf_arcade": 0.56,  # 59.1% on 2026-10-11; 55.1% own: looked at from the spawn (sheet stock_floors_before_4)
-	"surf_bathroom_final": 0.89,  # 92.0% on 2026-10-11; 50.3% own: looked at from the spawn (sheet stock_floors_before_4)
-	"surf_dust2_2008_final": 0.96,  # 99.2% on 2026-10-11; 59.3% own: looked at from the spawn (sheet stock_floors_before_4)
-	"surf_fruits": 0.82,  # 85.0% on 2026-10-11 (sixth batch: its own Früchte texture read); 83.2% before it; 24.8% own: looked at from the spawn (sheet stock_floors_before_4)
 	"surf_greensway": 0.95,  # 98.5% on 2026-10-11; 98.5% own: looked at from the spawn (sheet stock_floors_before_4)
 	"surf_interference": 0.97,  # 100.0% on 2026-10-11 (sixth batch: boundary wall and crystals as glass); 100.0% before it; 99.7% own: looked at from the spawn (sheet stock_floors_before_4)
 	"surf_kitsune": 0.59,  # 62.4% on 2026-10-11; 47.8% own: looked at from the spawn (sheet stock_floors_before_4)
 	"surf_life_of_duck": 0.96,  # 99.4% on 2026-10-11; 64.8% own: looked at from the spawn (sheet stock_floors_before_4)
 	"surf_lt_omnific": 0.94,  # 97.8% on 2026-10-11; 97.8% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_lt_unicorn": 0.93,  # 96.1% on 2026-10-11; 96.1% own: looked at from the spawn (sheet stock_floors_before_5)
-	"surf_matrix_v8": 0.32,  # 35.4% on 2026-10-11; 4.0% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_omnibus": 0.92,  # 95.9% on 2026-10-11; 16.5% own: looked at from the spawn (sheet stock_floors_before_5)
-	"surf_pavilion": 0.68,  # 71.5% on 2026-10-11; 3.7% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_quilavar": 0.93,  # 96.8% on 2026-10-11; 38.5% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_rookie": 0.93,  # 96.9% on 2026-10-11 (sixth batch: waterfall sheets see-through); 95.7% before it; 27.7% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_stonework3": 0.96,  # 99.9% on 2026-10-11; 56.8% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_summit": 0.95,  # 98.9% on 2026-10-11; 93.8% own: looked at from the spawn (sheet stock_floors_before_6)
-	"surf_torque2": 0.75,  # 78.6% on 2026-10-11; 51.4% own: looked at from the spawn (sheet stock_floors_before_6)
 	"surf_vegetables": 0.85,  # 88.5% on 2026-10-11 (sixth batch: its own Früchte textures read); 75.3% before it; 30.7% own: looked at from the spawn (sheet stock_floors_before_6)
-	"surf_velocity": 0.80,  # 83.9% on 2026-10-11; 0.7% own: looked at from the spawn (sheet stock_floors_before_6)
 }
 
 ## The most of a map, by triangles, that may draw the prototype grid with neither a

@@ -23,7 +23,7 @@
 
 A list that exempts maps from a check is a mute button unless it is asserted in both directions. In `headless_imported`:
 
-- `NOT_COURSES`: maps with no runnable finish on purpose (a vehicle map, section-chain maps whose END nothing distinguishes, combat maps). A listed map that grows a finish fails, which is how the list is found stale. **A suite that is red for a reason nobody intends to fix is a suite people stop reading.**
+- `NOT_COURSES`: maps with no runnable finish on purpose (a vehicle map, section-chain maps whose END nothing distinguishes, maps game-arena owns are not imported here at all). A listed map that grows a finish fails, which is how the list is found stale. **A suite that is red for a reason nobody intends to fix is a suite people stop reading.**
 - `NO_PIT`, separate from `NOT_COURSES`, so maps that have pits keep being asked.
 - `ARRIVES_IN_PIT` and `BONUSES_WITHOUT_PITS`: both empty, both still asserted.
 - `OWN_TEXTURES`, `STOCK_DRAWN`, `BLENDED`: floors for maps someone has looked at.

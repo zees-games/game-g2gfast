@@ -40,7 +40,7 @@ What a zones file can say, each opt-in and each with its reason in the file (for
 | `remove` | Cuts world brushes inside a box out of geometry and collision (a sealed void where the hand-placed spawn was). |
 | `"restart": false` | A stage with nowhere to stand is a split only (see [timer.md](timer.md#stages-restarts-and-r)). |
 | `"skybox": false`, `sky_walls` | Leaves out a 3D skybox, or draws sky faces as walls (see [map-rendering.md](map-rendering.md#skies)). |
-| `"kind": "arena"` | A combat map, not a course; out of rotation unless named. |
+| `"kind": "arena"` | A combat map, not a course; out of rotation unless named. The importer writes it to `../arena-surf-dm-maps/maps`, not `maps/imported`. |
 
 A teleport behind a class filter naming a class no player is never fires in the original engine either, and is dropped automatically. Teleports without the Clients flag are dropped for the same reason.
 

@@ -183,7 +183,7 @@ Collision comes from the map's brushes, not from what you can see, so invisible 
 
 What the map's own volumes do comes across too: a teleport sends you where the map aims it and your run goes on, boosters push, water is swum in (hold jump to come up), ladders are climbed, conveyors carry you, and a bunny-hop block sends you back if you stand on it. Blocks are timed for each player on their own, so nobody can sink a block under the player behind them. [`docs/brush-entities.md`](docs/brush-entities.md) goes through every brush entity and what happens to it.
 
-**Combat maps.** Some surf maps are built to fight on, not to time (`surf_10x_reloaded_fixed`, `surf_110b_austinpowers` and eight more). Their zones file says `"kind": "arena"`: they stay installed and loadable, **M** marks them "combat", and they are left out of the rotation and the vote unless `cfg/map_rotation.yml` lists them. They belong to game-arena's deathmatch.
+**Combat maps.** Some surf maps are built to fight on, not to time. Their zones file says `"kind": "arena"` and they are not part of g2gfast-maps: they live in `arena-surf-dm-maps`, for game-arena's deathmatch. `tools/bsp_import.py` writes such a map there, not into `maps/imported/`. If one is installed anyway it stays loadable, **M** marks it "combat", and it is left out of the rotation and the vote unless `cfg/map_rotation.yml` lists it.
 
 ### Zones
 Most surf and bunny-hop maps name their own start and end zones, stages and bonuses, and the importer reads those. For a map that doesn't, write the zones in `maps/zones/<id>.json` (see `maps/zones/README.md`), or draw them in the game.
