@@ -31,8 +31,6 @@ const G2GUnits := preload("g2g_units.gd")
 ## captures it in the first place, because pointer lock needs a real user gesture. See
 ## [method _grab_mouse].
 
-const LINK_SERVICE := &"dot_client_link"
-
 var game: G2GGame = null
 var player: G2GPlayer = null
 var hud: G2GHud = null
@@ -45,6 +43,10 @@ var link: Node = null
 ## Keeps the screen covered, and the local body, the keys and the timer still, until the level,
 ## the local player and its camera are all in. See [method _build_gate].
 var gate: DotLoadGate = null
+
+## dot-game's client platform: the loading cover (and the server told when it lifts), the link
+## and whether this client is offline. See [DotGameClient].
+var platform: DotGameClient = null
 
 ## The server browser: dot-browser's client half.
 ##
@@ -142,8 +144,8 @@ func _ready() -> void:
 	# First, before anything can be drawn: the map arrives after this node is in the tree.
 	_build_gate()
 
-	link = DotRegistry.get_node_service(LINK_SERVICE)
-	_offline = force_offline or link == null or OS.get_cmdline_user_args().has("--offline")
+	link = platform.link as Node
+	_offline = platform.offline
 
 	game = G2GGame.new()
 	game.name = "Game"
@@ -251,16 +253,21 @@ func _ready() -> void:
 ## and reads no keys while it settles, and the keys and the netcode sampling check
 ## [method _covered].
 func _build_gate() -> void:
-	gate = DotLoadGate.new()
-	gate.name = "LoadGate"
-	# A headless run draws nothing, so there is nothing to compile; its warm-up would only wait
-	# out its timeout, and every suite that drives a client would wait with it.
-	gate.warm_up_on_open = DisplayServer.get_name() != "headless"
-	add_child(gate)
+	platform = DotGameClient.new()
+	platform.name = "Platform"
+	platform.force_offline = force_offline
+	# The rest of the platform stays this client's own: its presentation layer owns the
+	# settings and the console, G2GMenuPages the menu, and _grab_mouse the pointer (it has a
+	# click-to-play notice). What it takes over is the cover, and telling the server about it.
+	platform.use_settings = false
+	platform.use_console = false
+	platform.capture_pointer = false
+	platform.spawned_text = "Joining"
+	platform.spawned_fn = func() -> bool:
+		return player != null and player.camera != null and player.camera.is_inside_tree()
+	add_child(platform)
+	gate = platform.gate
 	gate.hold(&"map", "Loading the map")
-	gate.require(&"spawned", func() -> bool:
-		return player != null and player.camera != null and player.camera.is_inside_tree(),
-		"Joining")
 
 
 ## Releases the map hold once the first level is in, and holds again for each map change.

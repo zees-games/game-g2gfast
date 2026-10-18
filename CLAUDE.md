@@ -118,6 +118,7 @@ Short forms; the reasoning is in the linked file.
 - The HUD follows the menu's theme (`apply_theme`, and `follow_hud(hud, null, false)` for dot-ui's pieces), never `hud_scale`. [client](docs/client.md#the-hud)
 - The flashlight is a shader default texture, never a `global uniform`. [client](docs/client.md#the-flashlight-lights-unshaded-surfaces-too)
 - Shake 0, flashes off, effect budget 24; emitters `local_coords`. [client](docs/client.md#presentation-settings-sound-and-effects)
+- **The loading cover is dot-game's `DotGameClient`** (`G2GClient.platform`, `gate` is `platform.gate`), with settings, console and pointer left to this client (`use_settings`, `use_console`, `capture_pointer` off): the menu and console are `G2GPresentation`'s and `G2GMenuPages`'s, the click-to-play notice is `_grab_mouse`'s. `tools/gate_shot.gd` renders the cover and the lift.
 - Typing suspends the sampler as well as swallowing input; the console is a menu overlay, built after the menu (`build_console(menu)`). [client](docs/client.md#the-chat-box-and-a-run-nobody-may-lose-to-a-keystroke)
 
 **Services and layers**
