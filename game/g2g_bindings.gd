@@ -70,4 +70,7 @@ static func make() -> DotMenuBindings:
 	for row in ROWS:
 		keys.add(row["action"], row["setting"], str(row["label"]), str(row["default"]), str(row["group"]),
 			int(row.get("scope", DotSettingsDef.Scope.DEVICE)))
+	# No weapons or items to switch between here, so the wheel jumps (a bhop game wants a tick
+	# per press); two rebindable extra rows on dot_fps_jump, Space stays.
+	var _wheel := keys.add_wheel_jump("Movement")
 	return keys

@@ -21,7 +21,7 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ## Exits non-zero on any failure.
 
 const CHECKS := 46
-const SECTIONS := 12
+const SECTIONS := 13
 
 var _passed := 0
 var _failed := 0
@@ -73,6 +73,7 @@ func _run() -> void:
 	await _test_the_camera_is_the_watched_players()
 	await _test_a_dead_body_falls()
 	await _test_the_map_menu()
+	await _test_the_wheel_jumps()
 	_test_solo_in_the_shell()
 
 	print("")
@@ -317,6 +318,33 @@ func _test_a_dead_body_falls() -> void:
 		"no ragdoll of your own body in first person: the camera is inside its head")
 	game.remove_player(&"u91")
 	await get_tree().process_frame
+	_done()
+
+
+## No item switching here, so the wheel jumps: two extra rows on the jump action, and a tick
+## (pressed and released inside one frame) reaches the next command as a press.
+func _test_the_wheel_jumps() -> void:
+	_section("the mouse wheel jumps, one press per tick")
+	var keys: DotMenuBindings = _client.menu.bindings
+	var wheel_rows := keys.rows.filter(func(r: Dictionary) -> bool:
+		return r["action"] == &"dot_fps_jump" and bool(r.get("extra", false)))
+	_check(wheel_rows.size() == 2 and keys.row_for_action(&"dot_fps_jump")["default"] == "Space",
+		"Space stays and two extra rows (wheel up, wheel down) sit on dot_fps_jump", str(wheel_rows.size()))
+	var sampler: DotFpsSampler = _client._active_sampler()
+	var _flush := sampler.sample(0.0)
+	for button in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var down := InputEventMouseButton.new()
+		down.button_index = button
+		down.pressed = true
+		sampler.handle_event(down)
+		var up := InputEventMouseButton.new()
+		up.button_index = button
+		up.pressed = false
+		sampler.handle_event(up)
+		_check(sampler.sample(0.0).is_pressed(DotFpsCommand.BUTTON_JUMP),
+			"wheel %s is a jump in the next command" % ("up" if button == MOUSE_BUTTON_WHEEL_UP else "down"))
+		_check(not sampler.sample(0.0).is_pressed(DotFpsCommand.BUTTON_JUMP),
+			"and only that one command")
 	_done()
 
 

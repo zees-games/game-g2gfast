@@ -995,6 +995,14 @@ func _unhandled_input(event: InputEvent) -> void:
 
 		return
 
+	# The wheel's jump: a tick is a press and a release in one frame, which polling never sees,
+	# so the sampler latches it. Here, after the zone editor (whose wheel sets a height) and
+	# behind the menu, console and gate guards above, so none of those jump.
+	if event is InputEventMouseButton and mouse_drives_view():
+		var wheel_sampler := _active_sampler()
+		if wheel_sampler != null:
+			wheel_sampler.handle_event(event)
+
 	if not event.is_pressed() or event.is_echo():
 		return
 

@@ -1214,8 +1214,10 @@ func _test_every_key_is_the_players() -> void:
 
 	var bound := 0
 	for row in G2GBindings.ROWS:
-		if DotInputBinding.describe_action(row["action"]) == str(row["default"]) \
-				and InputMap.action_get_events(row["action"]).size() == 1:
+		# Jump also has the wheel's two extra rows (Space stays the first).
+		var events := 3 if row["action"] == &"dot_fps_jump" else 1
+		if InputMap.action_get_events(row["action"]).size() == events \
+				and DotInputBinding.describe_action(row["action"]).begins_with(str(row["default"])):
 			bound += 1
 	_check(bound == G2GBindings.ROWS.size(),
 		"every action is on its default and on one key only (%d of %d)" % [bound, G2GBindings.ROWS.size()])
@@ -1458,7 +1460,7 @@ func _test_the_menu_is_a_view_of_the_settings() -> void:
 	menu.open(&"controls")
 	await get_tree().process_frame
 	var keys := _live(menu.screen, "DotMenuKeyButton")
-	_check(keys.size() == G2GBindings.ROWS.size(), "the Controls page has a key per action (%d)" % keys.size())
+	_check(keys.size() == G2GBindings.ROWS.size() + 2, "the Controls page has a key per action (plus the wheel's two) (%d)" % keys.size())
 
 	# Flashlight onto R: R was Restart, so Restart gets F rather than nothing.
 	var _r := p.bindings.rebind(p.bindings.row_for_action(&"g2g_flashlight"), "R", p.settings)
