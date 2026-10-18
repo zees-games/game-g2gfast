@@ -20,7 +20,7 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 46
+const CHECKS := 51
 const SECTIONS := 13
 
 var _passed := 0
