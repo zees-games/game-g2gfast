@@ -60,6 +60,10 @@ The Escape menu, help, the map list, "Move HUD elements", the key rebinder, the 
 
 Inside the shell's solo session (a `dot_solo` service in `DotRegistry`, duck-typed; see `G2GSoloMaps`) Leave reads "Back to menu" and calls the session's `leave()`, because a page cannot close its tab; anywhere else offline it is still "Quit game" on desktop and hidden on web. The same service makes M list every g2gfast course in dot-server-deploy's `cfg.example/content.yml` (kept in `game/g2g_solo_maps.gd`, and `headless_client` fails when the two drift), fetched under owner `gamemann` the first time one is chosen, the way the first map is. The browser itself was not driven for this change.
 
+## The load gate: nothing is shown or timed until the level is in
+
+`G2GClient` holds a dot-core `DotLoadGate` (built first in `_ready`): held for the map (again on every map change), `spawned` until the local player and its camera exist, and the local body frozen with `gate.freeze`. Before it, solo drew the body falling onto a floor still arriving and a connected client drew a HUD with nobody to read, and the timers were fed meanwhile. Three things honour it: `G2GGame.covered` (set by the client) stops the whole tick except the local body, which settles under the cover with a neutral command, so no run, start zone, bot or hunter acts while covered; `G2GPlayer.simulate` skips a frozen body and reads no keys while settling; the client's keys and the netcode sampler check `_covered()`. `G2GPlayer` answers `is_on_floor()` and `velocity` because the gate asks a settling body for them by name, and without them it lifts the cover with the body still in the air. `tools/gate_shot.gd` (xvfb) prints gate state, height and timer ticks per frame and saves frames.
+
 ## The HUD
 
 `G2GHud` draws the clock, the keys, speed in u/s, the standing line, PRACTICE, the spectator list and an admin's blind.

@@ -255,6 +255,9 @@ var _accumulator: float = 0.0
 ## between dot-net applying inputs and building the snapshot. See [G2GNetBridge].
 var external_tick: bool = false
 
+## Asked once a tick: true while the client's load gate holds the world still. See [method is_covered].
+var covered: Callable = Callable()
+
 
 ## dot-player-controller's `mp_forceview`: whether a player may switch to third person
 ## (0), or is held in first (1) or third (2). `sv_allow_thirdperson`, this game's own older
@@ -1343,6 +1346,12 @@ func _physics_process(delta: float) -> void:
 		_accumulator = 0.0
 
 
+## True while the client's load gate covers the screen. Set only by a client; a server and
+## every suite leave it empty, so nothing here ever waits for a cover that does not exist.
+func is_covered() -> bool:
+	return covered.is_valid() and bool(covered.call())
+
+
 ## The tick this game is on.
 ##
 ## Read rather than reconstructed. `_tick` is advanced by three different callers —
@@ -1374,6 +1383,17 @@ func tick_timers_only(tick: int) -> void:
 
 ## Move every player, then time the tick with the position the move produced.
 func _simulate_tick(step: float) -> void:
+	# [b]Under the client's load cover only the local body moves[/b], and only while the gate
+	# settles it onto the floor. The map clock, the bots, the hunters, combat, effects and
+	# above all the timers wait: a run that started (or a start zone that fired) behind the
+	# cover would be a time the player never played.
+	if is_covered():
+		for id in players:
+			var body: G2GPlayer = players[id]
+			if body.has_camera:
+				body.simulate(_tick, step)
+		return
+
 	maps.advance(step)
 
 	# The bots' keys, before anybody moves: see `g2g_bots.gd`.
@@ -1415,6 +1435,9 @@ func _simulate_tick(step: float) -> void:
 
 
 func _feed_timers() -> void:
+	if is_covered():
+		return
+
 	for id in players:
 		var player: G2GPlayer = players[id]
 		if player.timer == null or player.replay != null:

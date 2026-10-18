@@ -78,6 +78,13 @@ var swim := DotFpsSwimMode.new()
 var ladder := G2GLadderMode.new()
 
 var controller: DotFpsController = null
+
+## The motor's velocity, under the name the load gate asks any body for. Without it (and
+## [method is_on_floor]) the gate counts this node as already at rest and lifts its cover
+## with the body still in the air.
+var velocity: Vector3:
+	get:
+		return controller.state.velocity if controller != null else Vector3.ZERO
 var sampler: DotFpsSampler = null
 var rig: G2GRig = null
 var camera: G2GCamera = null
@@ -305,6 +312,12 @@ func teleport(to: Vector3, yaw: float = INF, keep_run: bool = false) -> void:
 		timer.stop(DotTimer.REASON_TELEPORT)
 
 
+## Whether the motor stands on something. Named for [CharacterBody3D] because that is what
+## [DotLoadGate] asks a settling body; see [member velocity].
+func is_on_floor() -> bool:
+	return controller != null and controller.state.is_grounded()
+
+
 # --- The tick --------------------------------------------------------------
 
 func simulate(tick: int, delta: float) -> void:
@@ -312,8 +325,19 @@ func simulate(tick: int, delta: float) -> void:
 		_play_replay(delta)
 		return
 
+	# A body the load gate froze is not moved by the game's tick either: the gate switches
+	# the node's processing off, which this direct call would walk straight past.
+	if not can_process():
+		return
+
 	if sampler != null:
-		controller.apply_command(sampler.sample(delta))
+		# While the gate settles the body under its cover the keys are off but the body
+		# still falls and lands (neutral command), and the sampler is left unread so a
+		# mouse turn does not pile up behind the cover.
+		if has_meta(DotLoadGate.SETTLING_META):
+			controller.apply_command(DotFpsCommand.new())
+		else:
+			controller.apply_command(sampler.sample(delta))
 
 	controller.simulate_tick(tick, delta)
 

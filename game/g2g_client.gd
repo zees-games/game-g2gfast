@@ -42,6 +42,10 @@ var _standing: Dictionary = {}
 var bridge: G2GNetBridge = null
 var link: Node = null
 
+## Keeps the screen covered, and the local body, the keys and the timer still, until the level,
+## the local player and its camera are all in. See [method _build_gate].
+var gate: DotLoadGate = null
+
 ## The server browser: dot-browser's client half.
 ##
 ## Built whether or not this client is connected, because looking for a server is what
@@ -135,6 +139,9 @@ var _watch_id: StringName = &""
 
 
 func _ready() -> void:
+	# First, before anything can be drawn: the map arrives after this node is in the tree.
+	_build_gate()
+
 	link = DotRegistry.get_node_service(LINK_SERVICE)
 	_offline = force_offline or link == null or OS.get_cmdline_user_args().has("--offline")
 
@@ -163,7 +170,9 @@ func _ready() -> void:
 	game.config = config
 	if _offline:
 		_offer_solo_maps()
+	game.covered = _covered
 	add_child(game)
+	_wire_gate_to_maps()
 
 	# Connected before anything can create a player. `JOIN` is what creates the local
 	# one and it arrives after `HELLO` has already said who we are — see [method _watch].
@@ -226,6 +235,51 @@ func _ready() -> void:
 
 	_grab_mouse()
 	set_process(true)
+
+
+# --- The load gate ---------------------------------------------------------
+
+## The screen stays covered, and the local body and the input stay still, until the level is
+## built, the local player exists and its camera is current.
+##
+## [b]Without it the first frames were a half-built world.[/b] Solo the player spawned in the
+## tick the first map landed and fell onto a floor that was still arriving; connected, the
+## client drew from its first frame with no player, no camera and a HUD with nobody to read; a
+## map change tore the level down in front of a body that kept moving, and the run timer was
+## fed the whole time. The gate does not stop the simulation by itself: [member G2GGame.covered]
+## freezes the tick (and with it the timers), [method G2GPlayer.simulate] skips a frozen body
+## and reads no keys while it settles, and the keys and the netcode sampling check
+## [method _covered].
+func _build_gate() -> void:
+	gate = DotLoadGate.new()
+	gate.name = "LoadGate"
+	# A headless run draws nothing, so there is nothing to compile; its warm-up would only wait
+	# out its timeout, and every suite that drives a client would wait with it.
+	gate.warm_up_on_open = DisplayServer.get_name() != "headless"
+	add_child(gate)
+	gate.hold(&"map", "Loading the map")
+	gate.require(&"spawned", func() -> bool:
+		return player != null and player.camera != null and player.camera.is_inside_tree(),
+		"Joining")
+
+
+## Releases the map hold once the first level is in, and holds again for each map change.
+## Offline the first map is already up (the game loads it inside its own `_ready`); connected
+## it arrives with the server's `load`.
+func _wire_gate_to_maps() -> void:
+	game.maps.changing.connect(
+		func(_from: DotMapDef, _to: DotMapDef) -> void: gate.hold(&"map", "Loading the map")
+	)
+	game.maps.changed.connect(
+		func(_map: DotMapDef, _loaded: Node) -> void: gate.release(&"map")
+	)
+	if game.maps.current != null:
+		gate.release(&"map")
+
+
+## True while the load gate covers the screen: no key, no mouse turn, no run.
+func _covered() -> bool:
+	return gate != null and not gate.is_open()
 
 
 # --- Dead bodies -------------------------------------------------------------
@@ -417,6 +471,7 @@ func _adopt(candidate: G2GPlayer) -> void:
 		return
 
 	player = candidate
+	gate.freeze(player)
 
 	# The sampler turns the view at the rate this player's style says, and until there
 	# is a player to ask it is on the game's own tunables. Done here rather than in
@@ -674,7 +729,10 @@ func _physics_process(delta: float) -> void:
 	# because a pack has to run on whatever client shell the player already has.
 	for i in range(ticks):
 		if net.clock.is_synced():
-			bridge.client_tick(net.clock.input_tick() - (ticks - 1 - i), _sampler.sample(delta))
+			# The clock above has advanced; only the sampling waits, so the mouse does not pile
+			# up a turn behind the cover and the server sees an idle body until it lifts.
+			var command: DotFpsCommand = DotFpsCommand.new() if _covered() else _sampler.sample(delta)
+			bridge.client_tick(net.clock.input_tick() - (ticks - 1 - i), command)
 
 
 func _process(delta: float) -> void:
@@ -853,6 +911,9 @@ func mouse_drives_view() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _covered():
+		return
+
 	# [b]An open menu or help screen owns the keyboard[/b], ahead of everything below: its
 	# own controls have already had the event, and what reaches here is only ever a key to
 	# close it or a key that must NOT fall through to the run — R behind a menu is a restart
