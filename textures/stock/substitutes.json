@@ -2371,6 +2371,372 @@
    "match": "vgui/*",
    "none": true,
    "why": "a UI image. Added 2026-10-16 (focus-map pass) [g2g-maps-stock-1]"
+  },
+  {
+   "match": "lambda_bunker/lb_xen_debris",
+   "texture": "wall_rock.png",
+   "mean": [
+    0.255,
+    0.21,
+    0.186
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name: xen debris is rock chunks; no reference, judged by name. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "nature/blendsandweed*",
+   "texture": "floor_ground_sand.png",
+   "mean": [
+    0.641,
+    0.584,
+    0.547
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name: sand blended with weeds; same family as nature/blendsandsand*. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/ramps/*_edge",
+   "none": true,
+   "why": "a mapper-custom ramp trim (surf_aquaflow, surf_greensway): a thin glowing edge strip, no packed texture and no reference; the tinted grid keeps the ramp outline readable. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/ramps/ramp_glow",
+   "none": true,
+   "why": "a mapper-custom glow overlay on aquaflow's ramps (its packed texture is a volumetric noclamp sprite); emissive effect, the grid is the honest stand-in. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/antosha/flow/cvet*",
+   "none": true,
+   "why": "a mapper-custom flower/petal prop (cvet = flower); a foliage atlas has no honest Kenney stand-in. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/iflr*",
+   "texture": "floor_stone_pattern_small.png",
+   "mean": [
+    0.433,
+    0.443,
+    0.49
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: infantry floor, as stone/infflrc. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "stone/infwllc",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name, no reference: stone wall. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_intrimb*",
+   "texture": "wall_brick_sand_center.png",
+   "mean": [
+    0.628,
+    0.561,
+    0.525
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name, no reference: interior brick. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_piranesi/pi_road",
+   "texture": "floor_stone_pattern_small.png",
+   "mean": [
+    0.433,
+    0.443,
+    0.49
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: road paving. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/sandtrim*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: plaster trim. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_dust/dust-trim*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: plaster trim. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "cs_havana/trmc",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: trim. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "sin_exteriorceiling_01",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: ceiling. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "customs/surf_vegetables/tides_floor_grainy_*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: grainy floor, a pale concrete-like slab. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "trainrail1",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: rail. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/env/space/pad_grate",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: metal grate. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props_building_details/courtyard_template*_bars*",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: iron bars. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props_rooftop/rooftopcluster*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "name, no reference: rooftop machinery. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/cs_assault/chain",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: chain. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/george/tesquo/nukroof*",
+   "texture": "cc0_metal_plates.jpg",
+   "filter": "linear",
+   "mean": [
+    0.272,
+    0.286,
+    0.29
+   ],
+   "units": 128,
+   "aspect": 1.0,
+   "why": "name, no reference: metal roof. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/de_inferno/pillar*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "name, no reference: stone pillar. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_nuke/nukwindow*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: nuke window. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_train/train_oldwindows_*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: old window. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/george/tesquo/prodwndw*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: window. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "tony/glas",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: glas = glass. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/effects/*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: effect sheets (funnel, light volume), as effects/*. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props_lab/warp_sheet",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: warp sheet effect. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props_combine/*_sheet",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "window or see-through by name, drawn as the other glass entries: energy sheet effect. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props_xen/instances/*/foliage/*",
+   "none": true,
+   "why": "stock xen foliage atlas, like the other foliage. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/combine_scanner/*",
+   "none": true,
+   "why": "emissive scanner eye. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/lego3/*",
+   "none": true,
+   "why": "plain coloured plastic brick underside; the grid tinted to it is the stand-in. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/antosha/fortony/*",
+   "none": true,
+   "why": "mapper-custom fishing props. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "fishingnet",
+   "none": true,
+   "why": "fishing net, open weave. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "de_chateau/curtain01a",
+   "none": true,
+   "why": "cloth. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "overlays/*",
+   "none": true,
+   "why": "overlay decal. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "aoki/*",
+   "none": true,
+   "why": "mapper-custom fade/tool. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "proxychains/shaders/*",
+   "none": true,
+   "why": "sky or shader proxy. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "proxy_map/*",
+   "none": true,
+   "why": "dev/measure proxy. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/cs_office/clouds",
+   "none": true,
+   "why": "sprite clouds. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/weapons/*",
+   "none": true,
+   "why": "weapon model skin. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/de_nuke/lifepreserver",
+   "none": true,
+   "why": "small prop. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "graything",
+   "none": true,
+   "why": "unknown flat grey. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/ramps/other_none",
+   "none": true,
+   "why": "mapper-custom tool. Added 2026-10-17 [g2g-maps-stock-1]"
   }
  ]
 }
