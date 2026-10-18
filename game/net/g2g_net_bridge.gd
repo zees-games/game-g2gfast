@@ -629,7 +629,7 @@ func transit_text() -> String:
 			and map_client.announced.id == id:
 		def = map_client.announced
 	if def != null:
-		name = def.name_or_id()
+		name = def.label()
 
 	if map_fetch_fraction > 0.0 and map_fetch_fraction < 1.0:
 		return "Loading %s… %d%%" % [name, int(map_fetch_fraction * 100.0)]

@@ -956,6 +956,8 @@ static func menu_rows(rows: Array) -> Array:
 		var tags: Array = []
 		if str(m.get("kind", "")) == "arena":
 			tags.append("combat")
+		if bool(m.get("workshop", false)):
+			tags.append("Workshop")
 		if bool(m.get("download", false)):
 			tags.append("downloads when chosen")
 		var rotating := bool(m.get("rotation", true))
@@ -978,9 +980,9 @@ func map_rows() -> Array:
 	list.sort_custom(func(a: DotMapDef, b: DotMapDef) -> bool: return String(a.id) < String(b.id))
 	for map in list:
 		out.append({
-			"id": String(map.id), "name": map.name_or_id(), "tier": map.tier,
+			"id": String(map.id), "name": map.label(), "tier": map.tier,
 			"kind": String(map.kind), "rotation": bool(map.meta.get("in_rotation", map.enabled)),
-			"current": map.id == current,
+			"current": map.id == current, "workshop": G2GMapCatalogue.is_workshop(map),
 		})
 	for raw in offered_maps:
 		if maps.catalogue.has(StringName(raw)):
@@ -1305,7 +1307,23 @@ func spawn_player(id: StringName) -> void:
 	if map != null:
 		player.teleport(map.spawn_for(track), map.spawn_yaw_for(track))
 	else:
-		player.teleport(Vector3(0.0, 2.0, 0.0), 0.0)
+		# A Workshop map is a plain scene, not a G2GMap, so its spawn is the one its zones
+		# file states (`Kind.SPAWN`, falling back to the main run's) and nothing else says.
+		var spawn := _zone_spawn(track)
+		if spawn != null:
+			player.teleport(spawn.destination, spawn.destination_yaw)
+		else:
+			player.teleport(Vector3(0.0, 2.0, 0.0), 0.0)
+
+
+## The spawn zone of [param track] in the zones the timer holds, or of the main run, or null.
+func _zone_spawn(track: int) -> DotTimerZone:
+	if timers == null or timers.zones == null:
+		return null
+	var spawn := timers.zones.first_of_kind(DotTimerZone.Kind.SPAWN, track)
+	if spawn == null and track != DotTimerTrack.MAIN:
+		spawn = timers.zones.first_of_kind(DotTimerZone.Kind.SPAWN, DotTimerTrack.MAIN)
+	return spawn
 
 
 func set_player_style(id: StringName, style_id: StringName) -> bool:

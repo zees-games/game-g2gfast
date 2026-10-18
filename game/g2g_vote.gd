@@ -1,6 +1,7 @@
 extends Node
 
 const G2GGame := preload("g2g_game.gd")
+const G2GVoteMapSource := preload("g2g_vote_map_source.gd")
 
 ## What plays next, decided by the players, with the genre's own rules.
 ##
@@ -144,7 +145,10 @@ func setup() -> DotResult:
 	# over a map they were still drawing. `G2GGame.change_map` is what an admin's
 	# `g2g_map` and the time limit call: it goes through the map-sync host, which tells
 	# the clients, waits for them, and only then swaps.
-	source = DotVoteMapSource.of(game.maps.catalogue, GameMaps.new(game))
+	# Our subclass of it, which adds the pack's title to a Workshop map's choice.
+	source = G2GVoteMapSource.new()
+	source.catalogue = game.maps.catalogue
+	source.session = GameMaps.new(game)
 
 	if not source.is_usable():
 		return DotResult.fail(DotError.CODE_STATE, "There is nothing to vote for.")

@@ -1306,7 +1306,7 @@ func board_snapshot() -> Dictionary:
 			row.merge({"id": String(id), "name": who.display_name, "seconds": here if who == player else -1,
 				"ping": -1, "you": who == player, "bot": who.replay != null}, true)
 			rows.append(row)
-	var map_name := game.maps.current.name_or_id() if game != null and game.maps != null and game.maps.current != null else ""
+	var map_name := game.maps.current.label() if game != null and game.maps != null and game.maps.current != null else ""
 	return {"server": {"name": "g2gfast", "game": "offline" if _offline else "", "map": map_name}, "players": rows}
 
 
@@ -1575,7 +1575,7 @@ func _restore_style() -> void:
 # --- What the menu asks the client (see G2GMenu.host) --------------------------------
 
 func menu_where() -> String:
-	var map_name := game.maps.current.name_or_id() if game != null and game.maps != null \
+	var map_name := game.maps.current.label() if game != null and game.maps != null \
 		and game.maps.current != null else "no map yet"
 	return "%s  ·  %s" % [map_name, "offline" if _offline else "online"]
 

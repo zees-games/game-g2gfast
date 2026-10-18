@@ -772,7 +772,7 @@ func _process(delta: float) -> void:
 	# The track is not repeated here either — `DotTimerHud` draws it beside the style,
 	# where a player reads the two together.
 	var parts := PackedStringArray([
-		game.maps.current.name_or_id() if game.maps.current != null else "-",
+		game.maps.current.label() if game.maps.current != null else "-",
 	])
 
 	# No limit (offline, by default) is no clock, not "0:00": the same rule as a vote with none.
@@ -872,7 +872,7 @@ func present_blind(delta: float) -> void:
 static func now_playing_text(map: DotMapDef) -> String:
 	if map == null:
 		return ""
-	var line := "Now playing %s" % map.name_or_id()
+	var line := "Now playing %s" % map.label()
 	var who := G2GMapCatalogue.credit(map)
 	if not who.is_empty():
 		line += ", by %s" % who

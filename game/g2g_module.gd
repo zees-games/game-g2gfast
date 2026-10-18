@@ -1681,7 +1681,7 @@ func _cmd_map(ctx: DotCmdContext) -> void:
 	if found.size() != 1:
 		ctx.reply("No map matches '%s'." % ctx.args[0] if found.is_empty() else "Which one?")
 		return
-	ctx.reply("Changing to %s." % found[0].name_or_id())
+	ctx.reply("Changing to %s." % found[0].label())
 	var changed: DotResult = await game.change_map(found[0].id)
 	if not changed.ok:
 		ctx.reply_error(changed)

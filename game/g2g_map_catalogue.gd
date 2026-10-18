@@ -110,14 +110,52 @@ static func credit(map: DotMapDef) -> String:
 ##
 ## [param extra_roots] are searched for imported maps after [constant IMPORTED_ROOTS] —
 ## an operator's own directory, wherever they keep it.
-static func discover(extra_roots: PackedStringArray = PackedStringArray()) -> DotMapCatalogue:
+##
+## [param content] is the Workshop's index (null is the process's shared one); the maps of
+## subscribed packs of an accepted kind follow it, after this game's own so that an id of
+## ours always wins. Solo or online is the index's, so a server lists none of them.
+static func discover(
+	extra_roots: PackedStringArray = PackedStringArray(), content: DotContentIndex = null
+) -> DotMapCatalogue:
 	var catalogue := DotMapCatalogue.new()
 	for map in scan(extra_roots):
 		var added := catalogue.add(map)
 		if not added.ok:
 			DotLog.warn(CHANNEL, "a map was refused by the catalogue",
 				{"id": String(map.id), "why": added.error.message})
+	catalogue.follow_content(content if content != null else DotContentIndex.shared(),
+		accepted_map_kinds())
 	return catalogue
+
+
+## The file a game pack states what it takes from subscriptions in (dot-cloud's
+## docs/workshop.md, "What a game accepts"). Read from there, not repeated, because the
+## site offers a pack by this same file and a second list would drift from it.
+const PROVIDES_PATH := "res://provides.json"
+
+## What [method accepted_map_kinds] answers when the file cannot be read.
+const ACCEPTED_MAP_KINDS_FALLBACK := ["surf", "bhop", "kz", "race"]
+
+
+## The `map_kind`s of subscribed maps this game lists: `accepts.map_kinds` in `provides.json`.
+static func accepted_map_kinds() -> PackedStringArray:
+	var out := PackedStringArray()
+	var path := G2GPaths.rebase(PROVIDES_PATH)
+	var parsed: Variant = null
+	if FileAccess.file_exists(path):
+		parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var accepts: Variant = (parsed as Dictionary).get("accepts") if parsed is Dictionary else null
+	var kinds: Variant = (accepts as Dictionary).get("map_kinds") if accepts is Dictionary else null
+	if not (kinds is Array):
+		kinds = ACCEPTED_MAP_KINDS_FALLBACK
+	for kind: Variant in (kinds as Array):
+		out.append(str(kind))
+	return out
+
+
+## Whether [param def] came from a subscribed pack rather than from this game or its disk.
+static func is_workshop(def: DotMapDef) -> bool:
+	return def != null and def.entry_key != ""
 
 
 ## Bring an existing catalogue up to date with the disk, in place.
@@ -150,9 +188,16 @@ static func rescan(
 			added.append(map.id)
 
 	for existing in catalogue.maps.duplicate():
+		# A subscribed pack's map is not on this disk to be found, and is not removed by
+		# its absence: the catalogue's own follower owns those rows.
+		if is_workshop(existing):
+			continue
 		if not seen.has(existing.id):
 			catalogue.remove(existing.id)
 			removed.append(existing.id)
+
+	# A map found on disk under a pack map's id replaced it above; give the pack its rows back.
+	catalogue.refresh_content()
 
 	return {"added": added, "removed": removed, "total": catalogue.size()}
 

@@ -1,0 +1,5 @@
+{"format": 1, "map": "fixture_hill", "meta": {"author": "fixture", "tier": 1}, "next_id": 4, "zones": [
+ {"from": [-2.0, 0.0, 6.0], "id": 1, "kind": 0, "shape": 0, "to": [2.0, 3.0, 10.0], "track": 0},
+ {"from": [-2.0, 0.0, -10.0], "id": 2, "kind": 1, "shape": 0, "to": [2.0, 3.0, -6.0], "track": 0},
+ {"destination": [0.0, 0.2, 8.0], "destination_yaw": 90.0, "from": [0.0, 0.0, 8.0], "id": 3, "kind": 8, "shape": 0, "to": [0.0, 0.0, 8.0], "track": 0}
+]}
