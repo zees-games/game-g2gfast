@@ -113,3 +113,19 @@ The rule (detail per class in [brush-entities.md](brush-entities.md)): **what a 
 The baked lighting needs `ARRAY_TEX_UV2` to reach the shader, and every importer route decides what a second UV set means: glTF's occlusion channel is greyscale (the neon goes grey) and its emissive channel is additive (it washes out). Building the `ArrayMesh` from a `PackedByteArray` costs one pass and keeps this repository's convention that maps are made in code. The vertex is ten floats; anything added since (a displacement blend's alpha) goes in its **own block after the indices**, so a pack imported now still loads in a game built before.
 
 **`Image.load_from_file` on a `res://` path works from source and ships nothing**: an export packs the imported `.ctex`, not the `.png`. `load()` is correct in both. The browser client is the target that cannot be debugged by looking at it.
+
+## Source 2 maps (`tools/vrf_import.py`)
+
+A CS2 map is a `.vpk` of compiled resources, not a `.bsp`. `tools/vrf_import.py` runs ValveResourceFormat's `Source2Viewer-CLI` (MIT, version 20.1) to export the map to glTF, then writes the same manifest and `.bin` the BSP importer does, so the loader, the zones file and every suite treat it as any other imported map. `surf_hologram` (Chent) is the first.
+
+```bash
+python3 -I tools/vrf_import.py <map.vpk> maps/imported --id <id> --cli <Source2Viewer-CLI> --work <scratch dir>
+```
+
+Needs numpy, scipy and trimesh, and refuses a map whose zones file has no attribution. What it does, and why:
+
+- **Axes and scale**: glTF is metres, Y up. `src = (g.z, g.x, g.y) / 0.0254` gives Source 2 units (the same movement numbers as the genre's units, so only the 0.0254 is undone), then the usual `to_godot`.
+- **Collision comes from the physics export, not the render mesh.** `world_physics_physics.glb` is a welded triangle soup; closed 12-triangle boxes become convex hulls, open sheets (the player-clip quads) stay triangles written in both windings, because the loader's concave shape has no backface collision.
+- **Zones and spawns come from the entity lump** (`maps/<name>/entities/default_ents.vents_c`, decoded with `-f ... -b DATA`): `[PR#]map_start` and `[PR#]map_end` triggers, one pit per `trigger_teleport`, `info_player_start` as the spawn.
+- **No author textures and no baked light.** Surfaces are `prototype` and tinted by a palette keyed on material name (`PALETTE`); the lightmap is a white patch. CS2's `irradiance.exr` is not decoded: a known gap. The stand-in materials are listed `none` in `textures/stock/substitutes.json`.
+- **glTF de-duplicates material names with a counter** (`side_rail_ramp_mat_66`); `material_of` strips it.

@@ -1,0 +1,8 @@
+{
+ "id": "surf_hologram",
+ "display_name": "surf: hologram",
+ "tier": 1,
+ "author": "Chent",
+ "attribution": {"author": "Chent", "source": "https://gamebanana.com/mods/525468 (page 'surf_hologram', submitter Chent; the download surf_hologram.zip holds surf_test_2.vpk, the CS2 map the page describes: 'T1 Linear surf map. map_start and map_end trigger_multiple zones'). Licence on the page: the generic GameBanana default, Creative Commons BY-NC-ND 4.0; the page says nothing further about altering or redistributing. Converted from the Source 2 .vpk with ValveResourceFormat (MIT); the author's textures and baked lighting are not carried, the game's own prototype textures are used. The author is credited on screen at the map change. Removal on request: tell the repository owner and the map is withdrawn.", "archive": "surf_hologram.zip (gamebanana.com/dl/1228064)", "recorded": "2026-10-18"},
+ "notes": "A CS2 (Source 2) map imported through tools/vrf_import.py. The timer volumes are the mapper's own map_start / map_end; every one of the fourteen trigger_teleports aims at the spawn."
+}

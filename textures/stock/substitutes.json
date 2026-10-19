@@ -2737,6 +2737,46 @@
    "match": "models/ramps/other_none",
    "none": true,
    "why": "mapper-custom tool. Added 2026-10-17 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "full_ramp_end_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "half_ramp_end_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "half_ramp_end_flip_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "ramp_surf_side_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "side_rail_ramp_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "tileable_surf_dec_mat",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "reflectivity_30",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "reflectivity",
+   "none": true,
+   "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
   }
  ]
 }
