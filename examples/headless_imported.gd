@@ -176,6 +176,10 @@ const STOCK_DRAWN := {
 	"surf_stonework3": 0.96,  # 99.9% on 2026-10-11; 56.8% own: looked at from the spawn (sheet stock_floors_before_5)
 	"surf_summit": 0.95,  # 98.9% on 2026-10-11; 93.8% own: looked at from the spawn (sheet stock_floors_before_6)
 	"surf_vegetables": 0.85,  # 88.5% on 2026-10-11 (sixth batch: its own Früchte textures read); 75.3% before it; 30.7% own: looked at from the spawn (sheet stock_floors_before_6)
+	"bhop_elate": 0.97,  # 100% on 2026-10-19 (stock_survey); armed late, imported after the floors sweep: looked at from the spawn
+	"bhop_nature": 0.97,  # 99.6% on 2026-10-19; the 0.4% is color/black, flat black on purpose: looked at from the spawn
+	"bhop_underground_crypt": 0.97,  # 100% on 2026-10-19 (batch8 stand-ins): looked at from the spawn
+	"surf_hologram": 0.14,  # 15.5% on 2026-10-19: a Source 2 map, its ramp materials are its own flat colours (none), no stock textures to stand in for
 }
 
 ## The most of a map, by triangles, that may draw the prototype grid with neither a
