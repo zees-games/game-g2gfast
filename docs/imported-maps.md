@@ -11,7 +11,7 @@ tools/bsp_preview.sh            # renders every one of them from its spawn (xvfb
 
 If the import prints `NO START` or `NO END` for the main track, the map labels neither and needs a `maps/zones/<id>.json`. It is still offered, but nothing will time a run on it.
 
-`tools/bsp_read.py` reads the file (including **LZMA-compressed lumps**, which map hosts' repack step produces while leaving the version at 20 and nothing in the header saying so), `tools/vtf.py` decodes textures (VTF mips are stored **smallest-first**: mip 0 is at the end), `tools/bsp_props.py` reads static props and `tools/bsp_mechanics.py` brush-entity behaviour.
+`tools/bsp_read.py` reads the file through dot-map's shared reader (`dot-map/tools/bsp`, cloned beside this repository or at `$DOTBSP_PATH`; a reader fix there reaches every converting game), including **LZMA-compressed lumps**, which map hosts' repack step produces while leaving the version at 20 and nothing in the header saying so; `tools/vtf.py` decodes textures (VTF mips are stored **smallest-first**: mip 0 is at the end), `tools/bsp_props.py` reads static props and `tools/bsp_mechanics.py` brush-entity behaviour.
 
 ## Scale and axes
 
