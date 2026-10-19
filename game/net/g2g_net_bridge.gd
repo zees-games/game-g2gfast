@@ -234,6 +234,11 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 	net.messages.on(G2GRequest.NAME, _on_request)
 
 	link = G2GNetLink.attached_to(link_parent, self, net.is_server)
+	# Not a bare add_child: the link must sit under the server node (RPCs route by path) yet die
+	# with this bridge. Without that a module reload left a second link, Godot renamed the live
+	# one `@Node@n`, and every RPC to a real client was lost without an error. DotGameLink frees
+	# it with the bridge, and without remove_child, which errors when the whole tree is torn down.
+	DotGameLink.attach(link, link_parent, self, G2GNetLink.NODE_NAME)
 
 	_build_map_sync()
 

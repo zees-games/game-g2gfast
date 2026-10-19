@@ -83,12 +83,11 @@ var voice_sent: int = 0
 var voice_received: int = 0
 
 
+## Builds the link; the caller places it (see [DotGameLink.attach]).
 static func attached_to(parent: Node, p_bridge: G2GNetBridge, server: bool) -> G2GNetLink:
 	var link := G2GNetLink.new()
-	link.name = NODE_NAME
 	link.bridge = p_bridge
 	link.is_server = server
-	parent.add_child(link)
 	return link
 
 
