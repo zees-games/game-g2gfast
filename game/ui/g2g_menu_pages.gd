@@ -31,6 +31,7 @@ static func install(menu: DotMenu, client: Node) -> void:
 	var hud_card := DotMenuSection.make("Heads-up display")
 	hud_card.add(DotMenuRow.toggle(&"show_speed", "Speed", "Your speed in units per second, under the clock.")) \
 		.add(DotMenuRow.toggle(&"show_splits", "Splits", "How each stage compares with your best and the record.")) \
+		.add(DotMenuRow.toggle(&"show_stage_splits", "Stage splits", "A panel of every stage against your best or the record, on a map that has stages. What it compares with is Split against, under HUD & theme.")) \
 		.add(DotMenuRow.toggle(&"show_zones", "Zones", "The start, stages and finish drawn as glowing boxes in the world.")) \
 		.add(DotMenuRow.toggle(&"show_keys", "Key display", "Which movement keys the simulation saw this tick.")) \
 		.add(DotMenuRow.toggle(&"show_crosshair", "Crosshair"))

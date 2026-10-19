@@ -64,6 +64,13 @@ signal standing_changed(player_id: StringName, standing: Dictionary)
 ## The last standing worked out per player. See [method board_fields].
 var _standings: Dictionary = {}
 
+## What a staged map's splits panel compares a player against changed: their personal best
+## and the record as cumulative splits, and their best time per section. The shape is
+## [method stage_reference]'s. Emitted after a spawn, a style change and a filed run or
+## section, never per tick; the net bridge sends it to that player alone, because a client
+## has no store to ask.
+signal stage_reference_changed(player_id: StringName, reference: Dictionary)
+
 ## Something worth saying about a finish. [param everyone] for a new record, which the
 ## whole server hears; otherwise only [param player_id].
 signal announced(player_id: StringName, text: String, everyone: bool)
@@ -577,6 +584,12 @@ func _build_timers() -> void:
 	timers.record_accepted.connect(_on_record_accepted)
 	timers.record_refused.connect(_on_record_refused)
 	timers.run_filed.connect(_on_timer_filed)
+	# A section filed on its own moves the player's best for it; the panel's gold and its
+	# sum of best read that. Refreshed here and not in the HUD, because online the HUD has no
+	# store and the server tells it.
+	timers.section_filed.connect(
+		func(result: Dictionary) -> void: refresh_stage_reference(match_id(result["player"]))
+	)
 	timers.practice_finished.connect(_on_practice_finished)
 	timers.start_refused.connect(
 		func(id: StringName, reason: String) -> void: announced.emit(match_id(id), reason, false)
@@ -2059,6 +2072,81 @@ func refresh_standing(id: StringName) -> void:
 	}
 	_standings[id] = standing
 	standing_changed.emit(id, standing)
+	await refresh_stage_reference(id)
+
+
+## Recomputes [signal stage_reference_changed] for a player. A map with no stages says
+## nothing: there is no panel to feed.
+##
+## Awaits the per-section bests before peeking them, because a database-backed store
+## answers [code]peek_best[/code] from a cache that only a fetch fills; the first read after a
+## map change would otherwise find nothing and the panel would show dashes until the next
+## finish.
+func refresh_stage_reference(id: StringName) -> void:
+	if not authoritative or timers == null or timers.store == null or maps == null or maps.current == null:
+		return
+	var player: G2GPlayer = players.get(id)
+	if player == null or player.timer == null:
+		return
+	var track: int = player.timer.track
+	var sections := timers.stage_count(track) + 1
+	if sections <= 1:
+		return
+	var key := record_key(id)
+	var style: StringName = player.timer.run.style_id
+	for section in range(1, sections + 1):
+		await timers.store.best_for(maps.current.id, track, style, key, section)
+	if not players.has(id):
+		return
+	var reference := stage_reference(id)
+	if not reference.is_empty():
+		stage_reference_changed.emit(id, reference)
+
+
+## What the splits panel compares [param id] against, from the store's cache (peeks, never
+## waits), or empty with no store, no player or no stages:
+## [code]{track, style, stages, pb: {splits, total}, wr: {splits, total}, bests}[/code].
+## [code]splits[/code] are cumulative times by stage number (as
+## [member DotTimerRecord.splits]), [code]total[/code] the same record's finish time and
+## [code]bests[/code] the player's best time by section number, 1..stages + 1.
+func stage_reference(id: StringName) -> Dictionary:
+	if timers == null or timers.store == null or maps == null or maps.current == null:
+		return {}
+	var player: G2GPlayer = players.get(id)
+	if player == null or player.timer == null:
+		return {}
+	var track: int = player.timer.track
+	var stages := timers.stage_count(track)
+	if stages <= 0:
+		return {}
+	var map_id := maps.current.id
+	var style: StringName = player.timer.run.style_id
+	var key := record_key(id)
+	var store := timers.store
+
+	var top: Variant = store.peek_top(map_id, track, style, 1)
+	if top is Array:
+		top = (top as Array)[0] if not (top as Array).is_empty() else null
+	var bests := {}
+	for section in range(1, stages + 2):
+		var found: Variant = store.peek_best(map_id, track, style, key, section)
+		if found is DotTimerRecord and (found as DotTimerRecord).time > 0.0:
+			bests[section] = (found as DotTimerRecord).time
+	return {
+		"track": track, "style": style, "stages": stages,
+		"pb": _reference_of(store.peek_best(map_id, track, style, key)),
+		"wr": _reference_of(top),
+		"bests": bests,
+	}
+
+
+## A record's splits and total as the panel takes them; empty ones for no record. Copied:
+## a record's splits are a Dictionary, and handing out the stored reference is the aliasing
+## bug this family has had before.
+static func _reference_of(record: Variant) -> Dictionary:
+	if not (record is DotTimerRecord):
+		return {"splits": {}, "total": 0.0}
+	return {"splits": (record as DotTimerRecord).splits.duplicate(true), "total": (record as DotTimerRecord).time}
 
 
 ## The standing [method refresh_standing] last worked out for [param id], or empty.

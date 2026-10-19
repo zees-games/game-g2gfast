@@ -4,6 +4,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GEvents := preload("../game/net/g2g_events.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
+const G2GHud := preload("../game/g2g_hud.gd")
 
 ## The real client, offline: what a player's keys do, rather than what the pieces do.
 ##
@@ -20,8 +21,8 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 51
-const SECTIONS := 13
+const CHECKS := 61
+const SECTIONS := 14
 
 var _passed := 0
 var _failed := 0
@@ -75,6 +76,7 @@ func _run() -> void:
 	await _test_the_map_menu()
 	await _test_the_wheel_jumps()
 	_test_solo_in_the_shell()
+	await _test_the_stage_splits_panel()
 
 	print("")
 	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
@@ -392,6 +394,75 @@ func _test_the_map_menu() -> void:
 	var _back_map: Variant = await menu.maps.change_fn.call(map_before)
 	for _i in 90:
 		await get_tree().physics_frame
+	_done()
+
+
+## Stands on a staged map's panel: hidden where there are no stages, one row per section where
+## there are, gone with its setting, gone while watching somebody, and fed a personal best and
+## a section best through the game's own store (the offline path, which is the same HUD code the
+## server's STAGE_REF feeds online; the wire half is in `headless_net`).
+func _test_the_stage_splits_panel() -> void:
+	_section("The stage splits panel: stages, setting, spectating and a comparison")
+	var hud: G2GHud = _client.hud
+	var panel: DotTimerSplitsPanel = hud.splits_panel
+	var settings: DotSettingsManager = _client.presentation.settings
+	var _first: Variant = await _client.menu.maps.change_fn.call(&"bhop_g2g_intro")
+	for _i in 30:
+		await get_tree().physics_frame
+	var intro_stages: int = _client.game.timers.stage_count(_client.player.timer.track)
+	_check(panel != null and (intro_stages > 0 or not panel.visible),
+		"a map with no stage lines has no panel", "stages %d" % intro_stages)
+
+	var _second: Variant = await _client.menu.maps.change_fn.call(&"bhop_g2g_stages")
+	for _i in 60:
+		await get_tree().physics_frame
+	var stages: int = _client.game.timers.stage_count(_client.player.timer.track)
+	_check(stages > 0 and panel.visible and panel.section_count == stages + 1,
+		"a staged map shows the panel with stages + 1 sections", "stages %d, sections %d" % [stages, panel.section_count])
+	_check(panel.rows_shown() == mini(panel.max_rows, stages + 1), "and a row for each", str(panel.rows_shown()))
+	_check(panel.get_parent() == hud and panel.mouse_filter == Control.MOUSE_FILTER_IGNORE,
+		"on the HUD, ignoring the mouse")
+
+	var _off := settings.set_value(&"show_stage_splits", false)
+	_check(not panel.visible and panel.section_count == 0, "show_stage_splits off hides it")
+	var _on := settings.set_value(&"show_stage_splits", true)
+	_check(panel.visible and panel.section_count == stages + 1, "and on brings it back")
+
+	# Spectating: the owner's best against somebody else's run compares nobody with nobody.
+	hud.set_spectating(&"somebody")
+	_check(not panel.visible, "watching somebody else hides it")
+	hud.set_spectating(&"")
+	_check(panel.visible, "and it returns when watching stops")
+
+	# A comparison from the game's own store: a personal best with splits and a best section.
+	var game: G2GGame = _client.game
+	var timer: DotTimer = _client.player.timer
+	var key: StringName = game.record_key(hud.player_id)
+	var record := DotTimerRecord.new()
+	record.map_id = game.maps.current.id
+	record.track = timer.track
+	record.style_id = timer.run.style_id
+	record.player_id = key
+	record.player_name = "Test"
+	record.time = 60.0
+	for k in range(1, stages + 1):
+		record.splits[k] = 10.0 * float(k)
+	var _put := await game.timers.store.put(record)
+	var section := DotTimerRecord.new()
+	section.map_id = record.map_id
+	section.track = record.track
+	section.style_id = record.style_id
+	section.player_id = key
+	section.player_name = "Test"
+	section.stage = 1
+	section.time = 9.5
+	var _put_section := await game.timers.store.put(section)
+	await game.refresh_stage_reference(hud.player_id)
+	_check(is_equal_approx(panel.comparison_total, 60.0) and panel.comparison_name == "PB",
+		"a stored personal best is the panel's comparison", "%s %s" % [panel.comparison_name, panel.comparison_total])
+	var _wr := settings.set_value(&"timer_comparison", &"wr")
+	_check(panel.comparison_name == "WR", "and Split against = the record switches it", panel.comparison_name)
+	var _pb := settings.set_value(&"timer_comparison", &"pb")
 	_done()
 
 

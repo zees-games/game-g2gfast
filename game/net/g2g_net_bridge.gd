@@ -64,6 +64,10 @@ signal clock_received(state: Dictionary)
 ## The local player's standing, from the server: [code]{pb, wr, rank, total}[/code].
 signal standing_received(player_id: int, standing: Dictionary)
 
+## The local player's splits comparison, from the server: [method G2GGame.stage_reference]'s
+## shape. The client has no store, so this is the only way its panel learns a best.
+signal stage_reference_received(player_id: int, reference: Dictionary)
+
 ## What the server allows on this client's own screen, and the chat commands it answers:
 ## [code]{flashlight, thirdperson, commands}[/code]. Client side. See [method rules_body].
 signal rules_received(rules: Dictionary)
@@ -247,6 +251,7 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 		game.timers.player_staged.connect(_on_staged)
 		game.run_filed.connect(_on_run_filed)
 		game.standing_changed.connect(_on_standing_changed)
+		game.stage_reference_changed.connect(_on_stage_reference_changed)
 		game.announced.connect(_on_announced)
 		game.movement_changed.connect(_on_movement_changed)
 		game.map_ready.connect(_on_map_ready)
@@ -824,6 +829,9 @@ func _admit(peer_id: int) -> void:
 	var standing := game.standing_of(_player_key(session_id))
 	if not standing.is_empty():
 		_tell(peer_id, G2GEvents.Kind.STANDING, G2GEvents.write_standing(session_id, standing))
+	var reference := game.stage_reference(_player_key(session_id))
+	if not reference.is_empty():
+		_tell(peer_id, G2GEvents.Kind.STAGE_REF, G2GEvents.write_stage_ref(session_id, reference))
 
 	# Every hunter already out on the course. A runner joining a server whose hunters were
 	# released an hour ago would otherwise be hit by things it was never told about.
@@ -1159,6 +1167,11 @@ func _on_staged(id: StringName, number: int, split: float) -> void:
 	_tell(peer_for_player(session_id), G2GEvents.Kind.NOTICE, G2GEvents.write_text(
 		session_id, "Stage %d — %s" % [number, DotTimerRun.format_time(split)]
 	))
+
+
+func _on_stage_reference_changed(id: StringName, reference: Dictionary) -> void:
+	var session_id := session_of(id)
+	_tell(peer_for_player(session_id), G2GEvents.Kind.STAGE_REF, G2GEvents.write_stage_ref(session_id, reference))
 
 
 func _on_standing_changed(id: StringName, standing: Dictionary) -> void:
@@ -1659,6 +1672,10 @@ func _on_event(message: DotNetMessage) -> void:
 			var standing := G2GEvents.read_standing(reader)
 			if bool(standing["ok"]):
 				standing_received.emit(int(standing["player_id"]), standing)
+		G2GEvents.Kind.STAGE_REF:
+			var reference := G2GEvents.read_stage_ref(reader)
+			if bool(reference["ok"]):
+				stage_reference_received.emit(int(reference["player_id"]), reference)
 		G2GEvents.Kind.MAPS:
 			maps_received.emit(G2GEvents.read_maps(reader))
 		G2GEvents.Kind.RULES:

@@ -126,6 +126,9 @@ static func schema() -> DotSettingsSchema:
 	s.add(DotSettingsDef.boolean(&"show_splits", true, &"running").with_scope(
 		DotSettingsDef.Scope.ACCOUNT
 	))
+	s.add(DotSettingsDef.boolean(&"show_stage_splits", true, &"running").with_scope(
+		DotSettingsDef.Scope.ACCOUNT
+	).with_description("The stage-by-stage panel on a map that has stages."))
 	s.add(DotSettingsDef.boolean(&"show_keys", true, &"running").with_scope(
 		DotSettingsDef.Scope.ACCOUNT
 	))

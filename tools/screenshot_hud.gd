@@ -59,6 +59,8 @@ var _done := false
 
 ## Set by `--fx`. See the class documentation.
 var _fx_only := false
+## Set by `--splits`: one frame, `hud_splits`, mid-run on bhop_g2g_stages.
+var _splits_only := false
 var _presentation: G2GPresentation = null
 
 ## How far into its own life each effect is captured, in seconds of the effect's time, and
@@ -71,6 +73,10 @@ var _fx_since := 0
 func _initialize() -> void:
 	DotLog.set_level(DotLog.Level.WARN)
 	_fx_only = "--fx" in OS.get_cmdline_user_args()
+	_splits_only = "--splits" in OS.get_cmdline_user_args()
+	if _splits_only:
+		# A staged map, so the stage splits panel has sections to draw.
+		OS.set_environment("G2G_INITIAL_MAP", "bhop_g2g_stages")
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 
 	# The movement actions, because the sampler reads them and an unregistered action
@@ -162,6 +168,10 @@ func _stage() -> void:
 		_stage_fx()
 		return
 
+	if _splits_only:
+		_shots = [{"name": "hud_splits", "arrange": _arrange_splits, "arranged": false}]
+		return
+
 	_shots = [
 		{"name": "hud_run", "arrange": _arrange_run, "arranged": false},
 		{"name": "hud_practice", "arrange": _arrange_practice, "arranged": false},
@@ -183,6 +193,47 @@ func _arrange_run() -> void:
 	cmd.buttons = DotFpsCommand.BUTTON_JUMP
 	_player.controller.current_command = cmd
 	_player.controller.state.velocity = Vector3(14.0, 0.0, 6.0)
+
+
+## The stage splits panel mid-run: a stored personal best with splits and two section bests,
+## a run past stage 1 and 2 and behind the best at stage 2, a notice up, keys down.
+func _arrange_splits() -> void:
+	_arrange_run()
+	_hud.notice("Stage 2 — 00:21.40")
+	var store := _game.timers.store
+	if store == null:
+		store = DotTimerStoreMemory.new()
+		_game.timers.store = store
+	var stages: int = _game.timers.stage_count(_player.timer.track)
+	var style: StringName = _player.timer.run.style_id
+	var record := DotTimerRecord.new()
+	record.map_id = _game.maps.current.id
+	record.track = _player.timer.track
+	record.style_id = style
+	record.player_id = _game.record_key(&"local")
+	record.player_name = "gamemann"
+	record.time = 15.0 * float(stages + 1)
+	for k in range(1, stages + 1):
+		record.splits[k] = 15.0 * float(k)
+	var _put := store.put(record)
+	for k in range(1, stages + 2):
+		var section := DotTimerRecord.new()
+		section.map_id = record.map_id
+		section.track = record.track
+		section.style_id = style
+		section.player_id = record.player_id
+		section.player_name = "gamemann"
+		section.stage = k
+		section.time = 14.0 + 0.3 * float(k)
+		var _put_section := store.put(section)
+	var run: DotTimerRun = _player.timer.run
+	run.begin(0.0)
+	var hz := 1.0 / maxf(run.tick_interval, 0.000001)
+	for line in [[1, 14.2], [2, 31.0]]:
+		run.ticks = int(float(line[1]) * hz)
+		run.mark_stage(int(line[0]), 0.0)
+	run.ticks = int(36.0 * hz)
+	_hud.refresh_stage_reference()
 
 
 func _arrange_practice() -> void:

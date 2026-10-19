@@ -13,6 +13,17 @@ const G2GArsenal := preload("g2g_arsenal.gd")
 ## in the corner), the stage, and PRACTICE the moment a checkpoint is used.
 
 var timer_hud: DotTimerHud = null
+## The per-section sidebar on a staged map: left edge, vertically centred, so it shares
+## nothing with the clock's block (bottom centre by default) or the notice line.
+var splits_panel: DotTimerSplitsPanel = null
+## The `show_stage_splits` setting. Separate from `show_splits`, which is the clock block's
+## one split line.
+var _show_stage_splits: bool = true
+## `timer_comparison` as the panel reads it: pb, wr or none.
+var _comparison: StringName = &"pb"
+## The splits comparison the server last sent this client, which has no store of its own.
+## Offline the game's own store answers and this stays empty.
+var _remote_reference: Dictionary = {}
 var _keys: Label = null
 var _status: Label = null
 var _spectating: Label = null
@@ -159,6 +170,17 @@ func _ready() -> void:
 	timer_hud.margin = Vector2(24.0, 92.0)
 	timer_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(timer_hud)
+
+	splits_panel = DotTimerSplitsPanel.new()
+	splits_panel.name = "StageSplits"
+	splits_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	splits_panel.offset_left = 0.0
+	splits_panel.offset_top = 0.0
+	splits_panel.offset_right = 0.0
+	splits_panel.offset_bottom = 0.0
+	splits_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	splits_panel.visible = false
+	add_child(splits_panel)
 
 	# The key display, directly under the clock, which is where every bhop stream in
 	# this genre has had it for fifteen years. Centred rather than left-aligned so it
@@ -327,6 +349,13 @@ func apply_layout(layout: Dictionary) -> void:
 					timer_hud.comparison = DotTimerHud.Comparison.PERSONAL_BEST
 		timer_hud.queue_redraw()
 
+	var want_panel := bool(layout.get("show_stage_splits", _show_stage_splits))
+	var compare := StringName(str(layout.get("comparison", _comparison)))
+	if want_panel != _show_stage_splits or compare != _comparison:
+		_show_stage_splits = want_panel
+		_comparison = compare
+		refresh_stage_reference()
+
 	if layout.has("position"):
 		var wanted := StringName(str(layout["position"]))
 		_timer_placement = wanted if PLACEMENTS.has(wanted) else &"bottom_centre"
@@ -383,6 +412,14 @@ func apply_theme(palette: DotMenuPalette = null) -> void:
 		timer_hud.ahead_colour = p.hud_ahead
 		timer_hud.behind_colour = p.hud_behind
 		timer_hud.queue_redraw()
+	if splits_panel != null:
+		# The plate stays the panel's own translucent one: it sits over the map, not over a
+		# theme's opaque card, and a heavier plate would be the loudest thing on the left.
+		splits_panel.neutral_colour = p.hud_text
+		splits_panel.ahead_colour = p.hud_ahead
+		splits_panel.behind_colour = p.hud_behind
+		splits_panel.dim_colour = Color(p.hud_text, 0.5)
+		splits_panel.queue_redraw()
 
 	# Text drawn straight over the world gets an outline in the theme's ink: the keys and
 	# the status line have no plate of their own, and white text over a pale sky, or a light
@@ -658,6 +695,13 @@ func bind(p_game: G2GGame, p_player: StringName) -> void:
 	# 128 times a second for a number that changes twice an hour is the cost this HUD
 	# would never notice locally and a server would.
 	game.map_ready.connect(func(_map: DotMapDef) -> void: refresh_stage_reference())
+	# The authoritative game says when a comparison moved (a section filed, a style
+	# changed); a client's game never does, and the server's message takes this path instead.
+	game.stage_reference_changed.connect(
+		func(id: StringName, _reference: Dictionary) -> void:
+			if id == player_id:
+				refresh_stage_reference()
+	)
 	game.run_filed.connect(
 		func(id: StringName, _run: DotTimerRun, _rank: int, _reason: String) -> void:
 			if id == player_id:
@@ -711,6 +755,7 @@ func refresh_stage_reference() -> void:
 
 	if timer == null:
 		timer_hud.set_stage_reference(0, {})
+		_feed_panel(null)
 		return
 
 	# The stage count is the watched player's track; the splits are this HUD's owner's own
@@ -719,6 +764,62 @@ func refresh_stage_reference() -> void:
 		game.timers.stage_count(timer.track),
 		game.timers.stage_splits_for(player_id) if shown_id() == player_id else {}
 	)
+	_feed_panel(timer)
+
+
+## The server's splits comparison for this HUD's player (a client has no store to read one
+## from). Kept, so a refresh from a map change or a track change finds it, and applied now.
+func apply_stage_reference(reference: Dictionary) -> void:
+	_remote_reference = reference
+	refresh_stage_reference()
+
+
+## Gives the splits panel its reference. Called from [method refresh_stage_reference]'s
+## moments only — a map, a track, a filed run or section, a setting — never per frame.
+##
+## [b]Hidden while spectating.[/b] The reference is the owner's personal best and section
+## bests, and a watched player's run against them is a comparison with nobody: every row
+## would be red or green for a reason that has nothing to do with the person on screen.
+## The clock still shows the watched run; the panel waits for the owner to be back.
+func _feed_panel(timer: DotTimer) -> void:
+	if splits_panel == null:
+		return
+	var stages := game.timers.stage_count(timer.track) if timer != null else 0
+	if stages <= 0 or not _show_stage_splits or shown_id() != player_id:
+		splits_panel.set_reference(0, {}, 0.0, {})
+		return
+
+	var reference := _reference_for(timer)
+	var set: Dictionary = {}
+	var label := "PB"
+	match _comparison:
+		&"wr":
+			set = reference.get("wr", {})
+			label = "WR"
+		&"none":
+			label = "-"
+		_:
+			set = reference.get("pb", {})
+	splits_panel.set_reference(
+		stages, set.get("splits", {}), float(set.get("total", 0.0)),
+		reference.get("bests", {}), label
+	)
+
+
+## The comparison data for the owner's current track and style: the game's own store where
+## there is one (offline, a server's local player), else what the server sent, if it was for
+## this track and style. A message for another one is a moment late and says nothing true.
+func _reference_for(timer: DotTimer) -> Dictionary:
+	var local := game.stage_reference(player_id)
+	if not local.is_empty():
+		return local
+	if (
+		not _remote_reference.is_empty()
+		and int(_remote_reference.get("track", -1)) == timer.track
+		and StringName(str(_remote_reference.get("style", ""))) == timer.run.style_id
+	):
+		return _remote_reference
+	return {}
 
 
 func notice(text: String) -> void:
@@ -750,6 +851,8 @@ func _process(delta: float) -> void:
 	timer_hud.style_name = player.timer_style.display_name if player.timer_style != null else ""
 	timer_hud.show_run(player.timer.run if player.timer != null else null, player.speed(),
 		player.controller.stats.to_dictionary())
+	if splits_panel != null and splits_panel.visible:
+		splits_panel.show_run(player.timer.run if player.timer != null else null)
 
 	# The key display. Read from the state's own buttons — what the SIMULATION saw —
 	# rather than from Input, so it shows what the server would show for a replay.

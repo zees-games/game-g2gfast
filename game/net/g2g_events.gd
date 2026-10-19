@@ -79,6 +79,11 @@ enum Kind {
 	## A dead player is alive again, at a start: every client shows the figure it hid on
 	## DEATH. Appended.
 	ALIVE,
+	## What a staged map's splits panel compares one player against: their best and the
+	## record as cumulative splits with their totals, and their best time per section.
+	## Server to that player only (a client has no store), on spawn, style change and a
+	## filed run or section. Appended.
+	STAGE_REF,
 }
 
 enum Ask {
@@ -404,6 +409,71 @@ static func read_standing(reader: DotNetReader) -> Dictionary:
 	}
 	out["ok"] = reader.ok()
 	return out
+
+
+## The most stage lines a STAGE_REF is believed to carry; a count past it is a corrupt
+## message, refused whole rather than allocating for it.
+const MAX_STAGE_REF := 128
+
+
+## A splits comparison as [method G2GGame.stage_reference] shapes it. Times are whole
+## microseconds in varints (exact, like STANDING); a split or best that does not exist is 0.
+## Splits are written for stages 1..n and bests for sections 1..n + 1.
+static func write_stage_ref(player_id: int, reference: Dictionary) -> PackedByteArray:
+	var writer := _w()
+	var stages := clampi(int(reference.get("stages", 0)), 0, MAX_STAGE_REF)
+	writer.write_varint(player_id)
+	writer.write_varint(maxi(int(reference.get("track", 0)), 0))
+	writer.write_string(str(reference.get("style", "")), 32)
+	writer.write_varint(stages)
+	for which in ["pb", "wr"]:
+		var set: Dictionary = reference.get(which, {})
+		writer.write_varint(_us(float(set.get("total", 0.0))))
+		var splits: Dictionary = set.get("splits", {})
+		for k in range(1, stages + 1):
+			writer.write_varint(_us(float(_split_of(splits, k))))
+	var bests: Dictionary = reference.get("bests", {})
+	for k in range(1, stages + 2):
+		writer.write_varint(_us(float(bests.get(k, 0.0))))
+	return writer.to_bytes()
+
+
+static func read_stage_ref(reader: DotNetReader) -> Dictionary:
+	var out := {
+		"player_id": reader.read_varint(),
+		"track": reader.read_varint(),
+		"style": reader.read_string(32),
+	}
+	var stages := reader.read_varint()
+	out["stages"] = stages
+	if stages > MAX_STAGE_REF:
+		out["ok"] = false
+		return out
+	for which in ["pb", "wr"]:
+		var total := float(reader.read_varint()) / 1000000.0
+		var splits := {}
+		for k in range(1, stages + 1):
+			var t := float(reader.read_varint()) / 1000000.0
+			if t > 0.0:
+				splits[k] = t
+		out[which] = {"splits": splits, "total": total}
+	var bests := {}
+	for k in range(1, stages + 2):
+		var t := float(reader.read_varint()) / 1000000.0
+		if t > 0.0:
+			bests[k] = t
+	out["bests"] = bests
+	out["ok"] = reader.ok()
+	return out
+
+
+static func _us(seconds: float) -> int:
+	return maxi(int(round(seconds * 1000000.0)), 0)
+
+
+## A split by stage number whether the record keyed it with an int or a string (JSON).
+static func _split_of(splits: Dictionary, k: int) -> Variant:
+	return splits.get(k, splits.get(str(k), 0.0))
 
 
 static func write_clock(state: Dictionary) -> PackedByteArray:

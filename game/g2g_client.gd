@@ -37,6 +37,8 @@ var hud: G2GHud = null
 var net: DotNetManager = null
 ## The last standing the server sent this player, for a HUD made after it arrived.
 var _standing: Dictionary = {}
+## The last splits comparison the server sent this player, kept for the same reason.
+var _stage_reference: Dictionary = {}
 var bridge: G2GNetBridge = null
 var link: Node = null
 
@@ -433,6 +435,8 @@ func _watch(id: StringName) -> void:
 	# shows the best and the record.
 	if not _standing.is_empty():
 		hud.apply_standing(_standing)
+	if not _stage_reference.is_empty():
+		hud.apply_stage_reference(_stage_reference)
 	_say_click_to_play()
 
 	# By id, like the HUD, and for the same reason: HELLO names us before JOIN makes us.
@@ -581,6 +585,13 @@ func _build_netcode() -> DotResult:
 		_standing = standing
 		if hud != null:
 			hud.apply_standing(standing)
+	)
+	bridge.stage_reference_received.connect(func(pid: int, reference: Dictionary) -> void:
+		if pid != bridge.local_player_id:
+			return
+		_stage_reference = reference
+		if hud != null:
+			hud.apply_stage_reference(reference)
 	)
 	# A hit of ours the server applied: the marker and the number on the body. Only sent to
 	# the one who fired, so there is no player to check.
@@ -1120,6 +1131,7 @@ func _hud_layout(st: DotSettingsManager) -> Dictionary:
 		"show_stats": st.get_bool(&"timer_show_stats", true),
 		"show_standing": st.get_bool(&"timer_show_standing", true),
 		"comparison": st.get_string(&"timer_comparison", "pb"),
+		"show_stage_splits": st.get_bool(&"show_stage_splits", true),
 		"compact": st.get_bool(&"timer_compact", true),
 		"size": st.get_int(&"timer_size", 30),
 		"position": st.get_string(&"timer_position", "bottom_centre"),
