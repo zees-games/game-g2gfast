@@ -268,9 +268,14 @@ func _build_gate() -> void:
 	platform.spawned_text = "Joining"
 	platform.spawned_fn = func() -> bool:
 		return player != null and player.camera != null and player.camera.is_inside_tree()
+	# The chat box, console, menu, help and spectating have the keyboard; polled by the
+	# platform each frame, so nothing needs forwarding from each of them.
+	platform.busy_fn = _input_busy
 	add_child(platform)
 	gate = platform.gate
 	gate.hold(&"map", "Loading the map")
+	# The cover blocks input too, so the sampler is still while it is up.
+	platform.input_blocked_changed.connect(func(_blocked: bool) -> void: _refresh_suspended())
 
 
 ## Releases the map hold once the first level is in, and holds again for each map change.
@@ -1443,12 +1448,17 @@ func _active_sampler() -> DotFpsSampler:
 	return player.sampler if _offline and player != null else _sampler
 
 
+## Something other than the cover has the keyboard or the screen.
+func _input_busy() -> bool:
+	return overlay_open() or (presentation != null and presentation.swallows_input()) \
+		or is_spectating()
+
+
 ## Movement stops while anything is taking the keyboard: the chat box, the console, the
 ## menu or the help screen. `DotFpsSampler` POLLS the keys, so swallowing events is not
 ## enough — see [method _wire_chat_window] for what that costs on a timer server.
 func _refresh_suspended() -> void:
-	var busy := overlay_open() or (presentation != null and presentation.swallows_input()) \
-		or is_spectating()
+	var busy := _input_busy() or (platform != null and platform.is_input_blocked())
 	for sampler in [_sampler, player.sampler if player != null else null]:
 		if sampler != null:
 			(sampler as DotFpsSampler).suspended = busy

@@ -29,10 +29,10 @@ const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 ## this file deliberately does not write down -- see [method _test_zones_have_floor].
 const EXPECTED_FIXED_CHECKS := 47
 
-## Checks each hand-written map adds: one for its zones' floor, six for its survey.
-const CHECKS_PER_MAP := 7
+## Checks each hand-written map adds: one for its zones' floor, one for the collision audit, six for its survey.
+const CHECKS_PER_MAP := 8
 
-const CHECKS := 68
+const CHECKS := 71
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so. The CHECKS
@@ -464,6 +464,17 @@ func _test_zones_have_floor() -> void:
 
 		_check(floating.is_empty(),
 			"%s stands every zone on something" % id, ", ".join(floating))
+
+		# dot-core's audit: drawn geometry with no shape near it, which a player walks through.
+		# Lenient (`anywhere`), as the drawing and the solids may sit in different subtrees.
+		var audit := DotCollisionAudit.audit(map, true)
+		var report: DotCollisionAudit = audit.value if audit.ok else null
+		if report != null and report.count() > 0:
+			for line in report.describe_lines().slice(0, 12):
+				print("    %s" % line)
+		_check(report != null and report.examined > 0 and report.count() == 0,
+			"%s: nothing drawn is walked through" % id,
+			audit.error.message if not audit.ok else "%d findings of %d examined" % [report.count(), report.examined])
 
 		map.queue_free()
 		await get_tree().process_frame

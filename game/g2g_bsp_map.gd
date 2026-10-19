@@ -263,6 +263,9 @@ func _mesh_instance(
 ) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.name = base_name if index == 0 else "%s%d" % [base_name, index + 1]
+	# The sky is a backdrop nobody can reach: opted out of dot-core's collision audit.
+	if base_name == "Sky":
+		mi.set_meta(&"dot_no_collision", true)
 	mi.mesh = mesh
 	add_child(mi)
 	for at in range(sources.size()):

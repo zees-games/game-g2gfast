@@ -1142,6 +1142,20 @@ func _test_stands_on_it() -> void:
 				shape_count += 1
 	_check(shape_count > 0, "with a collision shape on it", "%d shapes" % shape_count)
 
+	# dot-core's collision audit, REPORT ONLY: an imported map's drawing is the .bsp's faces and
+	# its solids the brushes, so triggers, clips-as-drawn and sky show up. Count and worst
+	# offenders (by kind) are printed; nothing fails on them.
+	var audit := DotCollisionAudit.audit(node, true)
+	if audit.ok:
+		var report: DotCollisionAudit = audit.value
+		var kinds := {}
+		for f: Dictionary in report.findings:
+			kinds[f["kind"]] = int(kinds.get(f["kind"], 0)) + 1
+		print("    collision audit: %d without a shape near them of %d examined (%d opted out) %s" % [
+			report.count(), report.examined, report.opted_out, str(kinds)])
+		for line in report.describe_lines().slice(1, 4):
+			print("      %s" % line)
+
 	var bot := game.add_player(&"bot", "Bot", true)
 	_check(bot != null, "a player joins")
 	if bot == null:
