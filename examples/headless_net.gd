@@ -931,6 +931,7 @@ func _publish_map_fixture(
 ## One content client for both ends, behind [SlowCloud], trusting only this suite's key.
 func _start_content(keys: Dictionary) -> void:
 	var config := DotCloudConfig.new()
+	config.side = "both"
 	config.cache_dir = SYNC_FIXTURE_ROOT.path_join("cache")
 	config.require_signed_manifests = true
 	config.trusted_keys = {"headless_net": str(keys["public"])}
