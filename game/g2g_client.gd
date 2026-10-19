@@ -15,6 +15,7 @@ const G2GMenuPages := preload("ui/g2g_menu_pages.gd")
 const G2GNetBridge := preload("net/g2g_net_bridge.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GPresentation := preload("g2g_presentation.gd")
+const G2GSoloMaps := preload("g2g_solo_maps.gd")
 const G2GUnits := preload("g2g_units.gd")
 
 ## A playable g2gfast: one local player, a camera, a HUD, and the keys.
@@ -34,11 +35,11 @@ const G2GUnits := preload("g2g_units.gd")
 var game: G2GGame = null
 var player: G2GPlayer = null
 var hud: G2GHud = null
-var net: DotNetManager = null
 ## The last standing the server sent this player, for a HUD made after it arrived.
 var _standing: Dictionary = {}
 ## The last splits comparison the server sent this player, kept for the same reason.
 var _stage_reference: Dictionary = {}
+var net: DotNetManager = null
 var bridge: G2GNetBridge = null
 var link: Node = null
 
@@ -430,13 +431,13 @@ func _watch(id: StringName) -> void:
 	# and the admit's CLOCK come together, and JOIN is what makes the player watched.
 	if bridge != null:
 		hud.clock_view = bridge.clock_view
-	apply_client_settings()
 	# Likewise the standing: kept from whenever it came, so a HUD made after it still
 	# shows the best and the record.
 	if not _standing.is_empty():
 		hud.apply_standing(_standing)
 	if not _stage_reference.is_empty():
 		hud.apply_stage_reference(_stage_reference)
+	apply_client_settings()
 	_say_click_to_play()
 
 	# By id, like the HUD, and for the same reason: HELLO names us before JOIN makes us.
