@@ -694,7 +694,13 @@ func bind(p_game: G2GGame, p_player: StringName) -> void:
 	# is a database handle behind an interface written to be asynchronous; asking it
 	# 128 times a second for a number that changes twice an hour is the cost this HUD
 	# would never notice locally and a server would.
-	game.map_ready.connect(func(_map: DotMapDef) -> void: refresh_stage_reference())
+	game.map_ready.connect(func(_map: DotMapDef) -> void:
+		# A comparison for the map just left is not this one's; the server sends the new
+		# one, and one that already arrived for this map stays.
+		if not _remote_reference.is_empty() and not _remote_is_for_this_map():
+			_remote_reference = {}
+		refresh_stage_reference()
+	)
 	# The authoritative game says when a comparison moved (a section filed, a style
 	# changed); a client's game never does, and the server's message takes this path instead.
 	game.stage_reference_changed.connect(
@@ -806,20 +812,29 @@ func _feed_panel(timer: DotTimer) -> void:
 	)
 
 
-## The comparison data for the owner's current track and style: the game's own store where
-## there is one (offline, a server's local player), else what the server sent, if it was for
-## this track and style. A message for another one is a moment late and says nothing true.
+## The comparison data for the owner's current track and style: the game's own store when the
+## game is authoritative (offline, a listen host), else only what the server sent, and only if
+## it was for this map, track and style. A message for another one is a moment late and says
+## nothing true.
 func _reference_for(timer: DotTimer) -> Dictionary:
-	var local := game.stage_reference(player_id)
-	if not local.is_empty():
-		return local
+	# Only an authoritative game's store is the player's truth. A client has a store too (a
+	# file store under user://), holding solo or other servers' bests, and letting it win
+	# over the server's STAGE_REF showed stale numbers online.
+	if game.authoritative:
+		return game.stage_reference(player_id)
 	if (
 		not _remote_reference.is_empty()
 		and int(_remote_reference.get("track", -1)) == timer.track
 		and StringName(str(_remote_reference.get("style", ""))) == timer.run.style_id
+		and _remote_is_for_this_map()
 	):
 		return _remote_reference
 	return {}
+
+
+func _remote_is_for_this_map() -> bool:
+	return game.maps != null and game.maps.current != null \
+		and str(_remote_reference.get("map", "")) == str(game.maps.current.id)
 
 
 func notice(text: String) -> void:

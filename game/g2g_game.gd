@@ -587,8 +587,12 @@ func _build_timers() -> void:
 	# A section filed on its own moves the player's best for it; the panel's gold and its
 	# sum of best read that. Refreshed here and not in the HUD, because online the HUD has no
 	# store and the server tells it.
+	# Only a section that improved: a slower crossing changes none of the bests, and each
+	# refresh awaits n + 1 store reads and sends a message.
 	timers.section_filed.connect(
-		func(result: Dictionary) -> void: refresh_stage_reference(match_id(result["player"]))
+		func(result: Dictionary) -> void:
+			if bool(result.get("improved", true)):
+				refresh_stage_reference(match_id(result["player"]))
 	)
 	timers.practice_finished.connect(_on_practice_finished)
 	timers.start_refused.connect(
@@ -2105,7 +2109,7 @@ func refresh_stage_reference(id: StringName) -> void:
 
 ## What the splits panel compares [param id] against, from the store's cache (peeks, never
 ## waits), or empty with no store, no player or no stages:
-## [code]{track, style, stages, pb: {splits, total}, wr: {splits, total}, bests}[/code].
+## [code]{map, track, style, stages, pb: {splits, total}, wr: {splits, total}, bests}[/code].
 ## [code]splits[/code] are cumulative times by stage number (as
 ## [member DotTimerRecord.splits]), [code]total[/code] the same record's finish time and
 ## [code]bests[/code] the player's best time by section number, 1..stages + 1.
@@ -2133,7 +2137,7 @@ func stage_reference(id: StringName) -> Dictionary:
 		if found is DotTimerRecord and (found as DotTimerRecord).time > 0.0:
 			bests[section] = (found as DotTimerRecord).time
 	return {
-		"track": track, "style": style, "stages": stages,
+		"map": map_id, "track": track, "style": style, "stages": stages,
 		"pb": _reference_of(store.peek_best(map_id, track, style, key)),
 		"wr": _reference_of(top),
 		"bests": bests,

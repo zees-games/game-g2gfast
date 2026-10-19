@@ -21,7 +21,7 @@ const G2GHud := preload("../game/g2g_hud.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 61
+const CHECKS := 67
 const SECTIONS := 14
 
 var _passed := 0
@@ -463,6 +463,51 @@ func _test_the_stage_splits_panel() -> void:
 	var _wr := settings.set_value(&"timer_comparison", &"wr")
 	_check(panel.comparison_name == "WR", "and Split against = the record switches it", panel.comparison_name)
 	var _pb := settings.set_value(&"timer_comparison", &"pb")
+
+	# Online the server's STAGE_REF wins over the local store (which holds a different PB,
+	# 60 s, from solo play), and a reference for another map is not accepted.
+	game.authoritative = false
+	var remote := {
+		"map": str(game.maps.current.id), "track": timer.track, "style": timer.run.style_id,
+		"stages": stages, "pb": {"splits": {}, "total": 42.0}, "wr": {"splits": {}, "total": 40.0},
+		"bests": {},
+	}
+	hud.apply_stage_reference(remote)
+	_check(is_equal_approx(panel.comparison_total, 42.0),
+		"a non-authoritative client compares with the server's STAGE_REF, not its own store",
+		str(panel.comparison_total))
+	var stale := remote.duplicate(true)
+	stale["map"] = "some_other_map"
+	hud.apply_stage_reference(stale)
+	_check(is_equal_approx(panel.comparison_total, 0.0),
+		"and a reference for another map is not shown", str(panel.comparison_total))
+	hud.apply_stage_reference(remote)
+	game.map_ready.emit(game.maps.current)
+	_check(is_equal_approx(panel.comparison_total, 42.0), "a map_ready on the same map keeps it")
+	stale["map"] = "some_other_map"
+	hud._remote_reference = stale
+	game.map_ready.emit(game.maps.current)
+	_check(hud._remote_reference.is_empty(), "and a map change drops one for the map just left")
+	game.authoritative = true
+	hud._remote_reference = {}
+	hud.refresh_stage_reference()
+	_check(is_equal_approx(panel.comparison_total, 60.0),
+		"while an authoritative game still reads its own store", str(panel.comparison_total))
+
+	# A section crossing refreshes the reference only when it improved a best.
+	var sent: Array[int] = [0]
+	var counter := func(_id: StringName, _ref: Dictionary) -> void: sent[0] += 1
+	game.stage_reference_changed.connect(counter)
+	game.timers.section_filed.emit({"player": key, "improved": false})
+	for _i in 5:
+		await get_tree().physics_frame
+	var after_slower: int = sent[0]
+	game.timers.section_filed.emit({"player": key, "improved": true})
+	for _i in 5:
+		await get_tree().physics_frame
+	game.stage_reference_changed.disconnect(counter)
+	_check(after_slower == 0 and sent[0] == 1, "a section that improved nothing sends no reference; one that did does",
+		"%d then %d" % [after_slower, sent[0]])
 	_done()
 
 

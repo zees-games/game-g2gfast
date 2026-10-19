@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 221
+const CHECKS := 224
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -514,7 +514,7 @@ func _test_handshake() -> void:
 			reference_in.append(ref)
 	)
 	var sent := {
-		"track": 0, "style": &"normal", "stages": 3,
+		"map": "bhop_x", "track": 0, "style": &"normal", "stages": 3,
 		"pb": {"splits": {1: 10.25, "2": 21.5}, "total": 33.125},
 		"wr": {"splits": {1: 9.0, 2: 20.0, 3: 29.5}, "total": 31.75},
 		"bests": {1: 9.5, 3: 11.0, 4: 12.0},
@@ -524,11 +524,18 @@ func _test_handshake() -> void:
 		and wire["pb"]["splits"].size() == 2 and is_equal_approx(float(wire["wr"]["splits"][3]), 29.5)
 		and wire["bests"].size() == 3 and not wire["bests"].has(2),
 		"a splits comparison survives the wire, absent splits staying absent", str(wire))
+	_check(wire["map"] == "bhop_x", "carrying the map it was worked out for", str(wire.get("map")))
+	# A message from before the map id was added ends after the bests: refused whole.
+	var short := G2GEvents.write_stage_ref(SESSION, sent)
+	short = short.slice(0, short.size() - 1 - "bhop_x".length())
+	var old_wire := G2GEvents.read_stage_ref(DotNetReader.new(short))
+	_check(not bool(old_wire["ok"]), "and one without a map id is refused, not guessed at", str(old_wire.get("ok")))
 	_server_game.stage_reference_changed.emit(G2GNetBridge._player_key(SESSION), sent)
 	_exchange()
 	_check(reference_in.size() == 1 and reference_in[0]["style"] == "normal"
 		and is_equal_approx(float(reference_in[0]["wr"]["total"]), 31.75),
 		"and the server sends the owner their comparison when it changes", str(reference_in))
+	_check(reference_in.size() == 1 and reference_in[0]["map"] == "bhop_x", "map id included", str(reference_in))
 	_check(G2GEvent.fits(), "and the new message kind still fits the kind field")
 
 	# HELLO has carried the server's tick rate since it was written and `read_hello`

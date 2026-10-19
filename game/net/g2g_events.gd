@@ -435,6 +435,9 @@ static func write_stage_ref(player_id: int, reference: Dictionary) -> PackedByte
 	var bests: Dictionary = reference.get("bests", {})
 	for k in range(1, stages + 2):
 		writer.write_varint(_us(float(bests.get(k, 0.0))))
+	# Last, so an older reader that stops after the bests never sees it; a newer reader of an
+	# older message runs out of bytes here and refuses the message whole.
+	writer.write_string(str(reference.get("map", "")), 64)
 	return writer.to_bytes()
 
 
@@ -463,6 +466,7 @@ static func read_stage_ref(reader: DotNetReader) -> Dictionary:
 		if t > 0.0:
 			bests[k] = t
 	out["bests"] = bests
+	out["map"] = reader.read_string(64)
 	out["ok"] = reader.ok()
 	return out
 
