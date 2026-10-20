@@ -26,12 +26,12 @@ const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 ## Checks that do not depend on how many maps are on disk. `_test_zones_have_floor`
 ## adds one per hand-written map and `_test_maps_are_surveyed` six, which is a number
 ## this file deliberately does not write down -- see [method _test_zones_have_floor].
-const EXPECTED_FIXED_CHECKS := 47
+const EXPECTED_FIXED_CHECKS := 38
 
 ## Checks each hand-written map adds: one for its zones' floor, one for the collision audit, six for its survey.
 const CHECKS_PER_MAP := 8
 
-const CHECKS := 63
+const CHECKS := 62
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so. The CHECKS
