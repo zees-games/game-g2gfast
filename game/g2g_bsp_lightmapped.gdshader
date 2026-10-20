@@ -50,6 +50,9 @@ uniform float uv_scale = 1.0;
 // more in a movement game than fidelity to the original does.
 uniform float ambient : hint_range(0.0, 1.0) = 0.10;
 uniform float light_boost : hint_range(0.0, 4.0) = 1.35;
+// Self-lit share of the colour, added after the light: a neon or hologram stand-in that
+// stays bright in the dark. 0 for every surface unless a map's dressing file asks (G2GMapDressing).
+uniform float glow : hint_range(0.0, 4.0) = 0.0;
 
 // The player's own flashlight. `unshaded` means no light in the scene reaches this
 // surface, so the one light a player carries is computed here, from a 4 x 1 float texture
@@ -96,5 +99,5 @@ void fragment() {
 	vec3 lm = texture(lightmap_tex, UV2).rgb;
 	vec3 world = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vec3 normal = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
-	ALBEDO = base.rgb * (lm * light_boost + ambient + flashlight(world, normal));
+	ALBEDO = base.rgb * (lm * light_boost + ambient + flashlight(world, normal) + glow);
 }

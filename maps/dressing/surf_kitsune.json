@@ -1,0 +1,107 @@
+{
+  "bloom": true,
+  "materials": [
+    {
+      "match": "neons/*",
+      "glow": 1.0
+    },
+    {
+      "match": "lights/*",
+      "glow": 2.0
+    },
+    {
+      "match": "custom/rainbowscroll",
+      "glow": 0.6
+    },
+    {
+      "match": "grids/*",
+      "glow": 0.7
+    }
+  ],
+  "props": [
+    {
+      "model": "holiday/lantern",
+      "at": [
+        -222.0,
+        -40.2,
+        205.0
+      ],
+      "scale": 4.0,
+      "light": {
+        "colour": [
+          1.0,
+          0.65,
+          0.3
+        ],
+        "energy": 3.0,
+        "range": 18,
+        "height": 3.0
+      }
+    },
+    {
+      "model": "holiday/lantern",
+      "at": [
+        -216.0,
+        -40.2,
+        205.0
+      ],
+      "scale": 4.0,
+      "light": {
+        "colour": [
+          1.0,
+          0.65,
+          0.3
+        ],
+        "energy": 3.0,
+        "range": 18,
+        "height": 3.0
+      }
+    },
+    {
+      "model": "nature/plant_bushLarge",
+      "at": [
+        -224.0,
+        -40.2,
+        200.0
+      ],
+      "scale": 5.0
+    },
+    {
+      "model": "nature/plant_bushLarge",
+      "at": [
+        -214.0,
+        -40.2,
+        200.0
+      ],
+      "scale": 5.0,
+      "yaw": 90
+    },
+    {
+      "model": "nature/grass_large",
+      "at": [
+        -219.0,
+        -40.2,
+        207.0
+      ],
+      "scale": 5.0
+    },
+    {
+      "model": "nature/flower_purpleB",
+      "at": [
+        -220.0,
+        -40.2,
+        203.0
+      ],
+      "scale": 5.0
+    },
+    {
+      "model": "nature/flower_redA",
+      "at": [
+        -218.0,
+        -40.2,
+        203.5
+      ],
+      "scale": 5.0
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "props": [
+    {"model": "food/chocolate", "at": [17.0, 16.9, 247.0], "scale": 12.0, "yaw": 20},
+    {"model": "food/candy-bar", "at": [23.5, 16.6, 249.0], "scale": 12.0, "yaw": -35},
+    {"model": "food/cookie", "at": [21.0, 16.7, 242.0], "scale": 8.0},
+    {"shape": "sphere", "size": 10.0, "height": 0.85, "colour": [0.97, 0.93, 0.92], "at": [9.5, 15.0, 246.0]}
+  ]
+}

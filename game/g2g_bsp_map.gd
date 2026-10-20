@@ -5,6 +5,7 @@ const G2GPaths := preload("g2g_paths.gd")
 const G2GLighting := preload("g2g_lighting.gd")
 const G2GTextures := preload("g2g_textures.gd")
 const G2GStockSubstitutes := preload("g2g_stock_substitutes.gd")
+const G2GMapDressing := preload("g2g_map_dressing.gd")
 
 ## A map imported from a Source .bsp, built at load from a manifest anywhere on disk.
 ##
@@ -210,6 +211,8 @@ func _construct() -> void:
 	# not one of them had ever been read. See [G2GLighting].
 	G2GLighting.apply(self, manifest.get("lighting", {}))
 	_apply_packed_sky(manifest.get("lighting", {}), dir)
+	# Sky, glow and props for the areas the pack could not carry (maps/dressing/<id>.json).
+	G2GMapDressing.apply(self, str(manifest.get("id", "")))
 	DotLog.info(CHANNEL, "imported map built", {
 		"map": str(manifest.get("id", "?")),
 		"surfaces": written,

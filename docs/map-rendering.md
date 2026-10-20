@@ -71,6 +71,10 @@ Most of a surf map is built from stock textures that were never in the file. In 
 - `clean_material` strips the compiler's cubemap `_x_y_z` suffix only from `maps/<map>/` names; a mapper's own `corals_1_5_8_9` is a name.
 - Open: a prop on displacement terrain should sample the displacement's lightmap the way `build_lightmap` parameterises it; a prop whose floor is far below in shadow takes that shadow.
 
+## Dressing: what one map's pack could not carry (g2g-maps-shot-sections-1)
+
+A map whose original sky, neon or scenery was never in its pack looks bare in a way no stock-texture row fixes. `maps/dressing/<id>.json`, read by `game/g2g_map_dressing.gd` at the end of `G2GBspMap`'s build, adds a procedural sky, a `glow` (a self-lit share added after the lightmap in `g2g_bsp_lightmapped.gdshader`) and a `tint` per material glob, and props: Kenney models under `props/kenney/` or a primitive. Props are scenery with no collision, so a dressing file can never change a route. Metres in the map's own space, the numbers a shot pose uses. Kenney and CC0 only; nothing from the original game. surf_kitsune takes no dressing sky: its black sky is deliberate (the Skies section, and `headless_imported` asserts it). Pilot: surf_hologram, surf_kitsune, surf_greensway, bhop_sqee. Open: surf_greensway's sky banner is still a flat label, and bhop_sqee's hard-variant area is not in the port at all (geometry, not dressing).
+
 ## Meshes over 256 surfaces
 
 Godot's per-mesh surface limit is 256 (`RenderingServer.MAX_MESH_SURFACES`); one map has 311. `G2GBspMap` starts a new `MeshInstance3D` every 256 surfaces: the first keeps the name `World`, which the suite and the probes look up, the rest are `World2`, `World3`. **Each drawn surface carries the index of the manifest surface it came from**; assigning materials by position in a second loop gives every surface after a skipped one its neighbour's texture. Collision is built from the manifest's brushes, not the drawn geometry, which is why the lost surfaces cost rendering and not play. The probes that read `World` alone see a smaller sample on that map, not a wrong one.
