@@ -17,10 +17,10 @@ extends RefCounted
 ##   "sky":  {"tint": [r,g,b], "overcast": 0.7, "grey": [r,g,b]},   # instead of top/horizon/ground: corrects the PACKED sky
 ##   "fog":  {"colour": [r,g,b], "density": 0.8, "start": 20, "end": 90, "sky_affect": 0.0},   # metres; any key optional
 ##   "bloom": true,
-##   "materials": [{"match": "neons/*", "glow": 1.2, "tint": [r,g,b]}],   # first match wins
+##   "materials": [{"match": "neons/*", "glow": 1.2, "tint": [r,g,b], "fog": 0}],   # first match wins; "fog": 0 draws the surface unfogged
 ##   "props": [{"model": "nature/plant_bushLarge", "at": [x,y,z], "yaw": 0, "scale": 1},
 ##             {"model": "holiday/lantern", "at": [x,y,z], "light": {"colour": [r,g,b], "energy": 2, "range": 12, "height": 1}},
-##             {"shape": "sphere", "size": 2.0, "colour": [r,g,b], "at": [x,y,z]}]
+##             {"shape": "sphere", "size": 2.0, "colour": [r,g,b], "at": [x,y,z], "unshaded": true}]
 ## }
 ## [/codeblock]
 ## Positions are metres in the map's own space (the numbers a [code]shot.gd[/code] pose
@@ -156,11 +156,34 @@ static func _materials(map: Node3D, rules: Variant) -> void:
 					mat.set_shader_parameter("tint", tinted)
 				if rule.has("glow"):
 					mat.set_shader_parameter("glow", float(rule["glow"]))
+				if rule.has("fog") and float(rule["fog"]) <= 0.0:
+					_exempt_from_fog(mat)
 				break
 
 
+## Draws a surface unfogged. Godot's fog is the environment's and a spatial shader cannot
+## read how much it added, so a fractional scale is not possible without redoing the fog
+## in the shader; the exemption is all-or-nothing, which is what a silhouette against the
+## sky needs (fog lightens a far island toward the haze colour, where the footage keeps it
+## dark). The shader is copied with `fog_disabled` added to its render modes, once per
+## source shader, so every surface that shares one still shares one.
+static func _exempt_from_fog(mat: ShaderMaterial) -> void:
+	var shader := mat.shader
+	if shader == null or shader.code.contains("fog_disabled"):
+		return
+	var key := StringName("dot_fog_free")
+	var copy: Shader = shader.get_meta(key) if shader.has_meta(key) else null
+	if copy == null:
+		copy = Shader.new()
+		copy.code = shader.code.replace("render_mode ", "render_mode fog_disabled, ")
+		copy.resource_name = shader.resource_path.get_file()
+		shader.set_meta(key, copy)
+	mat.shader = copy
+
+
 static func _is_water(mat: ShaderMaterial) -> bool:
-	return mat.shader != null and mat.shader.resource_path.ends_with("g2g_bsp_water.gdshader")
+	# A fog-exempt copy has no path of its own, so `_exempt_from_fog` names it after the original.
+	return mat.shader != null and (mat.shader.resource_path.ends_with("g2g_bsp_water.gdshader") or mat.shader.resource_name == "g2g_bsp_water.gdshader")
 
 
 ## Draws a surface see-through at [param alpha]. The importer reads `$translucent` into
@@ -244,6 +267,10 @@ static func _primitive(p: Dictionary) -> MeshInstance3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = _colour(p.get("colour"), Color.WHITE)
 	mat.roughness = 0.85
+	if bool(p.get("unshaded", false)):
+		# A flat colour that is the same lit or not: a far sheet of water or ground that
+		# stands in for the part of a 3D skybox the importer did not carry.
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mesh.material = mat
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh

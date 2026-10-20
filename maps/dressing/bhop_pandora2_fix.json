@@ -1,4 +1,8 @@
 {
   "sky": {"tint": [0.7, 1.4, 1.5]},
-  "fog": {"colour": [0.08, 0.55, 0.65], "density": 0.15, "start": 20, "end": 90}
+  "fog": {"colour": [0.08, 0.55, 0.65], "density": 0.15, "start": 20, "end": 90},
+  "materials": [
+    {"match": "models/props_xen/floatingislands/*", "fog": 0},
+    {"match": "models/props_xen/asteroids/*", "fog": 0}
+  ]
 }

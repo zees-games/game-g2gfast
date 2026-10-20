@@ -2,5 +2,8 @@
   "sky": {"overcast": 0.9, "grey": [0.58, 0.6, 0.63], "tint": [0.9, 0.92, 0.95]},
   "materials": [
     {"match": "*water_summit", "tint": [0.22, 0.32, 0.42]}
+  ],
+  "props": [
+    {"shape": "box", "size": 9000, "height": 0.0005, "depth": 1, "colour": [0.30, 0.42, 0.52], "unshaded": true, "at": [300, -410, 0]}
   ]
 }
