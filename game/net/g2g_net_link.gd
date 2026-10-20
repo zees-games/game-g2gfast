@@ -104,6 +104,11 @@ func _unbridged(kind: String, from_peer_id: int) -> void:
 	if _warned_unbridged:
 		return
 	_warned_unbridged = true
+	# A retired link (the game was switched away from) has its bridge cleared on purpose and
+	# receives what clients still send until LOAD_GAME reaches them: expected, not broken ordering.
+	if String(name).begins_with(DotGameLink.RETIRED):
+		DotLog.trace(CHANNEL, "a retired link dropped a payload", {"kind": kind, "from": from_peer_id})
+		return
 	DotLog.warn(CHANNEL, "a payload arrived before the link had a bridge, and was dropped", {
 		"kind": kind, "from": from_peer_id,
 	})
