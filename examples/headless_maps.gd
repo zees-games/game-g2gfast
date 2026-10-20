@@ -4,7 +4,6 @@ const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GMap := preload("../game/g2g_map.gd")
 const G2GMapCatalogue := preload("../game/g2g_map_catalogue.gd")
-const G2GMapRotationFile := preload("../game/g2g_map_rotation_file.gd")
 const G2GMapSurvey := preload("../game/g2g_map_survey.gd")
 const G2GMovement := preload("../game/g2g_movement.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
@@ -32,7 +31,7 @@ const EXPECTED_FIXED_CHECKS := 47
 ## Checks each hand-written map adds: one for its zones' floor, one for the collision audit, six for its survey.
 const CHECKS_PER_MAP := 8
 
-const CHECKS := 71
+const CHECKS := 63
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so. The CHECKS
@@ -328,39 +327,15 @@ func _test_rescan() -> void:
 	_done()
 
 
-## `cfg/map_rotation.yml`: the maps a server rotates, in five spellings, and what it does
-## to the catalogue -- the unlisted ones stay installed, out of rotation, and on the map list.
+## `cfg/maps.yml`: the maps a server rotates and what it does to the catalogue -- the unlisted
+## ones stay installed, out of rotation, and on the map list. The format's own checks are
+## dot-map's selftest; this is what the GAME does with it.
 func _test_rotation_file() -> void:
 	_section("rotation file")
-	var yml := G2GMapRotationFile.parse_yaml("# a comment\nmode: sequential\nmaps:\n  - bhop_g2g_intro\n  - 'surf_g2g_intro'  # trailing\ncooldown: 2\n")
-	_check(yml.ok and yml.value["maps"] == PackedStringArray(["bhop_g2g_intro", "surf_g2g_intro"])
-		and str(yml.value["settings"].get("mode")) == "sequential" and str(yml.value["settings"].get("cooldown")) == "2",
-		"a YAML rotation reads its list and the settings beside it", str(yml.value if yml.ok else yml.error.message))
-	var flow := G2GMapRotationFile.parse_yaml("maps: [a_one, \"b_two\"]\n")
-	_check(flow.ok and flow.value["maps"] == PackedStringArray(["a_one", "b_two"]), "a flow list too")
-	var bare := G2GMapRotationFile.parse_yaml("- one\n- two\n- one\n")
-	_check(bare.ok and bare.value["maps"] == PackedStringArray(["one", "two"]), "and a bare list, without repeats")
-	var obj := G2GMapRotationFile.parse_json("{\"maps\": [\"Surf_Mesa\", \"bhop_eazy\"], \"mode\": \"random\"}")
-	_check(obj.ok and obj.value["maps"] == PackedStringArray(["surf_mesa", "bhop_eazy"]), "a JSON object, ids lower-cased")
-	var arr := G2GMapRotationFile.parse_json("[\"x\", \"y\"]")
-	_check(arr.ok and arr.value["maps"].size() == 2, "a JSON array")
-	var txt := G2GMapRotationFile.parse_lines("surf_mesa\n// a comment\n# another\nbhop_eazy ; trailing\n\n")
-	_check(txt.ok and txt.value["maps"] == PackedStringArray(["surf_mesa", "bhop_eazy"]), "a mapcycle .txt")
-	var ini := G2GMapRotationFile.parse_lines("[rotation]\nmap = surf_mesa\nbhop_eazy = 1\n")
-	_check(ini.ok and ini.value["maps"] == PackedStringArray(["surf_mesa", "bhop_eazy"]), "an .ini, both ways round")
-	var bad := G2GMapRotationFile.parse_yaml("maps:\n  - one\nthis is not yaml\n")
-	_check(not bad.ok and bad.error.message.contains("line 3"), "a line it cannot read is refused, by number")
-
-	DirAccess.make_dir_recursive_absolute("user://rotation_test")
-	var f := FileAccess.open("user://rotation_test/map_rotation.txt", FileAccess.WRITE)
-	f.store_string("bhop_g2g_intro\n")
-	f.close()
-	_check(G2GMapRotationFile.find("user://rotation_test/map_rotation") == "user://rotation_test/map_rotation.txt",
-		"a path without an extension finds whichever spelling is there")
-
 	# Applied to a game: listed in, unlisted out, nothing removed.
 	var all_before := game.maps.catalogue.size()
-	game.rotation_ids = PackedStringArray(["bhop_g2g_intro"])
+	var parsed := DotMapRotationFile.from_trees([{"defaults": {"maps": ["bhop_g2g_intro"]}}], "game-g2gfast")
+	game.rotation_file = parsed.value
 	game.apply_rotation()
 	var pool := game.maps.rotation.pool()
 	_check(pool.size() == 1 and pool[0].id == &"bhop_g2g_intro" and game.maps.catalogue.size() == all_before,
@@ -378,7 +353,7 @@ func _test_rotation_file() -> void:
 	arena.id = &"surf_combat_test"
 	arena.kind = DotMapDef.KIND_ARENA
 	game.maps.catalogue.add(arena)
-	game.rotation_ids = PackedStringArray()
+	game.rotation_file = null
 	game.apply_rotation()
 	_check(not game.in_rotation(&"surf_combat_test") and game.in_rotation(&"bhop_g2g_intro"),
 		"with no file, every map rotates but a combat one")

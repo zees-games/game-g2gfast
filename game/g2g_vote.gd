@@ -106,6 +106,10 @@ var director: DotVoteDirector = null
 var source: DotVoteMapSource = null
 var commands: DotVoteCommands = null
 
+## `() -> Dictionary`: maps.yml's `commands:` block, so an operator renames the vote commands
+## without this game naming any. The module points it at the rotation file.
+var commands_spec_fn: Callable = Callable()
+
 var announce_fn: Callable = Callable()
 var is_admin_fn: Callable = Callable()
 
@@ -447,7 +451,8 @@ func install_commands(host: Object) -> DotResult:
 
 	commands = DotVoteCommands.new()
 	commands.director = director
-	commands.names = COMMAND_NAMES
+	commands.names = COMMAND_NAMES.duplicate()
+	commands.spec_fn = commands_spec_fn
 
 	var bound := commands.bind(host)
 

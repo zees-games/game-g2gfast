@@ -33,7 +33,7 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | `game/g2g_combat.gd`, `g2g_arsenal.gd`, `g2g_hunter*.gd`, `g2g_props.gd`, `g2g_spectate.gd` | the layers over the timer |
 | `game/g2g_bots.gd`, `g2g_bot_nav.gd`, `g2g_surf_course.gd`, `g2g_route_bot.gd` | the server's bots (`bot_quota`), the stage they ride read from the zones, the rule-based fallback and the route planned for it from dot-npc-ai's links (`tools/nav_probe.tscn` prints a map's links and timings); the simulator, planner and pilot are dot-player-controller's and dot-bot's |
 | `game/g2g_map.gd`, `g2g_geometry.gd`, `g2g_textures.gd`, `g2g_reach.gd`, `g2g_map_survey.gd` | hand-built maps |
-| `game/g2g_bsp_map.gd`, `g2g_map_mechanics.gd`, `g2g_lighting.gd`, `g2g_stock_substitutes.gd`, `*.gdshader`, `g2g_map_catalogue.gd`, `g2g_map_rotation_file.gd` | imported maps, the catalogue, rotation |
+| `game/g2g_bsp_map.gd`, `g2g_map_mechanics.gd`, `g2g_lighting.gd`, `g2g_stock_substitutes.gd`, `*.gdshader`, `g2g_map_catalogue.gd` | imported maps, the catalogue (rotation is dot-map's `DotMapRotationFile`) |
 | `game/g2g_client.gd`, `g2g_hud.gd`, `g2g_presentation.gd`, `g2g_bindings.gd`, `ui/`, and the other client files | the client; never loaded by a server |
 | `game/net/` | the bridge (its ordering is the file), net classes, the `@rpc` link (identical on both ends), events and requests |
 | `maps/` | the three hand-built maps (+ generated `.zones.json`), `imported_map.tscn`, `imported/` (link to g2gfast-maps), `zones/<id>.json` (hand-written; see its README), `routes/` (route files, recordings, surf caches) |

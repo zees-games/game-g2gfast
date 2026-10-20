@@ -236,6 +236,9 @@ func _module_load() -> DotResult:
 		return await game.change_map(id)
 	map_commands.player_count_fn = func() -> int:
 		return game.players.size() if game != null else 0
+	map_commands.rotation_file_fn = func() -> DotMapRotationFile: return game.rotation_file
+	map_commands.spec_fn = func() -> Dictionary:
+		return game.rotation_file.commands() if game.rotation_file != null else {}
 	map_commands.bind(self)
 	add_command("g2g_maps_reload", _cmd_maps_reload,
 		"Re-read maps/ from disk, picking up anything dropped in", DotAdminFlags.CHANGEMAP)
@@ -268,10 +271,10 @@ func _module_load() -> DotResult:
 	if not game.config.content_maps.is_empty():
 		game.fetch_content_maps()
 
-	# Which installed maps rotate: cfg/map_rotation.yml (or .json/.txt/.cfg/.ini). Changing
+	# Which installed maps rotate: cfg/maps.yml. Changing
 	# it re-reads the file now, as `g2g_maps_reload` does.
 	add_cvar("sv_map_rotation_file", game.config.map_rotation_file,
-		"File listing the maps that rotate (yml/json/txt/cfg/ini). Unlisted maps stay installed."
+		"maps.yml: the maps that rotate, in named rotations. Unlisted maps stay installed."
 	).changed.connect(
 		func(_old: String, new_value: String) -> void:
 			game.config.map_rotation_file = new_value.strip_edges()
@@ -525,6 +528,8 @@ func _build_services() -> DotResult:
 
 func _build_vote() -> DotResult:
 	vote = G2GVote.new()
+	vote.commands_spec_fn = func() -> Dictionary:
+		return game.rotation_file.commands() if game.rotation_file != null else {}
 	vote.name = "Vote"
 	vote.game = game
 	vote.authoritative = true

@@ -98,13 +98,13 @@ sv_deathmatch 0              // players can shoot each other
 sv_hunters 0                 // monsters walk the course
 sv_props 0                   // players can place practice blocks
 sv_ragdoll 1                 // a dead player falls as a ragdoll; 0 is a quick fall with no physics
-sv_map_rotation_file cfg/map_rotation   // which installed maps rotate; see below
+sv_map_rotation_file cfg/maps.yml   // which installed maps rotate; see below
 ```
 
 A player killed in deathmatch or by a hunter falls as a ragdoll ([dot-player-char](https://github.com/modcommunity/dot-player-char)) until they are back at the start; the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
 
 ### Which maps rotate
-Put the maps you want played in `cfg/map_rotation.yml`. A map you leave out stays installed: `g2g_map <id>` still loads it and **M** lists it, marked "not in rotation". It just never comes round on its own, and the vote and nominations don't offer it.
+Put the maps you want played in `cfg/maps.yml` (named rotations, wildcards and `sv_map_rotation <name>`: see dot-map docs/rotation.md). A map you leave out stays installed: `g2g_map <id>` still loads it and **M** lists it, marked "not in rotation". It just never comes round on its own, and the vote and nominations don't offer it.
 
 ```yaml
 mode: random          # or sequential
@@ -183,7 +183,7 @@ Collision comes from the map's brushes, not from what you can see, so invisible 
 
 What the map's own volumes do comes across too: a teleport sends you where the map aims it and your run goes on, boosters push, water is swum in (hold jump to come up), ladders are climbed, conveyors carry you, and a bunny-hop block sends you back if you stand on it. Blocks are timed for each player on their own, so nobody can sink a block under the player behind them. [`docs/brush-entities.md`](docs/brush-entities.md) goes through every brush entity and what happens to it.
 
-**Combat maps.** Some surf maps are built to fight on, not to time. Their zones file says `"kind": "arena"` and they are not part of g2gfast-maps: they live in `arena-surf-dm-maps`, for game-arena's deathmatch. `tools/bsp_import.py` writes such a map there, not into `maps/imported/`. If one is installed anyway it stays loadable, **M** marks it "combat", and it is left out of the rotation and the vote unless `cfg/map_rotation.yml` lists it.
+**Combat maps.** Some surf maps are built to fight on, not to time. Their zones file says `"kind": "arena"` and they are not part of g2gfast-maps: they live in `arena-surf-dm-maps`, for game-arena's deathmatch. `tools/bsp_import.py` writes such a map there, not into `maps/imported/`. If one is installed anyway it stays loadable, **M** marks it "combat", and it is left out of the rotation and the vote unless `cfg/maps.yml` (named rotations, wildcards and `sv_map_rotation <name>`: see dot-map docs/rotation.md) lists it.
 
 ### Zones
 Most surf and bunny-hop maps name their own start and end zones, stages and bonuses, and the importer reads those. For a map that doesn't, write the zones in `maps/zones/<id>.json` (see `maps/zones/README.md`), or draw them in the game.

@@ -11,7 +11,6 @@ const G2GHunters := preload("g2g_hunters.gd")
 const G2GMap := preload("g2g_map.gd")
 const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GMapMechanics := preload("g2g_map_mechanics.gd")
-const G2GMapRotationFile := preload("g2g_map_rotation_file.gd")
 const G2GMovement := preload("g2g_movement.gd")
 const G2GPaths := preload("g2g_paths.gd")
 const G2GPlayer := preload("g2g_player.gd")
@@ -134,11 +133,10 @@ var authoritative: bool = true
 ## Built from the manifest on every map change, on both ends: the client predicts with it.
 var mechanics: G2GMapMechanics = null
 
-## The map ids the rotation file lists, in its order; empty rotates every map. See
-## [member G2GConfig.map_rotation_file] and [method load_rotation].
-var rotation_ids: PackedStringArray = PackedStringArray()
+## The server's maps.yml, or null when there is none. See [method load_rotation].
+var rotation_file: DotMapRotationFile = null
 
-## Where [member rotation_ids] was read from, or "" when there was no file.
+## Where [member rotation_file] was read from, or "" when there was no file.
 var rotation_source: String = ""
 
 var maps: DotMapSession = null
@@ -893,70 +891,57 @@ func _build_maps() -> void:
 	maps.map_over.connect(_on_map_over)
 
 
-## Reads [member G2GConfig.map_rotation_file] and applies it. Called at boot and by
-## [method rescan_maps], so an operator who edits the file runs `g2g_maps_reload`.
+## Reads maps.yml and applies it. Called at boot and by [method rescan_maps], so an operator
+## who edits the file runs `g2g_maps_reload`.
+##
+## Two layers, weakest first: the game's own shipped `res://maps.yml` and the server's
+## [member G2GConfig.map_rotation_file]. The merge, the wildcards and the rules for what a
+## rotation does are dot-map's [DotMapRotationFile]; this game only supplies the paths.
 ##
 ## A file that is present and unreadable is an ERROR and changes nothing: rotating every
 ## map is a better failure than rotating none.
 func load_rotation() -> DotResult:
-	var path := G2GMapRotationFile.find(config.map_rotation_file if config != null else "")
-	var result := DotResult.success(PackedStringArray())
-	if path != "":
-		var read := G2GMapRotationFile.load_file(path)
-		if not read.ok:
-			DotLog.error(CHANNEL, "the map rotation file could not be read; every map rotates",
-				{"path": path, "why": read.error.message})
-			result = read
-		else:
-			rotation_ids = read.value["maps"]
-			rotation_source = path
-			var settings: Dictionary = read.value["settings"]
-			if maps != null and maps.rotation != null:
-				if settings.has("mode"):
-					var mode := str(settings["mode"]).to_lower()
-					maps.rotation.mode = DotMapRotation.Mode.SEQUENTIAL if mode == "sequential" \
-						else DotMapRotation.Mode.RANDOM
-				if settings.has("cooldown"):
-					maps.rotation.cooldown = maxi(int(settings["cooldown"]), 0)
-			DotLog.info(CHANNEL, "the map rotation file", {"path": path, "maps": rotation_ids.size()})
-			result = DotResult.success(rotation_ids)
-	else:
-		rotation_ids = PackedStringArray()
+	var paths := PackedStringArray()
+	for candidate in ["res://maps.yml", DotMapRotationFile.find(config.map_rotation_file if config != null else "")]:
+		if candidate != "" and not paths.has(candidate):
+			paths.append(candidate)
+	var read := DotMapRotationFile.load_files(paths, "game-g2gfast")
+	if not read.ok:
+		DotLog.error(CHANNEL, "the map rotation file could not be read; every map rotates",
+			{"why": read.error.message})
+		rotation_file = null
 		rotation_source = ""
+		apply_rotation()
+		return read
+	rotation_file = read.value
+	rotation_source = ", ".join(rotation_file.sources)
+	if rotation_file.has_rotations():
+		DotLog.info(CHANNEL, "the map rotation file", {"paths": rotation_source, "active": rotation_file.active_name()})
 	apply_rotation()
-	return result
+	return read
 
 
-## Marks every catalogue map in or out of rotation from [member rotation_ids].
+## Marks every catalogue map in or out of rotation from the file ([DotMapRotationFile.apply]).
 ##
-## Out of rotation is [member DotMapDef.enabled] off, which is what the rotation's pool,
+## Out of rotation is [member DotMapDef.in_rotation] off, which is what the rotation's pool,
 ## the vote's ballot and a nomination already read -- so a map can be left installed and
-## loadable by name without being played. An `arena`-kind map (a combat surf map, which
-## is game-arena's) is out unless the file names it.
+## loadable by name without being played. With no file an `arena`-kind map (a combat surf
+## map, which is game-arena's) is out; a file that lists it brings it in.
 func apply_rotation() -> void:
-	if maps == null or maps.catalogue == null:
+	if maps == null or maps.catalogue == null or maps.rotation == null:
 		return
-	var order: Array[StringName] = []
-	for id in rotation_ids:
-		order.append(StringName(id))
-	maps.rotation.order = order
+	if rotation_file != null and rotation_file.has_rotations():
+		rotation_file.apply(maps.rotation)
+		return
+	maps.rotation.order = []
 	for map: DotMapDef in maps.catalogue.maps:
-		# What the catalogue said before any rotation file touched it, kept the first time:
-		# an operator's `"enabled": false` in `catalogue_path` is never undone by a file
-		# that lists the map, or by there being no file at all.
-		if not map.meta.has("catalogue_enabled"):
-			map.meta["catalogue_enabled"] = map.enabled
-		var listed := rotation_ids.has(String(map.id)) if not rotation_ids.is_empty() \
-			else map.kind != DotMapDef.KIND_ARENA
-		listed = listed and bool(map.meta["catalogue_enabled"])
-		map.enabled = listed
-		map.meta["in_rotation"] = listed
+		map.in_rotation = map.kind != DotMapDef.KIND_ARENA
 
 
 ## Whether [param id] is in rotation. A map the catalogue does not hold is not.
 func in_rotation(id: StringName) -> bool:
 	var map: DotMapDef = maps.catalogue.get_map(id) if maps != null and maps.catalogue != null else null
-	return map != null and bool(map.meta.get("in_rotation", map.enabled))
+	return map != null and map.in_rotation and map.enabled
 
 
 ## Where zones drawn in-game for map [param id] are saved and read from.
@@ -998,7 +983,7 @@ func map_rows() -> Array:
 	for map in list:
 		out.append({
 			"id": String(map.id), "name": map.label(), "tier": map.tier,
-			"kind": String(map.kind), "rotation": bool(map.meta.get("in_rotation", map.enabled)),
+			"kind": String(map.kind), "rotation": map.in_rotation and map.enabled,
 			"current": map.id == current, "workshop": G2GMapCatalogue.is_workshop(map),
 		})
 	for raw in offered_maps:

@@ -222,15 +222,15 @@ func map_content_id(id: StringName) -> String:
 ## `--g2g-offline-map-seconds`) for an offline session that should still rotate.
 @export_range(0.0, 86400.0, 30.0) var offline_map_seconds: float = 0.0
 
-## The file that says which maps a server ROTATES, without an extension or with one:
-## `cfg/map_rotation` finds `cfg/map_rotation.yml`, `.yaml`, `.json`, `.txt`, `.cfg` or
-## `.ini` (see `g2g_map_rotation_file.gd` for the five shapes). Empty, or no such file,
-## rotates every map in the catalogue, which is what this game always did.
+## The file that says which maps a server ROTATES: `cfg/maps.yml`, layered over the game's own
+## shipped `res://maps.yml` (see dot-map's `DotMapRotationFile` for the format: named
+## rotations, `random` or `cycle`, wildcards). Empty, or no such file, rotates every map in the
+## catalogue but a combat one, which is what this game always did.
 ##
-## A map the file does not list stays INSTALLED: `map <id>` loads it and the map list
-## (M) shows it, marked as not in rotation. It is only left out of the rotation, the
-## vote and nominations. `sv_map_rotation_file`.
-@export var map_rotation_file: String = "cfg/map_rotation"
+## A map the active rotation does not list stays INSTALLED: `map <id>` loads it and the map
+## list (M) shows it, marked as not in rotation. It is only left out of the rotation, the
+## vote and nominations. `sv_map_rotation_file`; `sv_map_rotation <name>` switches the list.
+@export var map_rotation_file: String = "cfg/maps.yml"
 
 ## Seconds a map change waits for every connected client to say it has the new map.
 ## `sv_map_sync_timeout`.
