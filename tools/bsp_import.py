@@ -3391,6 +3391,31 @@ def attribution_problem(doc, map_id):
     return None
 
 
+def open_doors(bsp, specs):
+    """Take the doors a map's button opens out of the import (`"open_doors"`), and say how many.
+
+    Each spec is `{"name": "<door targetname>", "note": "..."}`. A `func_door*` of that name is
+    removed from the entity list before anything reads it, so it is neither solid nor drawn:
+    the doorway it closed is open, which is where the map's own button leaves it a moment
+    after a press. [b]This importer runs no outputs[/b], so a door that only a button opens
+    stayed shut for good and sealed whatever was behind it. surf_ski_2's catch-all floor
+    teleport puts a fallen player in a jail whose only way out is such a door: every player
+    and bot that fell was stuck. Opt-in and by name (a keypad door is a puzzle, a round's
+    door is a rule), and a name that matches no door stops the import.
+    """
+    opened = 0
+    for spec in specs:
+        want = str(spec["name"]).strip().lower()
+        doors = [e for e in bsp.entities
+                 if e.get("classname", "").startswith("func_door")
+                 and e.get("targetname", "").strip().lower() == want]
+        if not doors:
+            raise ValueError("open_doors: no func_door is named %r" % spec["name"])
+        bsp.entities[:] = [e for e in bsp.entities if not any(e is d for d in doors)]
+        opened += len(doors)
+    return opened
+
+
 def remove_geometry(bsp, specs):
     """Cut world geometry out of a map, where its zones file says to (`"remove"`).
 
@@ -3496,6 +3521,8 @@ def main(argv=None):
     if doc.get("remove"):
         gone_b, gone_f = remove_geometry(bsp, doc["remove"])
         print("  removed %d brush(es) and %d face(s) the zones file cuts out" % (gone_b, gone_f))
+    if doc.get("open_doors"):
+        print("  opened %d door(s) the zones file names" % open_doors(bsp, doc["open_doors"]))
     # A "fake skybox" is a brush a mapper painted to look like sky -- a custom texture,
     # not `tools/toolsskybox`, so SKIP_MASK does not know it. Its pixels never ship, so
     # it came out as a pale prototype slab across the sky (surf_interference's white

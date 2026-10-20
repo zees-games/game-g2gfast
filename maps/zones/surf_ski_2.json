@@ -2,6 +2,12 @@
  "id": "surf_ski_2",
  "kind": "arena",
  "kind_why": "A combat surf map: small, built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations -- it stays installed, loadable with `map`, and listed on M as combat -- and marks it for game-arena's deathmatch.",
+ "open_doors": [
+  {
+   "name": "jdoor",
+   "note": "The jail's door. The catch-all floor teleport (trigger_teleport aimed at `jailed`) puts every fallen player in a roofed cell whose only way out is this door, which the map's `jbutton` opens; the importer runs no outputs, so the door stayed shut and a player or bot that fell was stuck for good. Opened, a fall is a drop back into the fight. The keypad's secret_door is left shut: it is a puzzle, and its room has its own exits."
+  }
+ ],
  "author": "Massive Boredom and Mario",
  "attribution": {
   "author": "Massive Boredom and Mario",
