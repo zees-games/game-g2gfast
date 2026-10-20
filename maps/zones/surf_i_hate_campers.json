@@ -1,0 +1,13 @@
+{
+ "id": "surf_i_hate_campers",
+ "kind": "arena",
+ "kind_why": "A combat surf map: buyzones and bomb sites, 14 spawns a side, every teleport back to a spawn or the top of the course. 'arena' keeps it out of g2gfast's rotation, vote and nominations and marks it for game-arena's deathmatch.",
+ "author": "Snah",
+ "attribution": {
+  "author": "Snah",
+  "source": "https://gamebanana.com/mods/122339 (submitter Snah; licence CC BY-NC-ND 4.0 as listed on the page, redistribution 'ask')",
+  "archive": "surf_i_hate_campers.zip (surf_I_Hate_Campers.bsp)",
+  "recorded": "2026-10-20"
+ },
+ "notes": "Credit only, and deliberately no zones: a combat surf map with no finish. Two buyzones, two bomb sites, eleven trigger_teleports aimed at t_spawn, ct_spawn, b_site and top (the destinations are trigger_teleport brushes, not info_teleport_destination), four hurt volumes and four crusher tracktrains (not run here)."
+}
