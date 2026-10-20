@@ -1,0 +1,8 @@
+{
+  "sky": {"top": [0.3, 0.4, 0.43], "horizon": [0.78, 0.76, 0.68], "ground": [0.6, 0.5, 0.4]},
+  "materials": [
+    {"match": "de_dust/groundsand*", "tint": [2.6, 2.5, 2.3]},
+    {"match": "de_dust/stonewall02*", "tint": [2.0, 1.65, 1.15]},
+    {"match": "stone/stonewall050a", "tint": [1.8, 1.5, 1.1]}
+  ]
+}

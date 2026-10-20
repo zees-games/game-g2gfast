@@ -1,5 +1,20 @@
 {
   "materials": [
-    {"match": "de_tides/tides_floor_wood", "tint": [1.2, 1.7, 0.7]}
+    {
+      "match": "de_tides/tides_floor_wood",
+      "tint": [
+        1.2,
+        1.7,
+        0.7
+      ]
+    },
+    {
+      "match": "nature/water_canals_cheap001",
+      "alpha": 0.12
+    },
+    {
+      "match": "dev/dev_waterbeneath2",
+      "alpha": 0.12
+    }
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "materials": [
+    {"match": "fakesky/skyblockblack", "tint": [0.03, 0.03, 0.06]},
+    {"match": "fakesky/skycub2", "tint": [0.03, 0.03, 0.06]},
+    {"match": "collablol/rock_pur*", "tint": [2.5, 2.1, 2.9]},
+    {"match": "realworldtextures2/rock/rock_51", "tint": [2.2, 2.0, 2.8]}
+  ]
+}

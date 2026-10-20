@@ -1,0 +1,5 @@
+{
+  "materials": [
+    {"match": "models/ramps/ramp_glow_volumetric", "tint": [1.0, 0.45, 0.12], "glow": 1.0}
+  ]
+}
