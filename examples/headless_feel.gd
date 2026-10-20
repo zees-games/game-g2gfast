@@ -629,13 +629,24 @@ func _test_key_to_motion() -> void:
 	# and a predicted player only moves on a tick: the key landing just before one of those
 	# moved the eye on the second frame, one tick later, and failed this one run in nine
 	# with nothing wrong. The claim is that the prediction moves on the very next tick.
+	#
+	# And the eye is drawn at the clock's render alpha (see _fold_clock), not at the tick:
+	# a first tick from standstill is 1.3 mm, so the eye's step on that frame is 1.3 mm x
+	# alpha. Measured over 40 presses: alpha 0.03 -> 0.04 mm, and 0.004 -> 5 micrometres,
+	# under the 20 um motion floor above; and when the clock is slipping the alpha is
+	# negative (-0.14, -0.07 seen) and draws the frame between the two before, so the eye
+	# has not moved at all on the tick's own frame. 3 of 40 presses read "moved 2 frames,
+	# first tick 1" with the prediction working, and the next frame always moved. So the
+	# eye gets that one frame of grace; a prediction that waits for the server is ~14
+	# frames at the round trip below, which the second half of the check holds it to.
 	var first_tick := -1
 	for i in range(pressed_at + 1, ticks.size()):
 		if ticks[i] > ticks[i - 1]:
 			first_tick = i
 			break
-	_check(moved_at >= 0 and first_tick >= 0 and moved_at <= first_tick,
-		"the eye moved %d frame(s) after the key, %.1f ms, %d client ticks later, on the first frame that ran a tick (%d); the round trip is %d ms" % [
+	_check(moved_at >= 0 and first_tick >= 0 and moved_at <= first_tick + 1
+			and ms < _client.net.clock.rtt_ms() / 4.0,
+		"the eye moved %d frame(s) after the key, %.1f ms, %d client ticks later, within a frame of the first that ran a tick (%d); the round trip is %d ms" % [
 			frames, ms, (ticks[moved_at] - pressed_tick) if moved_at >= 0 else -1,
 			first_tick - pressed_at if first_tick >= 0 else -1, int(_client.net.clock.rtt_ms())])
 	_done()
