@@ -269,7 +269,7 @@ static func _primitive(p: Dictionary) -> MeshInstance3D:
 	mat.roughness = 0.85
 	if bool(p.get("unshaded", false)):
 		# A flat colour that is the same lit or not: a far sheet of water or ground that
-		# stands in for the part of a 3D skybox the importer did not carry.
+		# stands in for ground the map's 3D skybox never had (the .bsp's sky room holds none).
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mesh.material = mat
 	var mi := MeshInstance3D.new()
