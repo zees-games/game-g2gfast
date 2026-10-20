@@ -1,0 +1,6 @@
+{
+  "materials": [
+    {"match": "concrete/concretewall019a", "tint": [0.42, 0.37, 0.3]},
+    {"match": "concrete/concretefloor008a", "tint": [0.45, 0.38, 0.28]}
+  ]
+}

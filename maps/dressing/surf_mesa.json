@@ -1,0 +1,7 @@
+{
+  "materials": [
+    {"match": "concrete/concretefloor039a", "tint": [0.62, 0.74, 0.95]},
+    {"match": "concrete/concretewall011c", "tint": [0.62, 0.74, 0.95]},
+    {"match": "floor/bathroom_tile_floor_lg", "tint": [0.5, 0.62, 0.85]}
+  ]
+}
