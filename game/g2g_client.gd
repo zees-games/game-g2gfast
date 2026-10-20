@@ -1298,7 +1298,8 @@ func _wire_scoreboard() -> void:
 				if v == null or int(v) <= 0:
 					return "—"
 				return "%d / %d" % [int(v), int(row.get("of", 0))] if int(row.get("of", 0)) > 0 else str(int(v))},
-		{"key": &"seconds", "title": "Time", "kind": DotMenuScoreboard.KIND_DURATION},
+		# Seconds connected, not a run: titled "Time" next to Best and Rank it read as the run timer.
+		{"key": &"seconds", "title": "Played", "kind": DotMenuScoreboard.KIND_DURATION},
 		{"key": &"ping", "title": "Ping", "kind": DotMenuScoreboard.KIND_PING},
 	]
 	# Fastest first; nobody with a time after everybody with one.

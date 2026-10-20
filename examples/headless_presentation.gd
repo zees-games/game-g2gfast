@@ -1432,7 +1432,9 @@ func _test_the_menu_is_a_view_of_the_settings() -> void:
 	await get_tree().process_frame
 	_check(menu.is_open() and menu.screen.visible, "it opens")
 	var switches := _live(menu.screen, "DotMenuSwitch")
-	_check(switches.size() == 7, "the General page has a switch per HUD setting, zones and the counter included (%d)" % switches.size())
+	# dot-menu adds its Scoreboard section (one switch per hideable column) to General.
+	var board_switches := menu.scoreboard_column_rows().size()
+	_check(switches.size() == 7 + board_switches, "the General page has a switch per HUD setting, zones and the counter included, plus dot-menu's scoreboard columns (%d)" % switches.size())
 
 	(_row(menu, "show_speed") as Button).button_pressed = false
 	_check(not p.settings.get_bool(&"show_speed", true), "flipping one writes the setting it shows")
