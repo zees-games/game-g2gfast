@@ -1,0 +1,6 @@
+{
+  "materials": [
+    {"match": "*portal/light/*", "glow": 0.45},
+    {"match": "dev/reflectivity_70*", "glow": 0.35}
+  ]
+}

@@ -196,6 +196,42 @@
    "aspect": 1.0
   },
   {
+   "match": "de_aztec/stonework01moss*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference (bhop_aztec footage, 2026-10-20): the mossy stone is mostly pit WALL, grey cobble whose measured olive colour pulls the tint green; a grass texture made whole walls green. [ref-2]"
+  },
+  {
+   "match": "de_aztec/stn01moss*",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference (bhop_aztec footage, 2026-10-20): the mossy stone is mostly pit WALL, grey cobble whose measured olive colour pulls the tint green; a grass texture made whole walls green. [ref-2]"
+  },
+  {
+   "match": "de_aztec/stonework01g",
+   "texture": "wall_stone.png",
+   "mean": [
+    0.469,
+    0.48,
+    0.523
+   ],
+   "units": 128,
+   "aspect": 2.0,
+   "why": "reference (bhop_aztec footage, kappA_^ 41 s, 2026-10-20): the pit walls are pale grey cobble, not tan sandstone courses. [ref-2]"
+  },
+  {
    "match": "de_aztec/stonework01*",
    "texture": "wall_brick_sand_center.png",
    "why": "reference: sandstone blocks",
