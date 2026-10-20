@@ -9,6 +9,8 @@ extends RefCounted
 ## which no other map shares. Data in `maps/dressing/<id>.json`, drawn by this class, so
 ## the map importer and the pack stay untouched and a map without a file is unchanged.
 ##
+## A `box` takes `height` and `depth` as multiples of `size`: a banner board is one wide, thin box.
+##
 ## [codeblock]
 ## {
 ##   "sky":  {"top": [r,g,b], "horizon": [r,g,b], "ground": [r,g,b]},
@@ -156,7 +158,7 @@ static func _primitive(p: Dictionary) -> MeshInstance3D:
 	match str(p.get("shape", "sphere")):
 		"box":
 			var box := BoxMesh.new()
-			box.size = Vector3(size, size * float(p.get("height", 1.0)), size)
+			box.size = Vector3(size, size * float(p.get("height", 1.0)), size * float(p.get("depth", 1.0)))
 			mesh = box
 		"cylinder":
 			var cyl := CylinderMesh.new()
