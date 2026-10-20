@@ -105,11 +105,40 @@ static func _materials(map: Node3D, rules: Variant) -> void:
 			for rule: Dictionary in rules:
 				if not surface_name.match(str(rule.get("match", ""))):
 					continue
+				if rule.has("alpha"):
+					_make_see_through(mat, clampf(float(rule["alpha"]), 0.02, 1.0))
 				if rule.has("tint"):
-					mat.set_shader_parameter("tint", _colour(rule["tint"], Color.WHITE))
+					var tinted := _colour(rule["tint"], Color.WHITE)
+					# Keep the see-through alpha `_make_see_through` just wrote.
+					if rule.has("alpha") and not _is_water(mat):
+						tinted.a = float(rule["alpha"])
+					mat.set_shader_parameter("tint", tinted)
 				if rule.has("glow"):
 					mat.set_shader_parameter("glow", float(rule["glow"]))
 				break
+
+
+static func _is_water(mat: ShaderMaterial) -> bool:
+	return mat.shader != null and mat.shader.resource_path.ends_with("g2g_bsp_water.gdshader")
+
+
+## Draws a surface see-through at [param alpha]. The importer reads `$translucent` into
+## the manifest, but a map's own panel material (a blue glass pane with an opaque PNG)
+## can lack the flag, and then it is an opaque slab where the original was a window;
+## this is the per-map fix that needs no importer change. Water already writes ALPHA:
+## its two opacities are lowered instead (a pool's underside seen from a cave).
+static func _make_see_through(mat: ShaderMaterial, alpha: float) -> void:
+	if _is_water(mat):
+		mat.set_shader_parameter("alpha_down", alpha)
+		mat.set_shader_parameter("alpha_grazing", minf(1.0, alpha * 1.5))
+		return
+	var translucent := load(G2GPaths.rebase("res://game/g2g_bsp_translucent.gdshader")) as Shader
+	if mat.shader != translucent:
+		mat.shader = translucent
+	var tint: Variant = mat.get_shader_parameter("tint")
+	var c: Color = tint if tint is Color else Color.WHITE
+	c.a = alpha
+	mat.set_shader_parameter("tint", c)
 
 
 static func _props(map: Node3D, props: Variant) -> int:

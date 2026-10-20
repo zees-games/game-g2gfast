@@ -1,0 +1,7 @@
+{
+  "materials": [
+    {"match": "*beneath*", "alpha": 0.12, "tint": [0.03, 0.12, 0.14]},
+    {"match": "*water*", "alpha": 0.35, "tint": [0.04, 0.16, 0.18]},
+    {"match": "tony/hejvatten*", "alpha": 0.35, "tint": [0.04, 0.16, 0.18]}
+  ]
+}

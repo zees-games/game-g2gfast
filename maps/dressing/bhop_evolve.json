@@ -1,0 +1,6 @@
+{
+  "materials": [
+    {"match": "silkroad/fgworld/ice2", "tint": [0.38, 0.62, 0.64]},
+    {"match": "zyper/ice_stone", "tint": [0.38, 0.62, 0.64]}
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "materials": [
+    {"match": "de_tides/tides_floor_wood", "tint": [1.2, 1.7, 0.7]}
+  ]
+}

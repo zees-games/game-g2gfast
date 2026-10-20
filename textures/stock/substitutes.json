@@ -1210,6 +1210,19 @@
    "why": "name: snow (ambientCG Snow010A, CC0; Kenney has none). Added 2026-10-09 by name, for the maps imported since 10-04 [g2g-maps-stock-1]"
   },
   {
+   "match": "tile/tilefloor02*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0,
+   "why": "bhop_grove's walls and floors: the footage shows smooth dark slate concrete with faint seams, not the tan tile checker. The CC0 smooth concrete tinted to the map's measured slate (ref-2, 2026-10-20)"
+  },
+  {
    "match": "tile/*",
    "texture": "floor_tiles_tan_large.png",
    "mean": [

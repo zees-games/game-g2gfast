@@ -1,0 +1,7 @@
+{
+  "sky": {"top": [0.3, 0.27, 0.42], "horizon": [0.85, 0.62, 0.52], "ground": [0.25, 0.22, 0.28]},
+  "materials": [
+    {"match": "props/pinetrees/pine_*", "glow": 0.3},
+    {"match": "tile/tilefloor021a", "tint": [0.42, 0.45, 0.52]}
+  ]
+}
