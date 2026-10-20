@@ -18,6 +18,12 @@ uniform sampler2D face_dn : source_color, filter_linear, repeat_disable;
 
 // Applied to the sky as drawn; 1 shows the faces as the mapper painted them.
 uniform float exposure = 1.0;
+// A per-map dressing correction (maps/dressing/<id>.json, sky.tint / sky.overcast): the
+// faces are multiplied by `tint`, and `overcast` (0..1) pulls them toward their own grey,
+// then flattens that grey toward its mean so a clear sky's gradient reads as cloud cover.
+uniform vec3 tint = vec3(1.0);
+uniform float overcast : hint_range(0.0, 1.0) = 0.0;
+uniform vec3 overcast_grey = vec3(0.55);
 
 vec2 face_uv(vec2 st) {
 	return vec2((st.x + 1.0) * 0.5, 1.0 - (st.y + 1.0) * 0.5);
@@ -49,5 +55,7 @@ void sky() {
 		}
 	}
 
-	COLOR = colour * exposure;
+	float luma = dot(colour, vec3(0.299, 0.587, 0.114));
+	colour = mix(colour, mix(vec3(luma), overcast_grey, 0.5), overcast);
+	COLOR = colour * tint * exposure;
 }

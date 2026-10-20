@@ -14,6 +14,8 @@ extends RefCounted
 ## [codeblock]
 ## {
 ##   "sky":  {"top": [r,g,b], "horizon": [r,g,b], "ground": [r,g,b]},
+##   "sky":  {"tint": [r,g,b], "overcast": 0.7, "grey": [r,g,b]},   # instead of top/horizon/ground: corrects the PACKED sky
+##   "fog":  {"colour": [r,g,b], "density": 0.8, "start": 20, "end": 90, "sky_affect": 0.0},   # metres; any key optional
 ##   "bloom": true,
 ##   "materials": [{"match": "neons/*", "glow": 1.2, "tint": [r,g,b]}],   # first match wins
 ##   "props": [{"model": "nature/plant_bushLarge", "at": [x,y,z], "yaw": 0, "scale": 1},
@@ -51,6 +53,7 @@ static func apply(map: Node3D, map_id: String) -> int:
 	if data.is_empty():
 		return 0
 	_sky(map, data.get("sky", {}), bool(data.get("bloom", false)))
+	_fog(map, data.get("fog", {}))
 	_materials(map, data.get("materials", []))
 	var placed := _props(map, data.get("props", []))
 	DotLog.debug(CHANNEL, "map dressed", {"map": map_id, "props": placed})
@@ -74,6 +77,15 @@ static func _sky(map: Node3D, sky: Variant, bloom: bool) -> void:
 		if not (sky is Dictionary) or (sky as Dictionary).is_empty():
 			return
 		var d: Dictionary = sky
+		if not (d.has("top") or d.has("horizon") or d.has("ground")):
+			# No colours: correct the map's own packed sky instead of replacing it.
+			var packed := (env.sky.sky_material as ShaderMaterial) if env.sky != null else null
+			if packed != null:
+				packed.set_shader_parameter("tint", Vector3(_colour(d.get("tint"), Color.WHITE).r, _colour(d.get("tint"), Color.WHITE).g, _colour(d.get("tint"), Color.WHITE).b))
+				packed.set_shader_parameter("overcast", clampf(float(d.get("overcast", 0.0)), 0.0, 1.0))
+				var g := _colour(d.get("grey"), Color(0.55, 0.55, 0.55))
+				packed.set_shader_parameter("overcast_grey", Vector3(g.r, g.g, g.b))
+			return
 		var mat := ProceduralSkyMaterial.new()
 		mat.sky_top_color = _colour(d.get("top"), Color(0.2, 0.4, 0.8))
 		mat.sky_horizon_color = _colour(d.get("horizon"), Color(0.6, 0.7, 0.9))
@@ -84,6 +96,35 @@ static func _sky(map: Node3D, sky: Variant, bloom: bool) -> void:
 		env.sky = Sky.new()
 		env.sky.sky_material = mat
 		env.background_mode = Environment.BG_SKY
+		return
+
+
+## Fog the map's own `env_fog_controller` got wrong or never carried (bhop_pandora2_fix's
+## fog is navy where the footage's haze is cyan). Keys override what dot-lighting set:
+## `colour`, `density` (the fog's maximum, 0..1), `start` and `end` in metres, and
+## `sky_affect` (0..1: how much the fog tints the sky itself). Setting the colour also
+## sets the fog's light colour, which is what the 3D skybox and distant geometry fade to.
+static func _fog(map: Node3D, fog: Variant) -> void:
+	if not (fog is Dictionary) or (fog as Dictionary).is_empty():
+		return
+	var d: Dictionary = fog
+	for child in map.get_children():
+		var world := child as WorldEnvironment
+		if world == null or world.environment == null:
+			continue
+		var env := world.environment
+		env.fog_enabled = bool(d.get("enabled", true))
+		env.fog_mode = Environment.FOG_MODE_DEPTH
+		if d.has("colour"):
+			env.fog_light_color = _colour(d["colour"], env.fog_light_color)
+		if d.has("density"):
+			env.fog_density = clampf(float(d["density"]), 0.0, 1.0)
+		if d.has("start"):
+			env.fog_depth_begin = maxf(float(d["start"]), 0.0)
+		if d.has("end"):
+			env.fog_depth_end = maxf(float(d["end"]), env.fog_depth_begin + 0.1)
+		if d.has("sky_affect"):
+			env.fog_sky_affect = clampf(float(d["sky_affect"]), 0.0, 1.0)
 		return
 
 

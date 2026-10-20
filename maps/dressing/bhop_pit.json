@@ -1,0 +1,5 @@
+{
+  "materials": [
+    {"match": "blockworld-base/oldstone6_2*", "tint": [0.03, 0.12, 0.6]}
+  ]
+}
