@@ -902,7 +902,15 @@ func _build_maps() -> void:
 ## map is a better failure than rotating none.
 func load_rotation() -> DotResult:
 	var paths := PackedStringArray()
-	for candidate in ["res://maps.yml", DotMapRotationFile.find(config.map_rotation_file if config != null else "")]:
+	var stem := config.map_rotation_file if config != null else ""
+	var dir := DotMapRotationFile.config_dir_arg()
+	var found := DotMapRotationFile.find(stem, dir)
+	if found == "" and stem != "" and (dir != "" or stem != G2GConfig.new().map_rotation_file):
+		# The default name being absent is an install with no maps.yml; a name or a directory
+		# somebody chose that finds nothing is a typo they would otherwise never hear about.
+		DotLog.warn(CHANNEL, "the map rotation file was not found; every map rotates",
+			{"file": stem, "config_dir": dir})
+	for candidate in ["res://maps.yml", found]:
 		if candidate != "" and not paths.has(candidate):
 			paths.append(candidate)
 	var read := DotMapRotationFile.load_files(paths, "game-g2gfast")
@@ -931,6 +939,9 @@ func apply_rotation() -> void:
 	if maps == null or maps.catalogue == null or maps.rotation == null:
 		return
 	if rotation_file != null and rotation_file.has_rotations():
+		# An empty rotation plays "every installed map", but not the ones this game keeps out
+		# when there is no file: the fallback is the no-file behaviour, not a wider one.
+		rotation_file.fallback_in = func(map: DotMapDef) -> bool: return map.kind != DotMapDef.KIND_ARENA
 		rotation_file.apply(maps.rotation)
 		return
 	maps.rotation.order = []
