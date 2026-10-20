@@ -907,7 +907,7 @@ def stock_standin(pr):
     box = stock_standins.hull(pr["model"]) if mat else None
     if box is None:
         return None
-    return dict(pr, solid=2, standin=True), [stock_standins.box_mesh(box[0], box[1], mat)]
+    return dict(pr, solid=2, standin=stock_standins.source(pr["model"])), [stock_standins.box_mesh(box[0], box[1], mat)]
 
 
 def load_props(bsp, pak, notes, extra=()):
@@ -3698,6 +3698,10 @@ def main(argv=None):
             # Of those, the solid ones drawn and collided as a box (tools/stock_standins.py);
             # stock_models still counts them, because the model itself was not carried.
             "stock_standins": sum(1 for pr, _m in props_drawn if pr.get("standin")),
+            # ...and of those, the boxes whose size is a variant's or a written estimate
+            # (the base engine's models are not on /extra): see stock_standins.hull.
+            "stock_standins_estimated": sum(1 for pr, _m in props_drawn
+                                            if pr.get("standin") in ("variant", "estimate")),
             "surfaces": len(prop_surfaces),
             # Prototype prop surfaces painted a brush texture's colour (by name, or by a
             # material word), and props lit by the open-sky floor light for want of a lit

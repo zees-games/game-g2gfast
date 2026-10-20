@@ -67,7 +67,7 @@ def main():
                 continue
             material = str(s.get("material", ""))
             last = material.lower().rsplit("/", 1)[-1]
-            if "water" in last and "waterfall" not in last:
+            if ("water" in last or "vatten" in last or last.startswith("oceansurface")) and "waterfall" not in last:
                 # G2GBspMap.is_water_material: drawn by the water shader, not the grid.
                 drawn += tris
                 continue

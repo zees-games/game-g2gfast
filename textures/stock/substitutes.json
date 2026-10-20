@@ -2777,6 +2777,18 @@
    "match": "reflectivity",
    "none": true,
    "why": "a Source 2 prototype material (surf_hologram, by Chent): flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-18 [maps-vrf-poc-1]"
+  },
+  {
+   "match": "models/props_combine/tprings_globe*",
+   "treatment": "glass",
+   "alpha": 0.35,
+   "lighten": 0.2,
+   "why": "the energy globe of a combine ring prop (surf_omnibus): translucent glow in the original, so the glass treatment, never an opaque ball. Added 2026-10-19 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "models/props/generated_prop/*_neon",
+   "none": true,
+   "why": "a neon strip generated for the map (bhop_frotinity2): flat glowing colour, which the tinted grid already is. Added 2026-10-19 [g2g-maps-stock-1]"
   }
  ]
 }

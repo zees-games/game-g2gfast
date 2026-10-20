@@ -10,8 +10,10 @@ on was simply not there. This turns the ones that are *solid mass* into a plain 
     texture and no collision shape is read; the box is drawn in a stand-in material
     (`wood/`, `metal/`, `concrete/`, `models/props_wasteland/rockcliff`) that
     textures/stock/substitutes.json already maps to Kenney or ambientCG CC0 art.
-  * a machine without the archives gets no stand-ins (the same as before this existed), so a
-    map imported there differs from one imported here by exactly these boxes.
+  * the base engine's models are not on /extra: a variant's size from the archive stands in
+    (`_sibling`), else a written estimate (`ESTIMATES`), counted apart in the manifest.
+  * a machine without the archives gets only the estimates, so a map imported there differs
+    from one imported here by the exact and variant boxes.
 
 Everything else is a written `none` (RULES, last block), each with its why. The deciding
 question is "is a solid box a faithful stand-in?": a window frame, an arch, a pipe elbow or a
@@ -20,6 +22,7 @@ invisible-but-wrong wall is worse than a missing prop. Lights and foliage are de
 tools/stock_props_survey.py (none).
 """
 import fnmatch
+import re
 import struct
 
 import stock_archives
@@ -112,11 +115,8 @@ def material_for(model):
     return None
 
 
-def hull(model):
-    """(min, max) of the model's hull from the archive's MDL header, or None."""
-    if model in _cache:
-        return _cache[model]
-    out = None
+def _exact(model):
+    """(min, max) from the archive's own MDL header, or None."""
     raw = stock_archives.original(model)
     if raw is not None and len(raw) >= 128 and raw[:4] == b"IDST":
         # id, version, checksum, name[64], length, eyeposition, illumposition, hull_min, hull_max
@@ -124,9 +124,110 @@ def hull(model):
         lo, hi = v[0:3], v[3:6]
         sides = [hi[i] - lo[i] for i in range(3)]
         if all(s == s for s in v) and min(sides) > 0.5 and MIN_SIDE <= max(sides) <= MAX_SIDE:
-            out = (lo, hi)
-    _cache[model] = out
-    return out
+            return (lo, hi)
+    return None
+
+
+def _median(xs):
+    xs = sorted(xs)
+    return xs[len(xs) // 2]
+
+
+def _sibling(model):
+    """The median hull of the archive's variants of this model (rockcliff05f -> rockcliff07e), or None.
+
+    The base engine's models are not on /extra, but the shooter's archive carries some of
+    the same families; a variant is the right order of size and the right orientation, which
+    beats a guess. Only sizes are read, as for `_exact`."""
+    d, _, name = model.lower().rpartition("/")
+    if name.endswith(".mdl"):
+        name = name[:-4]
+    stem = re.sub(r"\d+[a-z]?$", "", name)
+    if not stem or stem == name:
+        return None
+    pat = re.compile(r"^" + re.escape(stem) + r"\d+[a-z]?$")
+    found = []
+    for key in stock_archives._load():
+        kd, _, kn = key.rpartition("/")
+        if kd == d and kn.endswith(".mdl") and pat.match(kn[:-4]) and kn[:-4] != name:
+            h = _exact(key)
+            if h:
+                found.append(h)
+    if not found:
+        return None
+    return (tuple(_median([h[0][i] for h in found]) for i in range(3)),
+            tuple(_median([h[1][i] for h in found]) for i in range(3)))
+
+
+# Where neither the archive nor a variant has the model: (glob on the file name, x, y, z size,
+# z of the floor under the model's origin). Sizes are estimates from the name and the closest
+# shooter-archive models of the same kind (fences, rails and barriers run along y, a car's
+# length is y: measured on car_nuke 85x197x63, tides_fences, handrail_*); the box is centred
+# on x and y. They are written down as estimates, and the manifest counts them apart.
+ESTIMATES = [
+    ("exterior_fence003a", 8, 256, 128, 0),
+    ("exterior_fence00*", 8, 192, 112, 0),
+    ("interior_fence00*", 8, 128, 96, 0),
+    ("fence0*", 8, 112, 90, 0),
+    ("handrail04_long", 4, 256, 40, 0),
+    ("handrail04_*", 4, 128, 40, 0),
+    ("payphone001a", 14, 22, 64, 0),
+    ("utilitypole0*", 24, 24, 448, 0),
+    ("pole_448*", 24, 24, 448, 0),
+    ("dock01_polecluster*", 96, 96, 256, 0),
+    ("piling_cluster*", 96, 96, 256, 0),
+    ("*_256", 32, 32, 256, 0),
+    ("prefab_piling*", 32, 32, 256, 0),
+    ("concrete_barrier001a", 28, 120, 48, 0),
+    ("concrete_debris256barricade*", 64, 256, 64, 0),
+    ("concrete_debris256pile*", 128, 256, 64, 0),
+    ("concrete_debris128pile*", 128, 128, 48, 0),
+    ("concrete_section128wall*", 24, 128, 128, 0),
+    ("concrete_wall02a", 24, 128, 96, 0),
+    ("concrete_wallpile*", 128, 128, 64, 0),
+    ("truck001a", 120, 300, 140, 0),
+    ("generatortrailer*", 90, 220, 110, 0),
+    ("trailer*", 100, 400, 130, 0),
+    ("car0*", 80, 190, 64, 0),
+    ("cargo_container*", 133, 388, 130, 0),
+    ("horizontalcoolingtank*", 108, 316, 123, 0),
+    ("gravestone*", 32, 16, 64, 0),
+    ("rockgranite*", 128, 128, 100, 0),
+    ("rock_riverbed*", 180, 180, 110, 0),
+    ("rockcliff*", 160, 160, 200, 0),
+]
+
+
+def _estimate(model):
+    name = model.rsplit("/", 1)[-1]
+    if name.endswith(".mdl"):
+        name = name[:-4]
+    for pat, sx, sy, sz, z0 in ESTIMATES:
+        if fnmatch.fnmatch(name, pat):
+            return ((-sx / 2.0, -sy / 2.0, float(z0)), (sx / 2.0, sy / 2.0, float(z0 + sz)))
+    return None
+
+
+def hull(model):
+    """(min, max) of the model's hull, or None. Exact from the archive's MDL header when it
+    has the model, else the median of its variants there, else `ESTIMATES`; see `source`."""
+    return _resolve(model)[0]
+
+
+def source(model):
+    """"exact", "variant", "estimate" or None: where `hull(model)` got its size."""
+    return _resolve(model)[1]
+
+
+def _resolve(model):
+    if model not in _cache:
+        out = (_exact(model), "exact")
+        if out[0] is None:
+            out = (_sibling(model), "variant")
+        if out[0] is None:
+            out = (_estimate(model), "estimate")
+        _cache[model] = out if out[0] is not None else (None, None)
+    return _cache[model]
 
 
 def box_mesh(lo, hi, material):

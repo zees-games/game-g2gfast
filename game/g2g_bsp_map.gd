@@ -551,7 +551,9 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 ## a player does not swim in. About 190 surfaces across the 51 held maps.
 static func is_water_material(material: String) -> bool:
 	var last := material.to_lower().get_file()
-	return last.contains("water") and not last.contains("waterfall")
+	# "vatten" is a mapper's Swedish water (tony/hejvatten2); an ocean surface is water too.
+	var wet := last.contains("water") or last.contains("vatten") or last.begins_with("oceansurface")
+	return wet and not last.contains("waterfall")
 
 
 ## Water in the map's own colour where the importer measured one that is not grey (most
