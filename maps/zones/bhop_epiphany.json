@@ -1,0 +1,40 @@
+{
+ "id": "bhop_epiphany",
+ "author": "wet",
+ "attribution": {
+  "author": "wet",
+  "source": "https://gamebanana.com/mods/124957 (Mapper and submitter: wet; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivs 4.0; credited, with removal on request)",
+  "archive": "bhop_epiphany.7z",
+  "recorded": "2026-10-20"
+ },
+ "notes": "Credit, and a start and finish read from the map's own logic. The 60 spawns stand in a holding room at about (16, -11150, -600) whose floor teleports to the cpb destination; the start is a box round cpb, where the player lands. The finish is the trigger in the end room (cp_end destination, far below the course) that shows the map's closing text. Checkpoints are class-renaming triggers with class-filtered teleports; the importer drops those whose class no player passes, leaving the unfiltered per-level pits.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "cpb",
+    "extents": [
+     256,
+     256,
+     192
+    ]
+   },
+   "note": "the first island, round the cpb destination the spawn room's floor teleport sends to (the text trigger 'By Nate' is beside it); the spawn room itself is only a holding room"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     -3912,
+     -12883.5,
+     -14296
+    ],
+    "within": 256
+   },
+   "note": "the end room trigger that shows the closing text, beside the cp_end destination"
+  }
+ ]
+}

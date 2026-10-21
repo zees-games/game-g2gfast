@@ -179,6 +179,7 @@ const STOCK_DRAWN := {
 	"bhop_elate": 0.97,  # 100% on 2026-10-19 (stock_survey); armed late, imported after the floors sweep: looked at from the spawn
 	"bhop_nature": 0.97,  # 99.6% on 2026-10-19; the 0.4% is color/black, flat black on purpose: looked at from the spawn
 	"bhop_underground_crypt": 0.97,  # 100% on 2026-10-19 (batch8 stand-ins): looked at from the spawn
+	"bhop_epiphany": 0.90,  # 94.2% on 2026-10-20 (stand-ins; 21% own); the rest is de_nuke beams and dev/light textures held on the grid: looked at from the spawn
 	"surf_hologram": 0.14,  # 15.5% on 2026-10-19: a Source 2 map, its ramp materials are its own flat colours (none), no stock textures to stand in for
 }
 
