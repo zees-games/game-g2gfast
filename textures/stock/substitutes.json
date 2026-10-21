@@ -2838,6 +2838,29 @@
    "match": "models/props/generated_prop/*_neon",
    "none": true,
    "why": "a neon strip generated for the map (bhop_frotinity2): flat glowing colour, which the tinted grid already is. Added 2026-10-19 [g2g-maps-stock-1]"
+  },
+  {
+   "match": "hr_concrete_wall_painted_002_grey*",
+   "texture": "cc0_concrete_smooth.jpg",
+   "filter": "linear",
+   "why": "painted concrete wall (surf_intro, by Chent), Source 2 material; added 2026-10-21 [maps-conv-cs2surf-1]; ambientCG Concrete034 (CC0) stands in",
+   "mean": [
+    0.723,
+    0.723,
+    0.723
+   ],
+   "units": 256,
+   "aspect": 1.0
+  },
+  {
+   "match": "orange_blend",
+   "none": true,
+   "why": "flat orange ramps (surf_intro, by Chent), Source 2 material; added 2026-10-21 [maps-conv-cs2surf-1]: the tinted grid is the honest stand-in"
+  },
+  {
+   "match": "meshset",
+   "none": true,
+   "why": "unnamed collision-mesh fragments (surf_intro, by Chent), Source 2 material; added 2026-10-21 [maps-conv-cs2surf-1]"
   }
  ]
 }

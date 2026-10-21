@@ -1,0 +1,8 @@
+{
+ "id": "surf_intro",
+ "display_name": "surf: intro",
+ "tier": 1,
+ "author": "Chent",
+ "attribution": {"author": "Chent", "source": "https://gamebanana.com/mods/524245 (page 'surf_intro', submitter Chent; the download surf_intro.rar holds surf_intro.vpk, the CS2 map the page describes: 'a tier 1 hybrid skill surf map. It contains 7 stages, gradually increasing in difficulty'). Licence on the page: the generic GameBanana default, Creative Commons BY-NC-ND 4.0; the page says nothing further about altering or redistributing. Converted from the Source 2 .vpk with ValveResourceFormat (MIT); the author's textures and baked lighting are not carried, the game's own prototype textures are used. The author is credited on screen at the map change. Removal on request: tell the repository owner and the map is withdrawn.", "archive": "surf_intro.rar (gamebanana.com/dl/1224342)", "recorded": "2026-10-21"},
+ "notes": "A CS2 (Source 2) map imported through tools/vrf_import.py. Timer volumes are the mapper's own map_start / map_end; the seven stages are not zoned yet (one linear course)."
+}

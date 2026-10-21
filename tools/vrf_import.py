@@ -132,6 +132,10 @@ PALETTE = {
     "half_ramp_end_flip_mat": [0.80, 0.50, 0.20], "ramp_surf_side_mat": [0.25, 0.45, 0.75],
     "side_rail_ramp_mat": [0.20, 0.55, 0.40], "tileable_surf_dec_mat": [0.40, 0.42, 0.48],
     "reflectivity_30": [0.55, 0.55, 0.58], "reflectivity": [0.55, 0.55, 0.58],
+    # surf_intro (Chent): painted concrete walls, a darker concrete, orange blend ramps.
+    "hr_concrete_wall_painted_002_grey": [0.46, 0.47, 0.50],
+    "hr_concrete_wall_painted_002_grey_dark": [0.26, 0.27, 0.30],
+    "orange_blend": [0.85, 0.45, 0.15], "meshset": [0.5, 0.5, 0.5],
 }
 
 
@@ -162,11 +166,15 @@ def node_geometry(path):
 
 def material_of(node):
     """`node000_world_lr0_agg4_51_ramp_surf_side_mat_fragment3` -> `ramp_surf_side_mat`."""
+    if re.search(r"nomerge\d+\.meshset(?:_\d+)?$", node):
+        return "meshset"
     m = re.match(r"^node\d+_world_lr\d+_agg\d+_\d+_(.+?)(?:_fragment\d+)?$", node)
     name = m.group(1) if m else re.sub(r"_fragment\d+$", "", node)
     # glTF de-duplicates repeated material names with a counter (`side_rail_ramp_mat_66`),
     # which is not part of the name; `reflectivity_30` is, so only its second counter goes.
-    return re.sub(r"^(.*_mat|reflectivity_\d+)_\d+$", r"\1", name)
+    name = re.sub(r"^(.*_mat|reflectivity_\d+)_\d+$", r"\1", name)
+    base = re.sub(r"_\d+$", "", name)
+    return base if base in PALETTE else name
 
 
 def build_mesh(parts, cos_limit):
@@ -400,6 +408,11 @@ def build_zones(ents, boxes, solids):
             elif tn == "map_end":
                 add("END", lo, hi, comment=tn)
     kinds = {z["kind"] for z in zones}
+    if not kinds:
+        # No map_start / map_end: a staged map whose timer plugin is told its zones by file
+        # (surf_intro). Read it from the teleport graph instead, the way the Source 1 importer
+        # does for a staged map.
+        return build_staged_zones(ents, boxes, solids, spawns, by_name, add, zones, notes)
     if not {"START", "END"} <= kinds:
         raise SystemExit("map_start / map_end not both found among the trigger_multiples")
     add("SPAWN", None, None, dest=main["origin_src"], yaw=main["yaw_src"],
@@ -437,6 +450,101 @@ def lighting_of(ents):
         out["sky_name"] = world["skyname"]
     out["baked_light_count"] = sum(1 for e in ents if e["classname"].startswith("light_omni"))
     return out
+
+
+STAGE_NAME = re.compile(r"^S(\d+)$")
+START_ROOM_EXTENTS = (480.0, 448.0, 192.0)
+ARRIVAL_EXTENTS = (160.0, 160.0, 96.0)
+
+
+def build_staged_zones(ents, boxes, solids, spawns, by_name, add, zones, notes):
+    """START / STAGE / END / RESPAWN from a teleport graph named `Spawn`, `S1`..`Sn`, `Win`.
+
+    [b]A gate is a teleport aimed at a section from inside a different one; a pit is aimed at
+    its own section's start.[/b] A section's extent is its widest floor-level teleport (the
+    slab under the course, aimed at the section's own start). Every other teleport whose
+    centre lies in a section's footprint but aims elsewhere is that section's gate: its
+    arrival becomes the next STAGE zone, and the one aimed at `Win` is the END (round the
+    win room). A teleport aimed at `Spawn` sends back to the spawn room (the START room round the
+    `Spawn` start entity): a pit. The thin one in no section's footprint (the spawn room's
+    own door) is the gate to S1, so the stages run 1..n as the timer wants.
+    """
+    def tag(name):
+        return (name or "").replace("[PR#]", "")
+
+    starts = {tag(e.get("targetname")): e for e in ents
+              if e["classname"] == "info_player_start" and e.get("targetname")}
+    if "Spawn" not in starts:
+        raise SystemExit("staged map without an info_player_start named Spawn")
+    room = starts["Spawn"]
+    room_o = numbers(room["origin"])
+    room_yaw = (numbers(room.get("angles", "0 0 0")) or [0, 0, 0])[1]
+    # The room's own player starts; the other info_player_starts are the stages' arrivals.
+    keep = [s for s in spawns if np.linalg.norm(np.array(s["origin_src"]) - room_o) < 256.0]
+    spawns[:] = keep
+    main = next(s for s in spawns if s["origin_src"] == room_o)
+
+    tele = [(i, e, boxes[i]) for i, e in enumerate(ents)
+            if e["classname"] == "trigger_teleport" and i in boxes]
+    # Section footprints: the widest slab aimed at each S<n>.
+    slabs = {}
+    for _i, e, (lo, hi) in tele:
+        t = tag(e["target"])
+        area = (hi[0] - lo[0]) * (hi[1] - lo[1])
+        if STAGE_NAME.match(t) and (t not in slabs or area > slabs[t][0]):
+            slabs[t] = (area, lo, hi)
+
+    def section_of(lo, hi):
+        cx, cy = (lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0
+        hit = [(a, t) for t, (a, l, h) in slabs.items()
+               if l[0] <= cx <= h[0] and l[1] <= cy <= h[1]]
+        return min(hit)[1] if hit else None
+
+    add("START", [room_o[0] - START_ROOM_EXTENTS[0], room_o[1] - START_ROOM_EXTENTS[1],
+                  room_o[2] - START_ROOM_EXTENTS[2]],
+        [room_o[0] + START_ROOM_EXTENTS[0], room_o[1] + START_ROOM_EXTENTS[1],
+         room_o[2] + START_ROOM_EXTENTS[2]], dest=room_o, yaw=room_yaw,
+        comment="the spawn room the start entities stand in")
+    add("SPAWN", None, None, dest=main["origin_src"], yaw=main["yaw_src"],
+        comment="the spawn for main")
+
+    def arrival(name, kind, number=None):
+        e = starts[name]
+        o = numbers(e["origin"])
+        yaw = (numbers(e.get("angles", "0 0 0")) or [0, 0, 0])[1]
+        ext = ARRIVAL_EXTENTS
+        add(kind, [o[0] - ext[0], o[1] - ext[1], o[2] - ext[2]],
+            [o[0] + ext[0], o[1] + ext[1], o[2] + ext[2]], dest=o, yaw=yaw,
+            comment="the arrival of %s's gate" % name)
+        if number is not None:
+            zones[-1]["number"] = float(number)
+
+    respawn, seen_gate = [], set()
+    for _i, e, (lo, hi) in tele:
+        t = tag(e["target"])
+        sec = section_of(lo, hi)
+        # A gate is thin and stands in a section aimed at a later one; the slabs are pits.
+        is_slab = sec == t and (hi[0] - lo[0]) > 512.0
+        if t != "Spawn" and sec != t and not is_slab:
+            # The gate itself is a teleport like any other (it sends the run on, kept); the
+            # arrival is what is timed.
+            if t not in seen_gate:
+                seen_gate.add(t)
+                if t == "Win":
+                    arrival("Win", "END")
+                else:
+                    arrival(t, "STAGE", int(STAGE_NAME.match(t).group(1)))
+        tgt = by_name.get(e["target"])
+        o = numbers(tgt["origin"]) if tgt and "origin" in tgt else None
+        if o is None:
+            raise SystemExit("trigger_teleport aims at %r, which is not in the entity lump"
+                             % e.get("target"))
+        yaw = (numbers(tgt.get("angles", "0 0 0")) or [0, 0, 0])[1]
+        add("RESPAWN", lo, hi, dest=o, yaw=yaw, comment=t, pit=True)
+        z = zones[-1]
+        respawn.append({"min": z["min"], "max": z["max"], "inflated": z["inflated"], "track": 0})
+    # The spawn room's exit is a gate to S1 too: a thin teleport in no section's footprint.
+    return zones, spawns, main, respawn, notes
 
 
 # ------------------------------------------------------------------- driver ---

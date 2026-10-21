@@ -116,7 +116,7 @@ The baked lighting needs `ARRAY_TEX_UV2` to reach the shader, and every importer
 
 ## Source 2 maps (`tools/vrf_import.py`)
 
-A CS2 map is a `.vpk` of compiled resources, not a `.bsp`. `tools/vrf_import.py` runs ValveResourceFormat's `Source2Viewer-CLI` (MIT, version 20.1) to export the map to glTF, then writes the same manifest and `.bin` the BSP importer does, so the loader, the zones file and every suite treat it as any other imported map. `surf_hologram` (Chent) is the first.
+A CS2 map is a `.vpk` of compiled resources, not a `.bsp`. `tools/vrf_import.py` runs ValveResourceFormat's `Source2Viewer-CLI` (MIT, version 20.1) to export the map to glTF, then writes the same manifest and `.bin` the BSP importer does, so the loader, the zones file and every suite treat it as any other imported map. `surf_hologram` (Chent) is the first; `surf_intro` (Chent, seven stages) the second. **A map with no `map_start`/`map_end` triggers is read from its teleport graph** (`build_staged_zones`): `Spawn`, `S1`..`Sn`, `Win` start entities; a slab aimed at its own section is a pit, a thin teleport aimed at another section is a gate (a RESPAWN that keeps the run, plus a STAGE zone round the arrival; `Win` is the END). The RAR on GameBanana holds a 0-byte `surf_intro.vpk` beside a folder with the real one: use the file in the folder.
 
 ```bash
 python3 -I tools/vrf_import.py <map.vpk> maps/imported --id <id> --cli <Source2Viewer-CLI> --work <scratch dir>
