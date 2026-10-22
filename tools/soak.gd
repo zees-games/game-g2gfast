@@ -22,6 +22,8 @@ const DEFAULT_BOTS := 4
 const TICK_RATE := 128
 ## Ticks to wait for the route plan; a plan not done by then is soaked as it stands.
 const MAX_PLAN_TICKS := 60000
+## The maps whose zones file documents no finish on purpose; the same list headless_imported exempts.
+const NO_FINISH: Array = preload("res://examples/headless_imported.gd").NOT_COURSES
 
 var _game: G2GGame
 var _tick := 0
@@ -89,6 +91,10 @@ func _run() -> void:
 	var watch := DotSpawnWatch.new()
 	watch.rules.enabled = true
 	var course: Object = _game.bots.get("course")
+	if (course == null) != NO_FINISH.has(String(map_id)):
+		_fail("map %s: %s but %s the no-finish list" % [map_id, "no course" if course == null else "has a course",
+			"is not in" if course == null else "is in"])
+		return
 	watch.rules.kill_y = (course.get("start") as Vector3).y - 400.0 if course != null else -5000.0
 
 	var soak := DotBotSoak.new(cfg)
