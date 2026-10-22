@@ -53,7 +53,7 @@ const SurfPlan := preload("../tools/surf_plan.gd")
 ## same bargain every skip in this family makes: it is allowed to skip a check, it is not
 ## allowed to stop asking the question.
 const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "kz_bhop_yonkoma", "bunnyhop_pro", "surf_animals",
-	"kz_bhop_lucid"]
+	"kz_bhop_lucid", "bhop_training_fun"]
 
 ## The imported maps with no pit, which is a different question from having no finish.
 ##
@@ -224,9 +224,9 @@ const DARK_SPAWNS := {
 
 ## The maps with `$additive` surfaces the importer must find, asserted both ways (a map
 ## that loses them, or one not listed that gains them, fails). 2026-10-11's re-import.
-const ADDITIVE := ["bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_ocean", "bhop_overthinker",
-	"bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference", "surf_lt_omnific",
-	"surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
+const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_ocean",
+	"bhop_overthinker", "bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference",
+	"surf_lt_omnific", "surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
 const CHECKS_PER_MAP := 58

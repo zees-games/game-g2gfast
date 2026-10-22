@@ -1,0 +1,11 @@
+{
+ "id": "bhop_training_fun",
+ "author": "Soapy Soap",
+ "attribution": {
+  "author": "Soapy Soap",
+  "source": "https://gamebanana.com/mods/126237 (Key Authors: Soapy Soap; submitter Soapy Soap; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_training_fun.rar",
+  "recorded": "2026-10-22"
+ },
+ "notes": "Credit only, no start or finish, on purpose (chk-maps run 73): a small training yard (about 2400 by 2600 units) of block lanes, light-switch pads and grenade/scout dispensers. Its teleports are four floor pits back to tele..tele4 beside the spawn, a sky-sized catch-all back to tele, and a trikz pad to a deathroom; no trigger, door or text marks an end. A finish guessed from the yard would time a route the map does not have. The map's own info_players are the spawn. Not published."
+}

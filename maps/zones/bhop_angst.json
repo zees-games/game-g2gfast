@@ -1,0 +1,11 @@
+{
+ "id": "bhop_angst",
+ "author": "Proxychains",
+ "attribution": {
+  "author": "Proxychains",
+  "source": "https://gamebanana.com/mods/303411 (Mapper and submitter: Proxychains; the map's own credit text reads 'Made with love, by Proxychains', SJ Mapping Contest 2021; skybox credited on the page to hipshot; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_angst_css.7z",
+  "recorded": "2026-10-22"
+ },
+ "notes": "Credit only: the map labels its own zones (mod_zone_start, mod_zone_end, mod_zone_bonus_1_start, mod_zone_bonus_1_end), which the importer reads (chk-maps run 73). Its secret_trigger_start opens a hidden credits room with no end, so that track is dropped. Not published."
+}

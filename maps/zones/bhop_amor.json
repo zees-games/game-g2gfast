@@ -1,0 +1,37 @@
+{
+ "id": "bhop_amor",
+ "author": "roma",
+ "attribution": {
+  "author": "roma",
+  "source": "https://gamebanana.com/mods/124424 (Key Authors: roma; submitter roma; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_amor.rar",
+  "recorded": "2026-10-22"
+ },
+ "notes": "Two routes read from the map's teleport names (chk-maps run 73). From the spawn room a short jump yard (pits to j1/j2) leads to two holes: one to pro1, the hard route (pro1..pro4), whose last door sends to map_finish; the other to noob1, the easy route (noob1..noob5, noob_52), whose last door sends to noob_finish, a room with doors on to pro1 and back to j3. The main track is the pro route, from the spawn room's exit (start box behind the jump yard's damage-filter wall, round j1) to the door into map_finish; the easy route is bonus 1, from noob1 to the door into noob_finish. The map_finish room also has a door to noob_finish; the bonus end is the one at the end of the easy route, picked by position. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {"point": [1749, 5160, -145], "extents": [300, 90, 96]},
+   "note": "the spawn room's exit into the jump yard, behind the trigger that sets the no-fall-damage filter (y 5263..5276) and short of the yard's first pit (y 5297)"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "map_finish",
+   "note": "the door at the end of the pro route (pro4) into the map_finish room, where the map's 'pr0n' message trigger is"
+  },
+  {
+   "kind": "START",
+   "track": 1,
+   "around": {"point": "noob1", "extents": [192, 192, 96]},
+   "note": "where the easy route's hole and its pits put the player"
+  },
+  {
+   "kind": "END",
+   "track": 1,
+   "near": {"class": "trigger_teleport", "point": [-2631, 3191, 2024], "within": 64},
+   "note": "the door at the end of the easy route (after noob5 / noob_52) into noob_finish; the other teleport aimed at noob_finish is the map_finish room's"
+  }
+ ]
+}

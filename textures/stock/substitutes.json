@@ -17,6 +17,41 @@
    "why": "developer texture"
   },
   {
+   "match": "proxychains/angst_props/reflectivity_*",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_*, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/angst_cubemap*",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_70b, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/ico_border",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_70b, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/gray",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_50b, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/giantplayer",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_50b, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/bonus_spin",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour dev/reflectivity_50b, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
+   "match": "proxychains/angst_props/white*",
+   "none": true,
+   "why": "bhop_angst (Proxychains): its own material over the stock flat developer colour white, which the map did not carry; flat colour in the original, so the tinted grid is the honest stand-in. Added 2026-10-22 [chk-maps]"
+  },
+  {
    "match": "*/black",
    "none": true,
    "why": "flat black in the original (cs_italy/black measured)"

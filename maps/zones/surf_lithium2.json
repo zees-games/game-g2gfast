@@ -1,0 +1,70 @@
+{
+ "id": "surf_lithium2",
+ "author": "copy-mark",
+ "attribution": {
+  "author": "copy-mark",
+  "source": "https://gamebanana.com/mods/122445 (Key Authors: copy-mark (map); textures nikki, skybox karatekaefer; submitter Lightning.; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "surf_lithium2.rar",
+  "recorded": "2026-10-22"
+ },
+ "notes": "A start read from the map's teleports; the finish is the bounds of the mapper's end triggers (chk-maps run 73). A race surf map: the spawn room is a lift (spawn_mover) whose exit is a teleport to the level1 destination, and every pit of level N sends back to levelN; the last ramp of level5 ends in two doors to winner_dest, the room holding end_trigger_ct / end_trigger_t; those start disabled behind team filters, so END is a box on their bounds. The start is a box from level1 down to the floor the player drops onto from it, and the spawn stands on that floor. The round's end_of_round_teleport volumes start disabled and cover whole levels (a winner enables them to send everyone else to the jail pads); dropped by round_teleports. Not published.",
+ "round_teleports": {
+  "names": [
+   "end_of_round_teleport"
+  ],
+  "note": "start-disabled round-end teleports over each level (enabled by win_activatebuttons_relay when somebody wins); imported, each was a pit over a whole level"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "note": "round level1, where the spawn lift exit and every level1 pit put the player, down to the floor 688 units under it that the player drops onto (the destination hangs in the air)",
+   "box": [
+    [
+     -1808,
+     0,
+     2048
+    ],
+    [
+     -1296,
+     512,
+     2912
+    ]
+   ]
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "box": [
+    [
+     -1616,
+     192,
+     2096
+    ],
+    [
+     -1488,
+     320,
+     2160
+    ]
+   ],
+   "note": "on the floor under level1 (Hammer z 2096), not at level1 itself: the destination hangs 688 units up and a player put there falls 13.6 m"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "box": [
+    [
+     -3552,
+     1920,
+     672
+    ],
+    [
+     -3424,
+     2080,
+     768
+    ]
+   ],
+   "note": "the winner room behind the level5 doors (winner_dest): the bounds of end_trigger_ct / end_trigger_t, which start disabled and are team-filtered, so the importer does not read them as END on its own"
+  }
+ ]
+}

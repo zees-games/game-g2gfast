@@ -1,0 +1,35 @@
+{
+ "id": "surf_ember",
+ "author": "Skar",
+ "attribution": {
+  "author": "Skar",
+  "source": "https://gamebanana.com/mods/122002 (Key Authors: skar; submitter Skar; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "surf_ember.zip",
+  "recorded": "2026-10-22"
+ },
+ "notes": "A start and finish read from the map's teleports (chk-maps run 73). A five-stage race surf map: the spawn room's door teleports to 1ENTER, each stage's pits send to nSTART, and a door at each stage's end sends to (n+1)ENTER (2ENTER, 3ENTER, 4ENTER, 5ENTER). The last ramp of stage 5 ends in the teleport to JAILTOP, the winner's room above the jails, whose trigger enables YOULOSE for everyone else; that teleport is the finish. The start is a box round 1ENTER, where the spawn door lands. Timesup0..5 (a five-minute timer) and YOULOSE start disabled and cover whole stages and the spawn room; dropped by round_teleports. The jail pads (T_TELEPORT / CT_TELEPORT) and knife dispensers are the round's and left as they are. Not published.",
+ "round_teleports": {
+  "names": ["Timesup*", "YOULOSE"],
+  "note": "start-disabled round teleports to the jails over every stage and the spawn room (a timer and the winner's trigger enable them); imported, each was a pit over a whole stage"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {"point": "1ENTER", "extents": [256, 256, 128]},
+   "note": "round where the spawn room's door puts the player, the head of stage 1"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "1ENTER"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "JAILTOP",
+   "all": true,
+   "note": "the teleport at the end of stage 5's last ramp into the winner's room (JAILTOP), two overlapping brushes"
+  }
+ ]
+}
