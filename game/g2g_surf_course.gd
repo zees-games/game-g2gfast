@@ -149,7 +149,9 @@ func progress(p: Vector3) -> float:
 ## the lowest goal.
 func settle_zones() -> void:
 	var best := INF
-	var lowest := INF
+	# The start counts too: a stage that climbs to its goal starts below the goals, and a floor
+	# measured from them alone sits above the start and puts the bot back every tick.
+	var lowest := start.y
 	var has_door := goal_zones.any(func(z: DotTimerZone) -> bool: return z.kind == DotTimerZone.Kind.TELEPORT)
 	for goal: DotTimerZone in goal_zones:
 		var d := goal.centre().distance_to(start)

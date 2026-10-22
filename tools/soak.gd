@@ -103,7 +103,15 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	if soak.write_report(report, path) != OK:
 		push_error("could not write %s" % path)
+	await _release_game()
 	get_tree().quit(0 if report["ok"] else 1)
+
+
+## Frees the game before quitting: a map still loaded at quit aborted the process on surf_greensway.
+func _release_game() -> void:
+	_game.queue_free()
+	for _i in range(3):
+		await get_tree().process_frame
 
 
 func _step(_delta: float) -> void:
