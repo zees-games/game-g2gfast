@@ -11,6 +11,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 ## godot --headless --path . res://tools/soak.tscn -- --map surf_beginner --bots 4 --minutes 2
 ## [/codeblock]
 ##
+## --trace prints one TRACE line a second for the first bot.
 ## Takes the harness's own flags too (--soak-max-stuck-sec and the rest of DotBotSoakConfig).
 ## Writes .godot/test-logs/soak-<map>.json, prints the SOAK line, exits 1 when the run fails.
 ## There is no combat here, so the harness's kill check is off and the kill columns stay 0.
@@ -19,13 +20,16 @@ const DEFAULT_MAP := &"bhop_g2g_intro"
 const DEFAULT_MINUTES := 1.0
 const DEFAULT_BOTS := 4
 const TICK_RATE := 128
+## Ticks to wait for the route plan; a plan not done by then is soaked as it stands.
+const MAX_PLAN_TICKS := 60000
 
 var _game: G2GGame
 var _tick := 0
+var _trace := false
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	DotLog.set_level(DotLog.Level.INFO if OS.get_cmdline_user_args().has("--why") else DotLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -38,6 +42,7 @@ func _arg(name: String, fallback: String) -> String:
 
 
 func _run() -> void:
+	_trace = OS.get_cmdline_user_args().has("--trace")
 	var map_id := StringName(_arg("map", String(DEFAULT_MAP)))
 	var cfg := DotBotSoakConfig.new()
 	cfg.minutes = DEFAULT_MINUTES
@@ -70,9 +75,16 @@ func _run() -> void:
 		if _game.bots.call("add_bot", "bot%d" % (i + 1)) == null:
 			_fail("bot %d refused" % (i + 1))
 			return
-	# Let the bots' route plan finish: they stand until it is done, which is not a stuck bot.
+	# The route plan is stepped by the game's own ticks (2 ms each), not by frames, so tick until it
+	# is done: a bot aimed straight at the finish meanwhile is the plan's wait, not a stuck bot.
 	for _i in range(40):
 		await get_tree().process_frame
+	var planned := 0
+	while _game.bots.get("_planning") and planned < MAX_PLAN_TICKS:
+		_step(0.0)
+		planned += 1
+		if planned % 32 == 0:
+			await get_tree().physics_frame
 
 	var watch := DotSpawnWatch.new()
 	watch.rules.enabled = true
@@ -117,14 +129,33 @@ func _release_game() -> void:
 func _step(_delta: float) -> void:
 	_tick += 1
 	_game.tick_once(_tick)
+	if _trace and _tick % TICK_RATE == 0:
+		_print_trace()
+
+
+## One line a second for the first bot: where it is, what it aims at, and whether it is moving.
+func _print_trace() -> void:
+	var ids: Array = _game.bots.get("ids")
+	if ids.is_empty():
+		return
+	var player = _game.players.get(ids[0])
+	var st: DotFpsState = player.controller.state
+	var info: Dictionary = _game.bots.call("describe")["bots"][0]
+	var route: Dictionary = info.get("route", {})
+	print("TRACE t=%d pos=%s speed=%.1f ground=%s ride_tick=%d rides=%d idx=%s/%s target=%s" % [
+		_tick / TICK_RATE, st.position, st.velocity.length(), st.is_grounded(),
+		_game.bots._riders[ids[0]]["ticks"], info["rides"], route.get("index", "-"), route.get("points", "-"),
+		route.get("target", "-")])
 
 
 func _movers() -> Array:
 	var out: Array = []
+	# A map with no finish gives the bots no stage: they stand at the spawn by design, which is not stuck.
+	var has_goal := _game.bots.get("course") != null
 	for id: StringName in _game.bots.get("ids"):
 		var player = _game.players.get(id)
 		if player != null:
-			out.append({"id": id, "position": player.controller.state.position, "kind": &"bot", "has_goal": true})
+			out.append({"id": id, "position": player.controller.state.position, "kind": &"bot", "has_goal": has_goal})
 	return out
 
 

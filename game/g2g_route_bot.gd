@@ -61,6 +61,12 @@ const LEDGE_DROP := 24.0
 ## The wall test: a ray at a step's height plus a little, this far ahead.
 const STEP_PLUS := 22.0
 const WALL_LOOK := 40.0
+## No progress: the bot stayed within STUCK_RADIUS metres for STUCK_SECONDS (wedged on a wall the
+## route does not know about), so it hops off the aimed line for UNSTICK_SECONDS, a new side each time.
+const STUCK_SECONDS := 2.0
+const STUCK_RADIUS := 1.0
+const UNSTICK_SECONDS := 1.0
+const UNSTICK_TURNS := [90.0, -90.0, 180.0, 45.0, -45.0, 135.0, -135.0]
 
 ## Each `{"at": Vector3 metres, "radius": metres, "max": u/s, "walk": bool}`.
 var points: Array[Dictionary] = []
@@ -70,6 +76,11 @@ var index := 0
 var surfed := 0
 var _side := 1.0
 var _leg_from := Vector3.INF
+var unstuck := 0
+var _anchor := Vector3.INF
+var _held := 0.0
+var _unstick_left := 0.0
+var _unstick_turn := 0.0
 
 
 ## The route file for [param id], or an empty array (no file, or unreadable -- said why
@@ -111,6 +122,8 @@ func _init(route: Array[Dictionary] = [], finish_centre: Vector3 = Vector3.INF) 
 func restart() -> void:
 	index = 0
 	_leg_from = Vector3.INF
+	_anchor = Vector3.INF
+	_unstick_left = 0.0
 
 
 ## A door moved the player: the door point it was walking into is passed.
@@ -133,6 +146,8 @@ func command(state: DotFpsState, space: PhysicsDirectSpaceState3D, tunables: Dot
 		_leg_from = at
 	_advance(at, state.is_grounded())
 	var goal := target()
+	if _watch_progress(at, delta):
+		return _unstick(state, goal)
 	var point: Dictionary = points[index] if index < points.size() else {}
 	var to := Vector3(goal.x - at.x, 0.0, goal.z - at.z)
 	var goal_yaw := rad_to_deg(atan2(-to.x, -to.z))
@@ -163,6 +178,42 @@ func command(state: DotFpsState, space: PhysicsDirectSpaceState3D, tunables: Dot
 		c.set_button(DotFpsCommand.BUTTON_JUMP, jump)
 	else:
 		c = _air(state, goal, flat, cap, tunables, delta)
+	return c
+
+
+## Whether the bot is off the line to hop free right now; counts how long it has gone nowhere.
+func _watch_progress(at: Vector3, delta: float) -> bool:
+	if _unstick_left > 0.0:
+		_unstick_left -= delta
+		_anchor = at
+		_held = 0.0
+		return _unstick_left > 0.0
+	if _anchor == Vector3.INF or Vector2(at.x - _anchor.x, at.z - _anchor.z).length() > STUCK_RADIUS \
+			or absf(at.y - _anchor.y) > 2.0 * STUCK_RADIUS:
+		_anchor = at
+		_held = 0.0
+		return false
+	_held += delta
+	if _held < STUCK_SECONDS:
+		return false
+	_held = 0.0
+	_unstick_left = UNSTICK_SECONDS
+	_unstick_turn = UNSTICK_TURNS[unstuck % UNSTICK_TURNS.size()]
+	unstuck += 1
+	return true
+
+
+## Forward and jumping, turned [member _unstick_turn] degrees off the goal.
+func _unstick(state: DotFpsState, goal: Vector3) -> DotFpsCommand:
+	var at := state.position
+	var c := DotFpsCommand.new()
+	c.yaw = rad_to_deg(atan2(-(goal.x - at.x), -(goal.z - at.z))) + _unstick_turn
+	c.move = Vector2(0.0, 1.0)
+	if not state.is_grounded() and (unstuck / 2) % 2 == 0:
+		# Forward alone gains nothing in the air: every other pair of attempts strafes to build speed off the spot.
+		_side = -_side
+		c.move = Vector2(_side, 1.0)
+	c.set_button(DotFpsCommand.BUTTON_JUMP, state.is_grounded())
 	return c
 
 

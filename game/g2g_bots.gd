@@ -57,6 +57,12 @@ var veto_horizon: int = 0
 ## wall) and starts over.
 const RIDE_SECONDS := 30.0
 
+## A ride whose bot has gone this far (metres) from where it was SETTLE_SECONDS ago has not moved;
+## it is wedged where the route bot's own unsticking failed, and starts over. Kept under the soak's
+## ten-second stuck limit so a bot in a pocket is put back, not left there.
+const SETTLE_SECONDS := 6.0
+const SETTLE_RADIUS := 1.5
+
 ## What the route planner may spend of one tick, microseconds. Until it is done the bots go
 ## straight at the finish as they always did, so planning is never a wait; a tick is 7.8 ms at
 ## 128 Hz and one step of the annotator can overrun this (docs/routes.md).
@@ -140,7 +146,8 @@ func drive(step: float) -> void:
 			continue
 		var event := course.event_at(player.controller.state)
 		var limit := int(RIDE_SECONDS * float(game.tick_rate))
-		if event != DotBotSurfCourse.EVENT_NONE or int(rider["ticks"]) >= limit:
+		var wedged := _wedged(player.controller.state.position, rider)
+		if event != DotBotSurfCourse.EVENT_NONE or int(rider["ticks"]) >= limit or wedged:
 			if event == DotBotSurfCourse.EVENT_GOAL:
 				rider["arrived"] = int(rider["arrived"]) + 1
 				var took := float(rider["ticks"]) / float(maxi(game.tick_rate, 1))
@@ -174,6 +181,16 @@ func drive(step: float) -> void:
 		if away > float(rider["far_ride"]):
 			rider["far_ride"] = away
 			rider["far"] = maxf(float(rider["far"]), away)
+
+
+## Whether the bot has stayed within SETTLE_RADIUS of one spot for SETTLE_SECONDS.
+func _wedged(at: Vector3, rider: Dictionary) -> bool:
+	var anchor: Vector3 = rider.get("anchor", Vector3.INF)
+	if anchor == Vector3.INF or at.distance_to(anchor) > SETTLE_RADIUS:
+		rider["anchor"] = at
+		rider["anchor_tick"] = int(rider["ticks"])
+		return false
+	return int(rider["ticks"]) - int(rider.get("anchor_tick", 0)) >= int(SETTLE_SECONDS * float(game.tick_rate))
 
 
 ## Builds the course for the map that is loaded, once per map. Every bot is put back on it,
@@ -319,6 +336,7 @@ func _stage_data(id: StringName) -> Dictionary:
 ## Back to the stage's start, standing, facing the way the stage faces, on a new ride.
 func _put_back(player: G2GPlayer, rider: Dictionary) -> void:
 	rider["ticks"] = 0
+	rider["anchor"] = Vector3.INF
 	rider["far_ride"] = 0.0
 	rider["rides"] = int(rider["rides"]) + 1
 	if course == null:
