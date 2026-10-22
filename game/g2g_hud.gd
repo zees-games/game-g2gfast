@@ -444,14 +444,24 @@ func apply_theme(palette: DotMenuPalette = null) -> void:
 ##
 ## The line tells a spectator the two things nobody can guess: how to change who they are
 ## watching, and how to stop. Both are in the words a player would type or press.
-func set_spectating(target: StringName, target_name: String = "") -> void:
+##
+## [param roam_hint] is the free-camera key's name when the server offers a free camera ("" when
+## it does not, so no prompt for a key that would be refused). [param roaming] is a spectator
+## who is flying: the "watching X" line is replaced by the controls, because there is nobody
+## to name.
+func set_spectating(target: StringName, target_name: String = "", roam_hint: String = "",
+		roaming: bool = false) -> void:
 	followed_id = target
 	if _spectating == null:
 		return
-	_spectating.visible = target != &""
-	if target != &"":
-		_spectating.text = "Spectating %s    ◀ left click   ·   right click ▶    R or !spec off to stop" % (
-			target_name if target_name != "" else String(target))
+	_spectating.visible = target != &"" or roaming
+	if roaming:
+		_spectating.text = "Free camera    WASD move   ·   Space / Ctrl up and down   ·   Shift fast   ·   Alt slow    %s to go back to the players" % (
+			roam_hint if roam_hint != "" else "R or !spec off")
+	elif target != &"":
+		_spectating.text = "Spectating %s    ◀ left click   ·   right click ▶%s    R or !spec off to stop" % [
+			target_name if target_name != "" else String(target),
+			("   ·   %s free camera" % roam_hint) if roam_hint != "" else ""]
 	refresh_stage_reference()
 
 

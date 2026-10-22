@@ -48,6 +48,9 @@ const ROWS: Array[Dictionary] = [
 
 	{"action": &"g2g_flashlight", "setting": &"bind_flashlight", "label": "Flashlight", "default": "F", "group": "View"},
 	{"action": &"g2g_hide_others", "setting": &"bind_hide_others", "label": "Hide other players", "default": "O", "group": "View"},
+	# Only a spectator's key: it sends the free-camera request while somebody is watching, and
+	# does nothing otherwise. G was free on every screen.
+	{"action": &"g2g_roam", "setting": &"bind_roam", "label": "Free camera (spectating)", "default": "G", "group": "View"},
 	{"action": &"g2g_third_person", "setting": &"bind_third_person", "label": "First / third person", "default": "F5", "group": "View"},
 
 	{"action": &"g2g_chat", "setting": &"chat_open_key", "label": "Chat", "default": "Y", "group": "Communication", "scope": ACCOUNT},

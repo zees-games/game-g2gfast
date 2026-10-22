@@ -42,6 +42,7 @@ The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` a
 | **H** | Help: every key and every chat command on the server |
 | **P** | Next HUD theme |
 | **Left / right click** | While spectating: the previous / next player |
+| **G** | While spectating: a free camera (WASD, Space / Ctrl up and down, Shift fast, Alt slow, mouse to look), and back onto a player. `!spec free` does the same from chat |
 | **Esc** | The menu: settings, key bindings, help. Click the game or **Resume** to take the mouse back |
 | **`** | The console. `settings` lists every setting |
 
@@ -91,6 +92,9 @@ sv_crestlaunch 1.25          // how fast you must be going for a ramp's top to l
 sv_allow_thirdperson 1
 sv_flashlight 1              // players may use their own flashlight (F); nobody else sees it
 sv_spec_list 1               // players see who is spectating them; 0 makes spectating anonymous
+mp_freeroam 1                // spectators may fly a free camera; 0 keeps them on players
+mp_freeroam_speed 12         // free camera speed, metres a second
+mp_forcecamera 0             // 1 or 2 restricts the camera and switches free roam off
 sv_stagger_snapshots 0       // 1 spreads snapshot work over the ticks between snapshots: a lower worst tick on a full server
 sv_replay_bot 1              // the server record runs as a visible ghost
 sv_map_sync_timeout 30       // how long a map change waits for slow clients

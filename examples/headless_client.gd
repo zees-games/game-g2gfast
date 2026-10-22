@@ -22,7 +22,7 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 67
+const CHECKS := 70
 const SECTIONS := 14
 
 var _passed := 0
@@ -181,6 +181,18 @@ func _test_spectating_holds_the_runner() -> void:
 	_client._on_spectate(&"", "")
 	_check(not _client.is_spectating() and not _client.player.sampler.suspended,
 		"and stopping gives the keys back")
+	# A free camera has no target; it still holds the keys, hides the "watching" line's
+	# name, and names the key only while the server offers it.
+	var pid: StringName = _client.player.player_id
+	_client.game.spectate.manager.apply_wire({"k": String(pid), "v": {"m": DotSpectatorView.Mode.ROAMING, "t": "", "u": -1}})
+	_client._on_spectate(&"", "")
+	_check(_client.roaming and _client.is_spectating() and _client.player.sampler.suspended,
+		"roaming counts as spectating and holds the runner still")
+	_check(_client.hud._spectating.visible and _client.hud._spectating.text.begins_with("Free camera"),
+		"and the HUD line is the free camera's controls", _client.hud._spectating.text)
+	_client.game.spectate.manager.apply_wire({"k": String(pid), "v": {"m": DotSpectatorView.Mode.NONE, "t": "", "u": -1}})
+	_client._on_spectate(&"", "")
+	_check(not _client.roaming and not _client.is_spectating(), "and leaving it gives the keys back")
 	_done()
 
 

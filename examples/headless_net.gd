@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 224
+const CHECKS := 228
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -1585,6 +1585,25 @@ func _test_spectating_reaches_the_client() -> void:
 	_server_bridge.broadcast_spectators()
 	_exchange()
 	_check(Array(lists.get(&"u8", PackedStringArray())).has("Ada"), "and turning it back on sends it again")
+
+	# The free-roam key: the mode crosses the wire with no target, and the same key returns.
+	_client_bridge.ask_spectate(G2GEvents.SPECTATE_ROAM)
+	_exchange()
+	_steps(2)
+	_check(_server_game.spectate.is_roaming(ada), "the free-roam request puts the server's viewer in ROAMING")
+	_check(mirror != null and mirror.is_roaming(ada) and mirror.target_of(ada) == &"",
+		"and the client's mirror is told, with no target")
+	_client_bridge.ask_spectate(G2GEvents.SPECTATE_ROAM)
+	_exchange()
+	_steps(2)
+	_check(not _server_game.spectate.is_roaming(ada) and _server_game.spectate.is_spectating(ada),
+		"the same request goes back onto a player")
+	var _off := _server_game.spectate.manager.rules.set_cvar("mp_freeroam", "0")
+	_client_bridge.ask_spectate(G2GEvents.SPECTATE_ROAM)
+	_exchange()
+	_steps(2)
+	_check(not _server_game.spectate.is_roaming(ada), "and with mp_freeroam 0 the request is refused")
+	var _on := _server_game.spectate.manager.rules.set_cvar("mp_freeroam", "1")
 
 	# R: one press stops watching and restarts. A runner who pressed R wants to run.
 	_client_bridge.ask_restart(G2GEvents.RESTART_STAGE)

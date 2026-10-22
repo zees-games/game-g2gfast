@@ -887,7 +887,9 @@ func _watch_spectate() -> void:
 func _on_view_changed(key: String, mode: int, target: String) -> void:
 	# Nobody left to watch is not a camera worth keeping: a spectator parked on an empty
 	# fixed view has a frozen screen and no idea why. They are put back in their own view.
-	if target == "" and mode != DotSpectatorView.Mode.NONE and _watched_spectate != null:
+	# A free camera has no target by design, so it is the one exception.
+	if target == "" and mode != DotSpectatorView.Mode.NONE \
+			and mode != DotSpectatorView.Mode.ROAMING and _watched_spectate != null:
 		_watched_spectate.stop(key)
 		return
 	var peer := peer_for_player(session_of(StringName(key)))
@@ -1467,7 +1469,8 @@ func _apply_spectate(target: String, mode: int, target_name: String) -> void:
 	var key := String(_player_key(local_player_id))
 	var manager: DotSpectatorManager = game.spectate.manager if game != null and game.spectate != null else null
 	if manager != null:
-		var wanted := mode if target != "" else DotSpectatorView.Mode.NONE
+		var wanted := mode if target != "" or mode == DotSpectatorView.Mode.ROAMING \
+			else DotSpectatorView.Mode.NONE
 		manager.apply_wire({"k": key, "v": {"m": wanted, "t": target, "u": -1}})
 	spectate_received.emit(StringName(target), target_name)
 
@@ -1573,6 +1576,8 @@ func _on_spectate_asked(peer_id: int, session_id: int, id: StringName, step: int
 		G2GEvents.SPECTATE_STOP:
 			game.spectate.stop(id)
 			return
+		G2GEvents.SPECTATE_ROAM:
+			res = game.spectate.toggle_roam(id)
 		G2GEvents.SPECTATE_NEXT:
 			res = game.spectate.next_target(id)
 		G2GEvents.SPECTATE_PREVIOUS:

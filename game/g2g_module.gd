@@ -184,6 +184,14 @@ func _module_load() -> DotResult:
 				bridge.broadcast_spectators()
 	)
 
+	# mp_forcecamera, mp_freeroam and mp_freeroam_speed (dot-spectate): free roam is on by
+	# default. REPLICATED, because each client flies its own camera at the server's speed and
+	# hides the key when roaming is off.
+	if game.spectate != null and game.spectate.manager != null:
+		var _spectate_cvars := game.spectate.manager.rules.bind_cvars(
+			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
+		)
+
 	# --- Commands ----------------------------------------------------------------
 	add_command("g2g_status", _cmd_status, "What this server is doing", "").with_chat()
 	add_command("g2g_restart", _cmd_restart, "Back to the start", "").with_chat()
@@ -822,6 +830,14 @@ func _on_chat_command(peer: int, command: String, args: PackedStringArray) -> vo
 					("Watching %s. Click to switch; R or !spec off to stop."
 						% _shown_name(game.spectate.target_of(voter))) if best.ok
 					else best.error.message
+				)
+			elif args[0] == "free" or args[0] == "roam":
+				var roamed := game.spectate.toggle_roam(voter)
+				services.notice(
+					peer,
+					"Flying free. !spec free again goes back to the players."
+						if roamed.ok and game.spectate.is_roaming(voter)
+					else ("Back to watching a player." if roamed.ok else roamed.error.message)
 				)
 			elif args[0] == "off" or args[0] == "stop":
 				game.spectate.stop(voter)

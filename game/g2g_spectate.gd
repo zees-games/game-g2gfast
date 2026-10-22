@@ -76,9 +76,15 @@ func _rules() -> DotSpectatorRules:
 	# deathmatch layer is on, where a living player watching a living one is a
 	# free wallhack.
 	var fighting := game.combat != null and game.combat.enabled
-	rules.force_camera = 1 if fighting else 0
+	#
+	# [b]Free roam is the family default and follows the cvars, not the deathmatch.[/b]
+	# `force_camera` stays 0 and `allow_roaming` stays true here; `mp_forcecamera` and
+	# `mp_freeroam` (bound by the module) are the operator's say. What the deathmatch layer
+	# tightens is who may spectate at all: `allow_while_alive` is false while fighting, so
+	# only the dead can roam, and an operator who wants the dead held to their own side
+	# sets `mp_forcecamera 1`. A hard-coded tightening here would be overwritten by the
+	# cvar's default the moment the module bound it, and say nothing about it.
 	rules.allow_while_alive = not fighting
-	rules.allow_roaming = not fighting
 	rules.cycle_includes_dead = not fighting
 
 	# No death camera on a run. Falling out of a surf map is not a kill and the two
@@ -206,6 +212,28 @@ func previous_target(viewer: StringName) -> DotResult:
 	if manager == null:
 		return DotResult.fail(DotError.CODE_STATE, "Spectating is not set up.")
 	return _watched(viewer, manager.previous_target(String(viewer)))
+
+
+## The free-roam key and `!spec free`: into a free camera, or back onto a player. Refused
+## (roaming off, or `mp_forcecamera` set) comes back as a failed result for a notice.
+func toggle_roam(viewer: StringName) -> DotResult:
+	if manager == null:
+		return DotResult.fail(DotError.CODE_STATE, "Spectating is not set up.")
+	var res := manager.toggle_roam(String(viewer))
+	if res.ok:
+		DotLog.debug(CHANNEL, "free roam toggled", {"viewer": String(viewer), "roaming": is_roaming(viewer)})
+	else:
+		DotLog.debug(CHANNEL, "free roam was refused", {"viewer": String(viewer), "why": res.error.message})
+	return res
+
+
+func is_roaming(viewer: StringName) -> bool:
+	return manager != null and manager.view(String(viewer)).mode == DotSpectatorView.Mode.ROAMING
+
+
+## Whether the key and the hint should be offered to [param viewer].
+func can_roam(viewer: StringName) -> bool:
+	return manager != null and manager.can_roam(String(viewer))
 
 
 ## Who a viewer is watching, or "".

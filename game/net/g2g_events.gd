@@ -118,6 +118,8 @@ const SPECTATE_STOP := 0
 const SPECTATE_NEXT := 1
 const SPECTATE_PREVIOUS := 2
 const SPECTATE_BEST := 3
+## The free-roam key: into a free camera, or back onto a player.
+const SPECTATE_ROAM := 4
 
 ## [constant Ask.RESTART]'s body. An empty body reads as [constant RESTART_TRACK], which is
 ## exactly what every client before the body existed meant by R.

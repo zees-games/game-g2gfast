@@ -28,7 +28,7 @@ const BhopIntro := preload("res://maps/bhop_g2g_intro.gd")
 const SurfIntro := preload("res://maps/surf_g2g_intro.gd")
 const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 
-const CHECKS := 241
+const CHECKS := 252
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -219,6 +219,38 @@ func _test_spectating() -> void:
 	# `!spec` with no name, which is what a spectator actually types.
 	var best := game.spectate.watch_best(&"watcher")
 	_check(best.ok, "watching whoever is furthest into a run picks somebody", str(best.error))
+
+	# Free roam: on by default, a toggle, seeded from where the camera was, and the cvars'
+	# rules refuse it.
+	var rules := game.spectate.manager.rules
+	_check(rules.allow_roaming and rules.roaming_permitted(), "free roam is on by default")
+	_check(game.spectate.can_roam(&"watcher"), "and offered to a watcher")
+	var before := game.spectate.camera_for(&"watcher")
+	var roam := game.spectate.toggle_roam(&"watcher")
+	_check(roam.ok and game.spectate.is_roaming(&"watcher"), "the free-roam key enters a roam", str(roam.error))
+	_check(game.spectate.manager.view("watcher").free_position.distance_to(before.origin) < 0.01,
+		"seeded from the camera it left")
+	var free := DotSpectatorFreeCam.new()
+	free.rules = rules
+	free.seed_from(before)
+	var moved := free.step(Vector3(0.0, 0.0, 1.0), false, false, 0.5)
+	_check(moved.origin.distance_to(before.origin) > 1.0, "and the free camera flies forward")
+	var back := game.spectate.toggle_roam(&"watcher")
+	_check(back.ok and not game.spectate.is_roaming(&"watcher") and game.spectate.is_spectating(&"watcher"),
+		"the same key goes back onto a player", str(back.error))
+	var _again := game.spectate.toggle_roam(&"watcher")
+	_check(rules.set_cvar("mp_freeroam", "0"), "mp_freeroam 0 is a valid value")
+	game.tick_once(game.current_tick() + 1)
+	_check(not game.spectate.is_roaming(&"watcher") and not game.spectate.can_roam(&"watcher"),
+		"and takes a roamer back to a player and hides the offer")
+	var refused := game.spectate.toggle_roam(&"watcher")
+	_check(not refused.ok and not game.spectate.is_roaming(&"watcher"), "while off a roam is refused with a reason",
+		refused.error.message if not refused.ok else "")
+	var _on := rules.set_cvar("mp_freeroam", "1")
+	_check(rules.set_cvar("mp_forcecamera", "1") and not rules.roaming_permitted(),
+		"mp_forcecamera 1 switches it off, whatever mp_freeroam says")
+	var _zero := rules.set_cvar("mp_forcecamera", "0")
+	_check(rules.roaming_permitted(), "and 0 gives it back")
 
 	game.spectate.stop(&"watcher")
 	_check(
