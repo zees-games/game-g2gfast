@@ -59,6 +59,9 @@ const ROWS: Array[Dictionary] = [
 	# key and adds none; the setting stays bind_voice, so nobody's stored key is reset. K, because
 	# V is Go to checkpoint here.
 	{"action": &"dot_voice_talk", "setting": &"bind_voice", "label": "Push to talk", "default": "K", "group": "Communication"},
+	# Look at a player and press (dot-game's DotGameClient): G is the free camera, H help, K talk.
+	{"action": &"voice_gag", "setting": &"bind_voice_gag", "label": "Look at a player: stop (or resume) hearing them", "default": "J", "group": "Communication"},
+	{"action": &"voice_mute", "setting": &"bind_voice_mute", "label": "Look at a player: mute (or unmute) their voice and chat", "default": "L", "group": "Communication"},
 
 	{"action": &"g2g_scoreboard", "setting": &"bind_scoreboard", "label": "Scoreboard (hold)", "default": "Tab", "group": "Interface"},
 	{"action": &"g2g_help", "setting": &"bind_help", "label": "Help", "default": "H", "group": "Interface"},

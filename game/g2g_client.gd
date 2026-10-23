@@ -562,6 +562,10 @@ func _build_netcode() -> DotResult:
 
 	var extra := extras.attach(bridge, game)
 	DotLog.result("g2g.client", "the client's chat and voice", extra)
+	platform.look_voice = extras.voice
+	platform.look_chat = extras.chat
+	platform.look_position_fn = _look_position
+	platform.build_look_mute()
 
 	extras.said.connect(_on_said)
 
@@ -1794,3 +1798,13 @@ func menu_set_third_person(on: bool) -> void:
 		return
 	var _ok := player.camera.set_mode(
 		G2GCamera.Mode.THIRD_PERSON if on else G2GCamera.Mode.FIRST_PERSON)
+
+
+## Where a roster row's player stands, for dot-game's look-to-gag key (J, L).
+func _look_position(row: Dictionary) -> Variant:
+	if game == null:
+		return null
+	for who: G2GPlayer in game.players.values():
+		if who != player and who.display_name == row["name"]:
+			return who.global_position + Vector3.UP * 1.5
+	return null
