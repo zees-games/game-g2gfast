@@ -47,7 +47,7 @@ const G2GUnits := preload("g2g_units.gd")
 ## [code]sv_accelerate[/code].
 @export_range(0.1, 100.0, 0.1) var accelerate: float = 5.0
 
-## [code]sv_airaccelerate[/code]. 1000 for bhop, 150 for surf, 10 for a stock shooter.
+## [code]sv_airaccelerate[/code]. The game default is 1000 for every map; a surf map may lower it.
 @export_range(0.0, 10000.0, 1.0) var air_accelerate: float = 1000.0
 
 ## [code]sv_friction[/code].

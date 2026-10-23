@@ -1,4 +1,4 @@
-# The game-wide default: 150, the surf standard (this is a surf and bhop server, and bhop maps
-# below say 1000). Overridden per map class here, per map by name, or by the operator in
-# cfg/server/game/game-g2gfast/dot_map/map/.
-sv_airaccelerate: 150
+# The fallback for every map without a file of its own. It sets nothing on purpose: the game-wide
+# default is sv_airaccelerate 1000 (game.yml, G2GConfig), and a key here would lower it on every
+# map that has no file of its own. Give a class of maps its own value in a narrower glob, a map in
+# its own file, or the operator in cfg/server/game/game-g2gfast/dot_map/map/.

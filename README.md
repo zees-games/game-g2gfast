@@ -85,7 +85,7 @@ Settings are cvars, in the units you already know. Set them in the server's conf
 
 ```
 sv_autobunnyhopping 1        // hold jump to keep hopping
-sv_airaccelerate 1000        // 150 for surf
+sv_airaccelerate 1000        // the default for every map
 sv_gravity 800
 sv_maxvelocity 3500
 sv_crestlaunch 1.25          // how fast you must be going for a ramp's top to launch you (x run speed, 0 = never)
