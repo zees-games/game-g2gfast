@@ -51,7 +51,7 @@ Short forms; the reasoning is in the linked file.
 - Third person is `G2GCamera` over one motor, never `DotTpsController`; arm `DotCameraBoom`, decided by `mp_forceview`; `tools/camera_check.gd` after touching either. [movement](docs/movement.md#third-person-is-cosmetic-and-stays-g2gcameras)
 - A ladder wins over water; the ladder mode never calls `categorise_ground`. [movement](docs/movement.md#ladders-and-water)
 
-- A map may change movement cvars through `cfg/game/game-g2gfast/dot_map/map/*.yml` (`G2GMapConfig`; default `sv_airaccelerate` 150, bhop 1000), restored on the next map. [movement](docs/movement.md#a-map-may-change-some-movement-cvars)
+- A map may change movement cvars through `cfg/game/game-g2gfast/dot_map/map/%.yml` (`G2GMapConfig`; default `sv_airaccelerate` 150, bhop 1000), restored on the next map. [movement](docs/movement.md#a-map-may-change-some-movement-cvars)
 
 **Timer**
 

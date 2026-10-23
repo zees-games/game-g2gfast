@@ -2,7 +2,7 @@ extends RefCounted
 
 ## Per-map movement settings: dot-game's [DotGameMapConfig] over the cvars a map may change.
 ##
-## `cfg/game/game-g2gfast/dot_map/map/<name>.yml` (a glob such as `surf_*.yml` covers a class of maps), overridable from `cfg/server/...`. Only the keys in [constant KEYS] are accepted; anything else a file says is logged and ignored. Never the auto-bhop cvar: that is the server's and the styles' call, not a map's.
+## `cfg/game/game-g2gfast/dot_map/map/<name>.yml` (a glob such as `surf_%.yml` covers a class of maps), overridable from `cfg/server/...`. Only the keys in [constant KEYS] are accepted; anything else a file says is logged and ignored. Never the auto-bhop cvar: that is the server's and the styles' call, not a map's.
 
 const GAME_ID := "game-g2gfast"
 
