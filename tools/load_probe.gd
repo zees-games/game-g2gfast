@@ -104,6 +104,8 @@ func _measure(map_id: StringName, players: int) -> void:
 	# LOAD_STAGGER=1: snapshots spread over the ticks between them (DotNetConfig.stagger_snapshots),
 	# so a row can be compared both ways.
 	nc.stagger_snapshots = OS.get_environment("LOAD_STAGGER") == "1"
+	# DOT_NET_SNAPSHOT_WORKERS=n: the config is built here, so the layered environment is not read.
+	nc.snapshot_workers = int(OS.get_environment("DOT_NET_SNAPSHOT_WORKERS")) if OS.get_environment("DOT_NET_SNAPSHOT_WORKERS") != "" else 0
 	net.config = nc
 	side.add_child(net)
 	net.setup()
@@ -204,6 +206,11 @@ func _measure(map_id: StringName, players: int) -> void:
 	var p99: float = sorted[int(sorted.size() * 0.99)] if not sorted.is_empty() else 0.0
 	var worst: float = sorted.back() if not sorted.is_empty() else 0.0
 	var seconds := float(MEASURED_TICKS) / float(game.tick_rate)
+	var p95: float = sorted[int(sorted.size() * 0.95)] if not sorted.is_empty() else 0.0
+	print("[load]  workers %d: pooled snapshots %d, interest %s (thread-safe %s), reason inline '%s', tick p95 %.2f ms, RSS %d MB" % [
+		_net.config.snapshot_workers, _net._snapshot_pooled, _net.interest.strategy_name if _net.interest != null else "none",
+		str(_net.interest.is_thread_safe()) if _net.interest != null else "n/a",
+		_net._snapshot_threads_reason, p95, _rss_mb()])
 	var snap := float(_bytes.get(&"snapshot", 0)) / seconds
 	print("[load]  %7d  %6.2f ms %6.2f %6.2f  %5.2f   %7d   game %.2f snapshots %.2f" % [
 		players, mean, p99, worst, 1000.0 / float(game.tick_rate), int(snap),
@@ -298,3 +305,14 @@ func _ack_later(peer_id: int, payload: PackedByteArray) -> void:
 	var taken := _net.receive_ack_payload(peer_id, ack.to_bytes())
 	if not taken.ok:
 		push_error("ack refused for peer %d: %s" % [peer_id, taken.error])
+
+
+## Resident set of this process, from /proc (0 where there is none). FileAccess reads procfs as empty.
+func _rss_mb() -> int:
+	var out: Array = []
+	if OS.execute("cat", ["/proc/%d/status" % OS.get_process_id()], out) != 0 or out.is_empty():
+		return 0
+	for line in str(out[0]).split("\n"):
+		if line.begins_with("VmRSS:"):
+			return int(line.substr(6).strip_edges().split(" ")[0]) / 1024
+	return 0
