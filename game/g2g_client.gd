@@ -3,6 +3,7 @@ extends Node
 const G2GArsenal := preload("g2g_arsenal.gd")
 const G2GBindings := preload("g2g_bindings.gd")
 const G2GBrowser := preload("g2g_browser.gd")
+const G2GMapConfig := preload("g2g_map_config.gd")
 const G2GCamera := preload("g2g_camera.gd")
 const G2GClientExtras := preload("g2g_client_extras.gd")
 const G2GConfig := preload("g2g_config.gd")
@@ -206,6 +207,10 @@ func _ready() -> void:
 	# Every effect drawn is somewhere on the map that just went away, and the landing
 	# watcher would otherwise read the first frame on the new one as a fall.
 	game.map_ready.connect(func(map: DotMapDef) -> void: presentation.on_map_changed(map.id if map != null else &""))
+	G2GMapConfig.wire_client(platform, game)
+	game.map_ready.connect(func(map: DotMapDef) -> void:
+		if map != null:
+			platform.map_changed(String(map.id)))
 
 	_build_ragdolls()
 	_build_killcam()

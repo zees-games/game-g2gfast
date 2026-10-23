@@ -1,0 +1,4 @@
+# The game-wide default: 150, the surf standard (this is a surf and bhop server, and bhop maps
+# below say 1000). Overridden per map class here, per map by name, or by the operator in
+# cfg/server/game/game-g2gfast/dot_map/map/.
+sv_airaccelerate: 150

@@ -77,3 +77,7 @@ What the probes established, and what is still open:
 ## Numbers that explain the hull
 
 The survey and the reach use the tunables' own numbers in units: hull `2 × radius` = **32 u**, crouched headroom 54, step 18, slope limit 45.57°. A surface steeper than that is a ramp; a 45° slab is a floor, which is why the stages map's surf bonus faces are 50° (`BONUS_RAMP_PITCH`, map data; the box turns by 90 minus it, because the builder's angle is the box's turn, not the face's).
+
+## A map may change some movement cvars
+
+`cfg/game/game-g2gfast/dot_map/map/<name>.yml` (a map id or a glob; the operator overrides in `cfg/server/game/game-g2gfast/dot_map/map/`) sets `sv_airaccelerate`, `sv_accelerate`, `sv_gravity`, `sv_friction`, `sv_maxspeed`, `sv_maxvelocity`, `sv_airwishcap` and `sv_enablebunnyhopping` through `G2GMapConfig` (server cvars, and the client's config), and the next map puts them back; never auto-bhop. The shipped default is `sv_airaccelerate: 150` in `*.yml` (the surf standard), 1000 for `bhop_*` and `kz_bhop_*`, 100 for the two maps whose own entities ask for it. Check: `examples/headless_mapcfg`.

@@ -6,6 +6,7 @@ const G2GCamera := preload("g2g_camera.gd")
 const G2GCombat := preload("g2g_combat.gd")
 const G2GConfig := preload("g2g_config.gd")
 const G2GGame := preload("g2g_game.gd")
+const G2GMapConfig := preload("g2g_map_config.gd")
 const G2GHunters := preload("g2g_hunters.gd")
 const G2GIdentity := preload("g2g_identity.gd")
 const G2GModTools := preload("g2g_mod_tools.gd")
@@ -35,6 +36,8 @@ const CHANNEL := "g2g.module"
 const MAP_BALLOT_TOPIC := &"map_ballot"
 
 var game: G2GGame = null
+## Per-map movement settings, built on the first map.
+var map_config: DotGameMapConfig = null
 var net: DotNetManager = null
 var bridge: G2GNetBridge = null
 
@@ -924,6 +927,8 @@ func _player_named(text: String) -> StringName:
 
 
 func _module_unload() -> void:
+	if map_config != null:
+		map_config.restore()
 	if server != null and server.client_disconnected.is_connected(_on_client_disconnected):
 		server.client_disconnected.disconnect(_on_client_disconnected)
 	# The server outlives this game; a column hook left behind would be called on the next.
@@ -960,6 +965,10 @@ func _module_unload() -> void:
 ## the backbone report does too) rather than this game's content id. On every change
 ## through the session's own signal, which every route to a new map ends at.
 func _report_map(map: DotMapDef, _world: Node = null) -> void:
+	if map != null:
+		if map_config == null:
+			map_config = G2GMapConfig.build(console)
+		map_config.apply(String(map.id))
 	if server != null and server.games != null:
 		server.games.set_current_map(String(map.id) if map != null else "")
 

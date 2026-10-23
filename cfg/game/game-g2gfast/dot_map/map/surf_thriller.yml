@@ -1,0 +1,2 @@
+# From the map's own entities (surf_* gives 150 otherwise).
+sv_airaccelerate: 100
