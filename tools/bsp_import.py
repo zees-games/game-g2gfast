@@ -28,7 +28,9 @@ this repository already has: geometry made in code.
 """
 
 import argparse
+import bisect
 import collections
+import copy
 import fnmatch
 import hashlib
 import io
@@ -89,6 +91,12 @@ MIN_ZONE_THICKNESS = 192.0
 # One tick of travel at the genre's ceiling, rounded up: 3500 u/s at 128 Hz is 27.3
 # units. A pit the importer could not grow to MIN_ZONE_THICKNESS is still made this deep.
 TICK_DEPTH = 32.0
+
+# The standing player hull: Source touches a trigger with this box, dot-timer with the feet.
+PLAYER_HEIGHT = 72.0
+PLAYER_HALF_WIDTH = 16.0
+# How high a player's feet rise over the floor: a 57-unit jump, 18 more crouched in the air.
+HOP_REACH = 76.0
 
 # Where the g2gfast roles come from: the angle of the surface, not the name on it.
 #
@@ -2618,6 +2626,86 @@ def clear_arrivals(zone, arrivals):
             lo[2] -= want
 
 
+def _tile(floor, us, vs, top, swap):
+    """Boxes over a grid of bottoms: runs of equal bottom along v, merged across u."""
+    boxes, open_runs = [], {}
+    for i in range(len(us)):
+        runs = set()
+        if i < len(us) - 1:
+            row, j = floor[i], 0
+            while j < len(row):
+                k = j
+                while k + 1 < len(row) and row[k + 1] == row[j]:
+                    k += 1
+                runs.add((j, k + 1, row[j]))
+                j = k + 1
+        for run in sorted(open_runs):
+            if run not in runs:
+                j0, j1, bottom = run
+                u0 = us[open_runs.pop(run)]
+                if swap:
+                    boxes.append(([vs[j0], u0, bottom], [vs[j1], us[i], top]))
+                else:
+                    boxes.append(([u0, vs[j0], bottom], [us[i], vs[j1], top]))
+        for run in sorted(runs):
+            open_runs.setdefault(run, i)
+    return boxes
+
+
+def _snap_out(a, b, lo, hi):
+    """(a, b) widened onto a TICK_DEPTH grid from `lo`, inside [lo, hi]. Every column the
+    cut leaves is then a tick wide: a thinner one is stepped over at the genre's ceiling,
+    and a block's dozen brushes cut one column, not a dozen slivers."""
+    if a >= hi or b <= lo:
+        return hi, lo
+    # The grid's last cell takes the remainder, so it is one to two ticks wide.
+    last = lo + max(0, math.floor((hi - lo) / TICK_DEPTH) - 1) * TICK_DEPTH
+    a = min(last, max(lo, lo + math.floor((a - lo) / TICK_DEPTH) * TICK_DEPTH))
+    b = lo + math.ceil((b - lo) / TICK_DEPTH) * TICK_DEPTH
+    return a, (hi if b > last else b)
+
+
+def clear_standers(zone, solids):
+    """Raise a thickened pit, column by column, off every floor whose stander Source
+    never touched it from; returns the extra boxes the cut leaves (the zone keeps one).
+
+    Source touches a trigger with the standing hull, dot-timer with the feet, so a floor
+    at least PLAYER_HEIGHT under the mapper's sheet keeps HOP_REACH of air above it. A
+    floor nearer the sheet is in the pit, as it was in Source; the sheet is never cut.
+    """
+    if not zone.get("inflated"):
+        return []
+    lo, hi = zone["min"], zone["max"]
+    sheet = zone["original_min"][2]
+    carves = []
+    for a, b in solids:
+        if not lo[2] - HOP_REACH < b[2] <= sheet - PLAYER_HEIGHT:
+            continue
+        x0, x1 = _snap_out(a[0] - PLAYER_HALF_WIDTH, b[0] + PLAYER_HALF_WIDTH, lo[0], hi[0])
+        y0, y1 = _snap_out(a[1] - PLAYER_HALF_WIDTH, b[1] + PLAYER_HALF_WIDTH, lo[1], hi[1])
+        bottom = min(b[2] + HOP_REACH, sheet, hi[2] - TICK_DEPTH)
+        if x0 < x1 and y0 < y1 and bottom > lo[2]:
+            carves.append((x0, y0, x1, y1, bottom))
+    if not carves:
+        return []
+    xs = sorted({lo[0], hi[0]} | {c[0] for c in carves} | {c[2] for c in carves})
+    ys = sorted({lo[1], hi[1]} | {c[1] for c in carves} | {c[3] for c in carves})
+    floor = [[lo[2]] * (len(ys) - 1) for _ in range(len(xs) - 1)]
+    for x0, y0, x1, y1, bottom in carves:
+        for i in range(bisect.bisect_left(xs, x0), bisect.bisect_left(xs, x1)):
+            row = floor[i]
+            for j in range(bisect.bisect_left(ys, y0), bisect.bisect_left(ys, y1)):
+                if bottom > row[j]:
+                    row[j] = bottom
+    # Tiled both ways round, and the one with fewer boxes kept.
+    across = [list(col) for col in zip(*floor)]
+    boxes = min(_tile(floor, xs, ys, hi[2], False), _tile(across, ys, xs, hi[2], True), key=len)
+    boxes.sort(key=lambda bx: bx[0][2])
+    zone["min"], zone["max"] = boxes[0]
+    zone["stood"] = True
+    return boxes[1:]
+
+
 def pit_tracks(z, e):
     """Which tracks a leftover teleport is a pit FOR: the ones whose start it sends to.
 
@@ -3011,14 +3099,20 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None,
                 clear_arrivals(zone, arrivals)
                 if brush is not None:
                     trim_to_hull(zone, arrivals, bsp, brush, origin)
-                respawn.append({"min": zone["min"], "max": zone["max"],
-                                "inflated": zone["inflated"],
-                                "hung": bool(zone.get("hung")),
-                                "cleared": bool(zone.get("cleared")),
-                                "trimmed": bool(zone.get("trimmed")),
-                    "track": track,
-                                "original_min": zone["original_min"],
-                                "original_max": zone["original_max"]})
+                rest = []
+                for piece in clear_standers(zone, z.solids):
+                    rest.append(dict(copy.deepcopy(zone), min=piece[0], max=piece[1]))
+                z.zones.extend(rest)
+                for part in [zone] + rest:
+                    respawn.append({"min": part["min"], "max": part["max"],
+                                    "inflated": part["inflated"],
+                                    "hung": bool(part.get("hung")),
+                                    "cleared": bool(part.get("cleared")),
+                                    "trimmed": bool(part.get("trimmed")),
+                                    "stood": bool(part.get("stood")),
+                                    "track": track,
+                                    "original_min": part["original_min"],
+                                    "original_max": part["original_max"]})
 
     # A pit whose destination is inside another pit is usually a HUB, not a loop: the
     # speed-stopping box mappers send a fallen player into so that the second teleport,

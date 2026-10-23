@@ -380,14 +380,17 @@ def build_zones(ents, boxes, solids):
 
     def add(kind, lo, hi, dest=None, yaw=0.0, comment="", pit=False):
         z = {"kind": kind, "track": 0}
+        parts = [(lo, hi)]
         if lo is not None:
             if pit:
+                olo = list(lo)
                 lo, hi, grown, _how = bi.inflate_pit(lo, hi, bi.MIN_ZONE_THICKNESS, solids)
+                raw = {"min": lo, "max": hi, "inflated": grown, "original_min": olo}
+                rest = bi.clear_standers(raw, solids)
+                parts = [(raw["min"], raw["max"])] + [tuple(p) for p in rest]
             else:
                 lo, hi, grown = bi.inflate(lo, hi, bi.MIN_ZONE_THICKNESS)
-            a, b = to_godot(lo), to_godot(hi)
-            z["min"] = [min(a[i], b[i]) for i in range(3)]
-            z["max"] = [max(a[i], b[i]) for i in range(3)]
+                parts = [(lo, hi)]
             z["inflated"] = grown
         if dest is not None:
             at = to_godot(dest)
@@ -395,7 +398,13 @@ def build_zones(ents, boxes, solids):
             z["destination_yaw"] = yaw_to_godot(yaw)
         if comment:
             z["comment"] = comment
-        zones.append(z)
+        for lo, hi in parts:
+            part = dict(z)
+            if lo is not None:
+                a, b = to_godot(lo), to_godot(hi)
+                part["min"] = [min(a[i], b[i]) for i in range(3)]
+                part["max"] = [max(a[i], b[i]) for i in range(3)]
+            zones.append(part)
 
     # The surf timer plugins' convention, which the mapper's page says the map follows:
     # `map_start` and `map_end` trigger_multiples.
