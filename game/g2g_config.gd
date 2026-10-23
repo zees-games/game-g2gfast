@@ -317,6 +317,9 @@ func map_content_id(id: StringName) -> String:
 ## hitboxes, health, an arsenal and a scoreboard, and it takes nothing away.
 @export var deathmatch: bool = false
 
+## Seconds of the final killcam when a deathmatch ends, added to the end's wait. `mp_killcam_time`; 0 is off.
+@export_range(0.0, 30.0, 0.5) var killcam_seconds: float = 7.0
+
 ## Whether hunters walk the course. `sv_hunters`.
 ##
 ## Off. A hunter cannot catch a runner who is running well — the fastest one does

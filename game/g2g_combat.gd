@@ -199,6 +199,7 @@ func _build_match() -> DotResult:
 	match_node = DotMatch.new()
 	match_node.name = "Match"
 	match_node.rules = G2GArsenal.match_rules(score_limit)
+	apply_killcam_wait()
 	match_node.register_service = false
 
 	var config := DotMatchConfig.new()
@@ -217,6 +218,23 @@ func _build_match() -> DotResult:
 	match_node.respawn_due.connect(_on_respawn_due)
 
 	return DotResult.success(match_node)
+
+
+## The final killcam plays inside the match's end, so the end waits that much longer.
+func apply_killcam_wait() -> void:
+	if match_node != null:
+		match_node.rules.match_end_sec = G2GArsenal.match_rules(score_limit).match_end_sec \
+			+ maxf(game.config.killcam_seconds, 0.0)
+
+
+## The top of the board for the winner reveal: `{name, kills, deaths}`, best first.
+func podium_rows() -> Array:
+	var rows: Array = []
+	if match_node == null or match_node.scoreboard == null:
+		return rows
+	for row: DotPlayerScore in match_node.scoreboard.ranked().slice(0, 3):
+		rows.append({"name": row.display_name, "kills": row.kills, "deaths": row.deaths})
+	return rows
 
 
 ## The two weapons everybody starts with.

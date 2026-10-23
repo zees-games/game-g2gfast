@@ -99,6 +99,7 @@ sv_stagger_snapshots 0       // 1 spreads snapshot work over the ticks between s
 sv_replay_bot 1              // the server record runs as a visible ghost
 sv_map_sync_timeout 30       // how long a map change waits for slow clients
 sv_deathmatch 0              // players can shoot each other
+mp_killcam_time 7          // seconds of final killcam when a deathmatch ends (0 off)
 sv_hunters 0                 // monsters walk the course
 sv_props 0                   // players can place practice blocks
 sv_ragdoll 1                 // a dead player falls as a ragdoll; 0 is a quick fall with no physics

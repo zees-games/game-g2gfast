@@ -1,5 +1,6 @@
 extends Node
 
+const G2GArsenal := preload("g2g_arsenal.gd")
 const G2GBindings := preload("g2g_bindings.gd")
 const G2GBrowser := preload("g2g_browser.gd")
 const G2GCamera := preload("g2g_camera.gd")
@@ -10,6 +11,7 @@ const G2GGame := preload("g2g_game.gd")
 const G2GZoneEditor := preload("g2g_zone_editor.gd")
 const G2GZoneOutlines := preload("g2g_zone_outlines.gd")
 const G2GHud := preload("g2g_hud.gd")
+const G2GKillcam := preload("g2g_killcam.gd")
 const G2GEvents := preload("net/g2g_events.gd")
 const G2GMenuPages := preload("ui/g2g_menu_pages.gd")
 const G2GNetBridge := preload("net/g2g_net_bridge.gd")
@@ -206,6 +208,7 @@ func _ready() -> void:
 	game.map_ready.connect(func(map: DotMapDef) -> void: presentation.on_map_changed(map.id if map != null else &""))
 
 	_build_ragdolls()
+	_build_killcam()
 
 	zone_outlines = G2GZoneOutlines.new()
 	zone_outlines.name = "ZoneOutlines"
@@ -307,6 +310,109 @@ func _covered() -> bool:
 	return gate != null and not gate.is_open()
 
 
+# --- The end of a deathmatch: final killcam, winner reveal, board ------------------
+
+## How long the board stays up after the reveal, with nobody holding Tab.
+const SUMMARY_BOARD_SEC := 8.0
+
+## The final killcam: records every frame, replays the last kill before the winner reveal.
+var killcam: G2GKillcam = null
+var winner_reveal: DotWinnerReveal = null
+
+var _end_rows: Array = []
+var _end_active: bool = false
+var _reveal_hid: Dictionary = {}
+var _summary_board_open: bool = false
+var _killcam_sec: float = 0.0
+
+
+func _build_killcam() -> void:
+	killcam = G2GKillcam.new()
+	killcam.name = "FinalKillcam"
+	killcam.players_fn = func() -> Array: return game.players.values() if game != null else []
+	killcam.player_for_fn = func(id: StringName) -> Variant: return game.players.get(id) if game != null else null
+	killcam.seconds_fn = func() -> float: return _killcam_sec
+	killcam.weapon_name_fn = func(id: String) -> String:
+		var def: DotWeaponDef = G2GArsenal.weapon_catalogue().get_def(StringName(id)) if id != "" else null
+		return def.display_name if def != null and def.display_name != "" else id.capitalize()
+	killcam.over.connect(func(_skipped: bool) -> void: _reveal_winner())
+	add_child(killcam)
+	winner_reveal = DotWinnerReveal.new()
+	winner_reveal.name = "WinnerReveal"
+	winner_reveal.skip_actions = G2GKillcam.SKIP_ACTIONS
+	winner_reveal.finished.connect(_on_reveal_finished)
+	add_child(winner_reveal)
+	game.map_ready.connect(func(_map: DotMapDef) -> void: _leave_match_end())
+
+
+## The deathmatch ended: the final killcam if there is a kill to show, then the winner.
+func _match_over(killcam_sec: float, rows: Array) -> void:
+	if killcam == null:
+		return
+	_end_rows = rows
+	_end_active = true
+	_killcam_sec = killcam_sec
+	if killcam.match_ended():
+		DotLog.debug("g2g.client", "the winner waits for the final killcam")
+
+
+## The top three on a podium, after the killcam and before the board.
+func _reveal_winner() -> void:
+	if not _end_active:
+		return
+	var entries: Array = []
+	for row: Dictionary in _end_rows:
+		var kills := int(row.get("kills", 0))
+		var deaths := int(row.get("deaths", 0))
+		entries.append({"name": str(row.get("name", "")), "score": "%d %s  %d %s" % [
+			kills, "kill" if kills == 1 else "kills", deaths, "death" if deaths == 1 else "deaths"]})
+	winner_reveal.reduced_motion = presentation != null and presentation.settings != null \
+		and presentation.settings.get_bool(&"reduce_motion", false)
+	var shown := winner_reveal.present(entries, {"title": "WINNER", "hint": "Jump to skip"})
+	if not shown.ok:
+		_end_active = false
+		_open_summary_board()
+		return
+	if hud != null:
+		_reveal_hid[hud] = hud.visible
+		hud.visible = false
+
+
+func _on_reveal_finished(_skipped: bool) -> void:
+	for n: Variant in _reveal_hid:
+		if is_instance_valid(n):
+			(n as CanvasItem).visible = _reveal_hid[n]
+	_reveal_hid.clear()
+	if _end_active:
+		_end_active = false
+		_open_summary_board()
+
+
+func _open_summary_board() -> void:
+	if menu == null or menu.any_open():
+		return
+	menu.scoreboard.open()
+	_summary_board_open = true
+	await get_tree().create_timer(SUMMARY_BOARD_SEC).timeout
+	if _summary_board_open and menu != null:
+		_summary_board_open = false
+		menu.scoreboard.close()
+
+
+## A new match or map began: whatever of the end is still up goes.
+func _leave_match_end() -> void:
+	if not _end_active and not _summary_board_open:
+		return
+	_end_active = false
+	if killcam != null:
+		killcam.skip()
+	if winner_reveal != null:
+		winner_reveal.skip()
+	if _summary_board_open and menu != null:
+		_summary_board_open = false
+		menu.scoreboard.close()
+
+
 # --- Dead bodies -------------------------------------------------------------
 
 ## The yard the dead lie in, the presentation's sound, and the solo game's own deaths. Built
@@ -336,6 +442,17 @@ func _build_ragdolls() -> void:
 			var _fell := fall(id, who.death if who != null else null)
 		)
 		game.combat.player_respawned.connect(rise)
+		game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
+			var killer := game.combat.player_id_for(entry.killer_key.to_int()) if entry.killer_key != "" else &""
+			if killcam != null:
+				killcam.note_kill(killer, game.combat.player_id_for(entry.victim_key.to_int()), entry.cause, entry.headshot)
+		)
+		if game.combat.match_node != null:
+			# Deferred: the last kill ends the match from inside its own report, before the kill
+			# reaches the killcam.
+			game.combat.match_node.match_ended.connect(func(_winner: int, _outcome: int) -> void:
+				_match_over.call_deferred(game.config.killcam_seconds, game.combat.podium_rows())
+			)
 
 
 ## [param id]'s body falls the way the server picked ([param death]; null is a plain drop),
@@ -343,6 +460,8 @@ func _build_ragdolls() -> void:
 ## the server's style hides bodies, or nobody here draws that body: a player the client is
 ## hiding, or this client's own in first person (the camera is inside its head).
 func fall(id: StringName, death: DotPlayerDeath) -> DotPlayerRagdoll:
+	if killcam != null:
+		killcam.set_alive(id, false)
 	var who: G2GPlayer = game.players.get(id) if game != null else null
 	if who == null or ragdolls == null or who.rig == null or not who.rig.is_inside_tree():
 		return null
@@ -354,6 +473,9 @@ func fall(id: StringName, death: DotPlayerDeath) -> DotPlayerRagdoll:
 
 ## [param id] is alive again: the rig a fall hid is drawn again where they now stand.
 func rise(id: StringName) -> void:
+	if killcam != null:
+		killcam.set_alive(id, true)
+	_leave_match_end()
 	var who: G2GPlayer = game.players.get(id) if game != null else null
 	if who != null and who.rig != null:
 		who.rig.visible = true
@@ -624,6 +746,11 @@ func _build_netcode() -> DotResult:
 		var _fell := fall(id, death)
 	)
 	bridge.alive_received.connect(rise)
+	bridge.kill_received.connect(func(killer: StringName, victim: StringName, weapon: String, head: bool) -> void:
+		if killcam != null:
+			killcam.note_kill(killer, victim, weapon, head)
+	)
+	bridge.match_end_received.connect(_match_over)
 	# The server's sv_ragdoll* set: this end draws the bodies. An older shell's link cannot
 	# say, and the rules keep their defaults.
 	if link != null:
@@ -844,6 +971,9 @@ func _process(delta: float) -> void:
 	# because they asked the spectator manager where the camera should be, not where the
 	# camera was. `headless_client` asks the camera.
 	_drive_spectator_camera()
+	if killcam != null:
+		killcam.hide_while_playing = [hud]
+		killcam.frame()
 
 
 ## Hands the local player this frame's view, the mouse motion of THIS frame folded in,

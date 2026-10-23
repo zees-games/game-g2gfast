@@ -374,6 +374,14 @@ func _module_load() -> DotResult:
 				})
 	)
 
+	add_cvar("mp_killcam_time", str(game.config.killcam_seconds),
+		"Seconds the final killcam plays when a deathmatch ends, added to the end's wait (0 for none)").changed.connect(
+		func(_old: String, new_value: String) -> void:
+			game.config.killcam_seconds = clampf(new_value.to_float(), 0.0, 30.0)
+			if game.combat != null:
+				game.combat.apply_killcam_wait()
+	)
+
 	# Registered whether or not hunters are on, so `npc_skill hard` in a config holds
 	# when an operator turns `sv_hunters` on later.
 	game.npc_skill.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY)

@@ -139,6 +139,12 @@ signal death_received(player_id: StringName, death: DotPlayerDeath)
 ## A dead player is alive again: their key.
 signal alive_received(player_id: StringName)
 
+## A kill on the server: player keys (empty for the world), the weapon id and whether it was the head.
+signal kill_received(killer: StringName, victim: StringName, weapon: String, headshot: bool)
+
+## The deathmatch ended: the killcam's seconds and the top of the board.
+signal match_end_received(killcam_sec: float, rows: Array)
+
 ## The map's time left as the server last described it. Client side; what the HUD draws.
 ## Never adopted means never told, which the HUD answers with the local clock.
 var clock_view: DotVoteClockView = DotVoteClockView.new()
@@ -267,7 +273,13 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 			# Every death, a hunter's included, and every return: before this nothing
 			# connected player_killed, and a dead runner stood upright on every screen.
 			game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
-				broadcast_death(game.combat.player_id_for(entry.victim_key.to_int())))
+				broadcast_death(game.combat.player_id_for(entry.victim_key.to_int()))
+				broadcast_kill(entry))
+			if game.combat.match_node != null:
+				# Deferred: the last kill ends the match from inside its own report, before the
+				# kill is broadcast, and the killcam needs the kill first.
+				game.combat.match_node.match_ended.connect(
+					func(_winner: int, _outcome: int) -> void: broadcast_match_end.call_deferred())
 			game.combat.player_respawned.connect(broadcast_alive)
 
 	return DotResult.success(self)
@@ -286,6 +298,21 @@ func broadcast_death(id: StringName) -> void:
 	var victim: G2GPlayer = game.players.get(id)
 	if victim != null:
 		_broadcast(G2GEvents.Kind.DEATH, G2GEvents.write_death(session_of(id), victim.death))
+
+
+## To everybody: a kill, for the final killcam. Server side.
+func broadcast_kill(entry: DotKillFeed.Entry) -> void:
+	var killer := game.combat.player_id_for(entry.killer_key.to_int()) if entry.killer_key != "" else &""
+	_broadcast(G2GEvents.Kind.KILL, G2GEvents.write_kill(
+		session_of(killer) if killer != &"" else 0,
+		session_of(game.combat.player_id_for(entry.victim_key.to_int())),
+		String(entry.cause), entry.headshot))
+
+
+## To everybody: the deathmatch is over. Server side; from [signal DotMatch.match_ended].
+func broadcast_match_end() -> void:
+	_broadcast(G2GEvents.Kind.MATCH_END, G2GEvents.write_match_end(
+		game.config.killcam_seconds, game.combat.podium_rows()))
 
 
 ## To everybody: [param id] is alive again. Server side; from [signal G2GCombat.player_respawned].
@@ -1709,6 +1736,16 @@ func _on_event(message: DotNetMessage) -> void:
 			var died := G2GEvents.read_death(reader)
 			if bool(died["ok"]):
 				death_received.emit(_player_key(int(died["player_id"])), died.get("death"))
+		G2GEvents.Kind.KILL:
+			var shot := G2GEvents.read_kill(reader)
+			if bool(shot["ok"]):
+				var killer := _player_key(int(shot["killer"])) if int(shot["killer"]) > 0 else &""
+				kill_received.emit(killer, _player_key(int(shot["victim"])), String(shot["weapon"]),
+					bool(shot["headshot"]))
+		G2GEvents.Kind.MATCH_END:
+			var over := G2GEvents.read_match_end(reader)
+			if bool(over["ok"]):
+				match_end_received.emit(float(over["killcam"]), over["rows"])
 		G2GEvents.Kind.ALIVE:
 			var session_id := G2GEvents.read_player(reader)
 			if reader.ok():

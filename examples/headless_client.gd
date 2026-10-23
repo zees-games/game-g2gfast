@@ -22,8 +22,8 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 70
-const SECTIONS := 14
+const CHECKS := 81
+const SECTIONS := 15
 
 var _passed := 0
 var _failed := 0
@@ -78,6 +78,7 @@ func _run() -> void:
 	await _test_the_wheel_jumps()
 	_test_solo_in_the_shell()
 	await _test_the_stage_splits_panel()
+	await _test_the_end_of_a_deathmatch()
 
 	print("")
 	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
@@ -332,6 +333,68 @@ func _test_a_dead_body_falls() -> void:
 	_check(_client.fall(_client.player.player_id, crumple) == null and _client.player.rig.visible,
 		"no ragdoll of your own body in first person: the camera is inside its head")
 	game.remove_player(&"u91")
+	await get_tree().process_frame
+	_done()
+
+
+## The end of a deathmatch: the last kill replayed from the killer's eye, then the winner on a
+## podium, then the board, each skippable; 0 seconds goes straight to the winner and Reduce
+## motion shows the reveal's last frame at once. The clock is the test's, so no wall time passes.
+func _test_the_end_of_a_deathmatch() -> void:
+	_section("A deathmatch's end: the final killcam, the winner, then the board")
+	var game := _client.game
+	var rival: G2GPlayer = game.add_player(&"u92", "Rival", false)
+	var start := _client.player.controller.state.position + Vector3(0.0, 0.0, -6.0)
+	var clock := [0.0]
+	var kc := _client.killcam
+	kc.now_fn = func() -> float: return clock[0]
+	kc.killcam.auto_process = false
+	_client.winner_reveal.auto_process = false
+	var step := 1.0 / 60.0
+	var before := get_viewport().get_camera_3d()
+	while clock[0] < 9.5:
+		clock[0] += step
+		rival.teleport(start + Vector3(clock[0], 0.0, 0.0))
+		kc.frame()
+		if absf(clock[0] - 8.0) < step * 0.5:
+			kc.note_kill(&"u92", _client.player.player_id, "deagle")
+	_check(kc.buffer.frame_count() > 400 and StringName(kc.buffer.last_event(&"kill")["data"]["killer"]) == &"u92",
+		"every frame drawn and the kill went into the buffer")
+
+	var rows := [{"name": "Rival", "kills": 40, "deaths": 3}, {"name": "You", "kills": 12, "deaths": 20}]
+	_client._match_over(7.0, rows)
+	_check(kc.is_playing() and kc.camera.current and not _client.hud.visible,
+		"the end starts the killcam, from its own camera, with the HUD hidden")
+	kc.killcam.advance(step)
+	_check(kc.killcam.banner != null and kc.killcam.banner.killer_label.text == "Rival",
+		"under a banner naming the killer")
+	var n := 0
+	while kc.is_playing() and n < 1000:
+		kc.killcam.advance(step)
+		n += 1
+	_check(not kc.is_playing() and n * step < 7.0 and get_viewport().get_camera_3d() == before,
+		"it ends inside the budget and gives the view back (%.2f s)" % (n * step))
+	_check(_client.winner_reveal.is_active() and _client.winner_reveal.name_label.text == "Rival",
+		"then the winner is named over the podium")
+	_check(not _client.hud.visible, "with the HUD still hidden")
+	_client.winner_reveal.advance(30.0)
+	_check(not _client.winner_reveal.is_active() and _client.hud.visible and _client.menu.scoreboard.is_open(),
+		"and when it is done the HUD returns and the board comes up")
+	_client._leave_match_end()
+	_check(not _client.menu.scoreboard.is_open(), "the next match takes the board down again")
+
+	_client._match_over(0.0, rows)
+	_check(not kc.is_playing() and _client.winner_reveal.is_active(),
+		"mp_killcam_time 0: no killcam, straight to the winner")
+	_client._leave_match_end()
+	_check(not _client.winner_reveal.is_active() and _client.hud.visible, "leaving the end skips what is up")
+
+	_client.presentation.settings.set_value(&"reduce_motion", true)
+	_client._match_over(0.0, rows)
+	_check(_client.winner_reveal.reduced_motion, "Reduce motion is read from the settings")
+	_client._leave_match_end()
+	_client.presentation.settings.set_value(&"reduce_motion", false)
+	game.remove_player(&"u92")
 	await get_tree().process_frame
 	_done()
 

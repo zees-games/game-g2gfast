@@ -84,6 +84,12 @@ enum Kind {
 	## Server to that player only (a client has no store), on spawn, style change and a
 	## filed run or section. Appended.
 	STAGE_REF,
+	## A player was killed, to everybody: killer (0 for the world), victim, weapon and head.
+	## The final killcam notes the last one. Appended.
+	KILL,
+	## The deathmatch ended: the killcam's length and the top of the board, to everybody.
+	## Appended.
+	MATCH_END,
 }
 
 enum Ask {
@@ -747,3 +753,51 @@ static func read_hit(reader: DotNetReader) -> Dictionary:
 	var flags := reader.read_uint(2)
 	return {"ok": reader.ok(), "victim": victim, "amount": amount, "point": point,
 		"killed": flags & 1 != 0, "headshot": flags & 2 != 0}
+
+
+## [constant Kind.KILL]'s body: session ids, 0 for the world.
+static func write_kill(killer: int, victim: int, weapon: String, headshot: bool) -> PackedByteArray:
+	var writer := _w()
+	writer.write_varint(maxi(killer, 0))
+	writer.write_varint(maxi(victim, 0))
+	writer.write_string(weapon, 32)
+	writer.write_uint(1 if headshot else 0, 1)
+	return writer.to_bytes()
+
+
+static func read_kill(reader: DotNetReader) -> Dictionary:
+	var killer := reader.read_varint()
+	var victim := reader.read_varint()
+	var weapon := reader.read_string(32)
+	var head := reader.read_uint(1)
+	return {"ok": reader.ok(), "killer": killer, "victim": victim, "weapon": weapon, "headshot": head == 1}
+
+
+## The most rows a MATCH_END carries: the podium shows three.
+const MAX_MATCH_ROWS := 3
+
+
+## [constant Kind.MATCH_END]'s body. [param rows] are `{name, kills, deaths}`, best first.
+static func write_match_end(killcam_sec: float, rows: Array) -> PackedByteArray:
+	var writer := _w()
+	writer.write_varint(clampi(roundi(killcam_sec * 10.0), 0, 300))
+	var count := mini(rows.size(), MAX_MATCH_ROWS)
+	writer.write_uint(count, 2)
+	for i in range(count):
+		var row: Dictionary = rows[i]
+		writer.write_string(str(row.get("name", "")), NAME_BYTES)
+		writer.write_varint(maxi(int(row.get("kills", 0)), 0))
+		writer.write_varint(maxi(int(row.get("deaths", 0)), 0))
+	return writer.to_bytes()
+
+
+static func read_match_end(reader: DotNetReader) -> Dictionary:
+	var seconds := float(reader.read_varint()) / 10.0
+	var count := reader.read_uint(2)
+	var rows: Array = []
+	for i in range(mini(count, MAX_MATCH_ROWS)):
+		var name := reader.read_string(NAME_BYTES)
+		var kills := reader.read_varint()
+		var deaths := reader.read_varint()
+		rows.append({"name": name, "kills": kills, "deaths": deaths})
+	return {"ok": reader.ok(), "killcam": seconds, "rows": rows}

@@ -243,6 +243,8 @@ static func schema() -> DotSettingsSchema:
 		))
 	s.add(DotSettingsDef.boolean(&"allow_flashes", false, &"accessibility")
 		.with_description("Off by default here, for the same reason as the shake."))
+	s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
+		.with_description("The end-of-match announcement appears at once, with nothing sliding, rising or bursting."))
 
 	# One binding per key the client reads, DEVICE scope, after the chat block above so the
 	# two chat keys keep the ACCOUNT declarations they had first. See G2GBindings.

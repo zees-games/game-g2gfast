@@ -37,13 +37,13 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 228
+const CHECKS := 231
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 30
+const SECTIONS := 31
 
 var _passed := 0
 var _failed := 0
@@ -98,6 +98,7 @@ func _run() -> void:
 		_test_clock_wire()
 		_test_rules_wire()
 		_test_hit_wire()
+		_test_end_of_match_wire()
 		_test_death_wire()
 		_test_blind_and_beacon()
 		_test_hunters_reach_the_client()
@@ -1878,6 +1879,25 @@ func _test_clock_wire() -> void:
 	_client_bridge.clock_view = DotVoteClockView.new()
 	remove_child(vote)
 	vote.free()
+	_done()
+
+
+## A kill and the end of a deathmatch round-trip: the killcam's inputs and the podium's rows.
+func _test_end_of_match_wire() -> void:
+	_section("a kill and a match's end over the link")
+	var shot := G2GEvents.read_kill(DotNetReader.new(G2GEvents.write_kill(4097, 12, "deagle", true)))
+	_check(bool(shot["ok"]) and int(shot["killer"]) == 4097 and int(shot["victim"]) == 12
+			and shot["weapon"] == "deagle" and bool(shot["headshot"]),
+		"a KILL round-trips: killer, victim, weapon and the head", str(shot))
+	var rows := [{"name": "Ana", "kills": 40, "deaths": 3}, {"name": "Bo", "kills": 12, "deaths": 20},
+		{"name": "Cy", "kills": 0, "deaths": 9}, {"name": "Dee", "kills": 0, "deaths": 0}]
+	var over := G2GEvents.read_match_end(DotNetReader.new(G2GEvents.write_match_end(7.0, rows)))
+	_check(bool(over["ok"]) and is_equal_approx(float(over["killcam"]), 7.0) and over["rows"].size() == 3
+			and over["rows"][0] == rows[0] and over["rows"][2] == rows[2],
+		"a MATCH_END round-trips: the killcam's seconds and the podium's three rows", str(over))
+	var none := G2GEvents.read_match_end(DotNetReader.new(G2GEvents.write_match_end(0.0, [])))
+	_check(bool(none["ok"]) and none["rows"].is_empty() and float(none["killcam"]) == 0.0,
+		"and an empty board reads as none")
 	_done()
 
 

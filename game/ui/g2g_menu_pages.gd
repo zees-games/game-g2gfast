@@ -111,7 +111,8 @@ static func install(menu: DotMenu, client: Node) -> void:
 	gameplay.section("Comfort") \
 		.add(DotMenuRow.slider(&"shake_scale", "Camera shake", "Zero by default: a shaken camera on a ramp is a lost run.")
 			.formatted(DotMenuRow.FORMAT_PERCENT_OR_OFF)) \
-		.add(DotMenuRow.toggle(&"allow_flashes", "Screen flashes", "A green tint on a personal best."))
+		.add(DotMenuRow.toggle(&"allow_flashes", "Screen flashes", "A green tint on a personal best.")) \
+		.add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion", "The end-of-match announcement appears at once."))
 	var _g := menu.add_page(gameplay, &"video")
 
 	# --- Video, Audio, Controls: the stock pages in this game's words ---------------
