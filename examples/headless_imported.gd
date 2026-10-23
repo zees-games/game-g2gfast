@@ -216,6 +216,7 @@ const SPAWN_VIEW_FLOOR := 0.012
 const DARK_SPAWNS := {
 	"kz_bhop_lucid": "the hub is a tools/toolsblack box round a lit floor with neon route markers; the map's own screenshots are neon on dark brick (rendered 2026-10-11)",
 	"bhop_fury_2": "dark rooms lit by green and cyan neon, as its screenshots are (rendered 2026-10-11)",
+	"bhop_fury": "the first fury, same mapper and look as bhop_fury_2: dark rooms lit by coloured light (its page screenshots are green, blue and yellow on near-black); the room at dest1 is lit red, 0.008 against the 0.012 floor (rendered 2026-10-23, chk-maps run 74)",
 	"surf_kitsune": "black panels with neon lines under a sky named blacksky (map-rendering.md, black on purpose)",
 	"surf_stonework3": "a torch-lit stone hall, as dim as its screenshots (rendered 2026-10-11)",
 	"bhop_monster_jam": "the 24 spawns hang in a black void 2700 units over the lit platform and a player falls onto it (the map filters fall damage); looking down from there is the map's own first screenshot, spotlight pools and red carpet included, and only its tower, a stock building model, is not drawn (rendered 2026-10-11)",

@@ -1,0 +1,37 @@
+{
+ "id": "bhop_hellish_dream_css",
+ "author": "Sonia_",
+ "attribution": {
+  "author": "Sonia_",
+  "source": "https://gamebanana.com/mods/125200 (Key author and submitter: Sonia_; skybox credited on the page to Mr.Who, textures to Sonia_, komaokc, TopHATTwaffle and Wolves Hero; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_hellish_dream_css.rar",
+  "recorded": "2026-10-23"
+ },
+ "notes": "A start and finish read from the map's destinations (chk-maps run 74). The spawns stand over a teleport to `cp1`, so a player lands there and the start is round it. Checkpoints cp2..cp14 are named-filter pits (the name `fcpN` is set by a checkpoint trigger and stays), kept as pits. The finish is the one teleport to the `finish` destination. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "cp1",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round where the spawn room's floor teleport sends"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "cp1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "finish",
+   "note": "the only teleport to the `finish` destination"
+  }
+ ]
+}

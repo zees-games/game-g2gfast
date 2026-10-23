@@ -1,0 +1,73 @@
+{
+ "id": "bhop_depot",
+ "author": "ballz of steel",
+ "attribution": {
+  "author": "ballz of steel",
+  "source": "https://gamebanana.com/mods/124816 (Key author: ballz of steel (submitter ballzofsteel); the map's own hud hint reads 'bhop_depot by ballz of steel'; compile help credited on the page to prox; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "_5801-.rar (saved as bhop_depot_5801.rar)",
+  "recorded": "2026-10-23"
+ },
+ "notes": "A start and finish read from the map (chk-maps run 74). 29 stages (stage1..stage29), each floor an anti-standing trap run as sinking blocks. The start is round the `start` destination beside the spawns. Past stage 29 the route runs north to door5, whose proximity trigger shows the credit hud hint ('bhop_depot by ballz of steel'); that trigger is the finish. The five func_doors are proximity doors (open while a player stands in front of them); the importer runs no outputs, so they are opened. The long-jump room (teleports to `longjumps`) is a side room. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "The anti-standing trap: touching a block renames the player `activator` after 0.09 s and back to `default` after 0.1 s; the teleports behind filter_activator fire only on that name. Run as sinking blocks."
+ },
+ "open_doors": [
+  {
+   "name": "door1",
+   "note": "proximity door: a trigger round it opens it while anybody stands there (OnStartTouchAll/OnEndTouchAll); the importer runs no outputs, so it is opened"
+  },
+  {
+   "name": "door2",
+   "note": "proximity door: a trigger round it opens it while anybody stands there (OnStartTouchAll/OnEndTouchAll); the importer runs no outputs, so it is opened"
+  },
+  {
+   "name": "door3",
+   "note": "proximity door: a trigger round it opens it while anybody stands there (OnStartTouchAll/OnEndTouchAll); the importer runs no outputs, so it is opened"
+  },
+  {
+   "name": "door4",
+   "note": "proximity door: a trigger round it opens it while anybody stands there (OnStartTouchAll/OnEndTouchAll); the importer runs no outputs, so it is opened"
+  },
+  {
+   "name": "door5",
+   "note": "proximity door: a trigger round it opens it while anybody stands there (OnStartTouchAll/OnEndTouchAll); the importer runs no outputs, so it is opened"
+  }
+ ],
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "start",
+    "extents": [
+     256,
+     256,
+     96
+    ]
+   },
+   "note": "round the start destination and the spawns beside it"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "start"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "class": "trigger_multiple",
+    "point": [
+     -7680,
+     1288,
+     112
+    ],
+    "within": 256
+   },
+   "note": "door5's trigger, which shows the map's credit hud hint, past stage 29"
+  }
+ ]
+}

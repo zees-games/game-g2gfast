@@ -1,0 +1,65 @@
+{
+ "id": "bhop_fury",
+ "author": "Dotty",
+ "attribution": {
+  "author": "Dotty",
+  "source": "https://gamebanana.com/mods/125105 (Key author and submitter: Dotty; the map says 'Map by Dotty!' on load and at the finish; the page says all textures are self-made; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_fury.rar",
+  "recorded": "2026-10-23"
+ },
+ "notes": "A start and finish read from the map (chk-maps run 74). Ten levels, dest1..dest12, each level's floor an anti-standing trap run as sinking blocks. The finish is the one teleport to `dest13`, the music-button room, inside the trigger that says 'Map by Dotty!' and plays the end sound. The five func_doors are touch-opening trapdoors in the drop shaft between levels 7 and 8; the importer runs no outputs, so they are opened. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "The anti-standing trap: touching a block renames the player `activator` after 0.09 s and back to `default` after 0.1 s; the teleports behind filter_activator fire only on that name. Run as sinking blocks."
+ },
+ "open_doors": [
+  {
+   "name": "door1",
+   "note": "touch-opening trapdoor (spawnflags 1024) in the shaft at 2320 10368 from level 7 down to level 8; it slides open the moment a player lands on it, so open is how a player meets it"
+  },
+  {
+   "name": "door2",
+   "note": "touch-opening trapdoor (spawnflags 1024) in the shaft at 2320 10368 from level 7 down to level 8; it slides open the moment a player lands on it, so open is how a player meets it"
+  },
+  {
+   "name": "door3",
+   "note": "touch-opening trapdoor (spawnflags 1024) in the shaft at 2320 10368 from level 7 down to level 8; it slides open the moment a player lands on it, so open is how a player meets it"
+  },
+  {
+   "name": "door4",
+   "note": "touch-opening trapdoor (spawnflags 1024) in the shaft at 2320 10368 from level 7 down to level 8; it slides open the moment a player lands on it, so open is how a player meets it"
+  },
+  {
+   "name": "door5",
+   "note": "touch-opening trapdoor (spawnflags 1024) in the shaft at 2320 10368 from level 7 down to level 8; it slides open the moment a player lands on it, so open is how a player meets it"
+  }
+ ],
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "dest1",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round where level 1's pits send, beside the spawn room"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "dest1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "dest13",
+   "note": "the only teleport to dest13, inside the trigger that says 'Map by Dotty!'"
+  }
+ ]
+}

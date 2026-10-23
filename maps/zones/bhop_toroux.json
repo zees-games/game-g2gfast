@@ -1,0 +1,38 @@
+{
+ "id": "bhop_toroux",
+ "author": "toroux",
+ "attribution": {
+  "author": "toroux",
+  "source": "https://gamebanana.com/mods/126232 (Map maker and submitter: toroux; the map's own game_text reads 'bhop_toroux'; soundscapes credited on the page to tmontana; the page also says 'feel free to Port this map'; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_toroux.rar",
+  "recorded": "2026-10-23"
+ },
+ "notes": "A start and finish read from the map's teleport graph (chk-maps run 74). The spawns stand by the `start` destination; level 1 runs `level1 part1`..`part6b`, level 2 `lvl2-1`..`lvl2-5`, then a door-sized teleport to `lvl3-1`. The only way into the room at `end` that is not that room's own pit is the 80x80 teleport past level 3, which is the finish; the teleport from the end room back to `start` is the map's way home. The bonus (five pits to `bonus`) has no start of its own and is left out. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "start",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round the start destination, where the spawns stand"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "start"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "max_horizontal": 256,
+   "note": "the 80x80 teleport past level 3; the other trigger aimed at `end` is the 2464-wide pit under the end room, which this width limit excludes"
+  }
+ ]
+}

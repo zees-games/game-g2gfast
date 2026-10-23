@@ -1,0 +1,11 @@
+{
+ "id": "bhop_tranquility",
+ "author": "Nallieheai",
+ "attribution": {
+  "author": "Nallieheai",
+  "source": "https://gamebanana.com/mods/126240 (Mapper and submitter: Nallieheai, made for the Bhop World Cup 2020; the map's own closing text reads 'Thanks for playing bhop_tranquility created for the Bhop World Cup 2020!'; textures credited on the page to TopHATTwaffle, silkroad, biql and Emque, models to Aui__ and Fibbs; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_tranquility.zip",
+  "recorded": "2026-10-23"
+ },
+ "notes": "Credit only: the map labels its own zones (mod_zone_start, mod_zone_end), which the importer reads (chk-maps run 74). Not published."
+}

@@ -174,3 +174,31 @@ All eleven downloads are VBSP 20; the pages all state CC BY-NC-ND 4.0 and none s
 - [126237](https://gamebanana.com/mods/126237) `bhop_training_fun` (Soapy Soap): a practice yard with no finish; credit only, and listed in `headless_imported`'s `NOT_COURSES`.
 
 Downloaded and sent to `inspirations/g2gfast/pending/` (reasons in its README): `surf_spectrum` (123037), `surf_gurus` (122228), `bhop_relinquished_fixx` (125839), `bhop_miku` (125530), `bhop_cw_journey` (124781), `bhop_communityjump` (124722). Not downloaded: `Surf_Elements_beta3` (121990), a team minigame map that belongs with the arena maps, and `surf_ny_exploder_prime` (122646), already on the arena surf list.
+
+## Extended and imported 2026-10-23
+
+The likes list above had no Bunny Hop course left that we did not hold, so chk-maps re-read category 5568 (Bunny Hop) sorted by most liked, pages 1-2 at 50 a page, against the zones files, `inspirations/g2gfast/` and `pending/`. Every page is game 2, every file downloaded VBSP 20; CS:GO/CS2 skipped: 0. Every page states CC BY-NC-ND 4.0; each was read for anything against porting before downloading.
+
+Not held, in like order, and what became of each:
+
+| Page | Map | Likes | Views | Status |
+| --- | --- | ---: | ---: | --- |
+| [126240](https://gamebanana.com/mods/126240) | bhop_tranquility | 18 | 6,126 | imported: labels its own `mod_zone_start` / `mod_zone_end` (`bhop_tranquility`) |
+| [126043](https://gamebanana.com/mods/126043) | bhop_space | 18 | 9,590 | downloaded, pending/: class-renaming route and a point_template teleport maker |
+| [125320](https://gamebanana.com/mods/125320) | bhop_jouluuu | 18 | 10,384 | downloaded, pending/: no finish marked |
+| [126101](https://gamebanana.com/mods/126101) | bhop_strafe_azure | 18 | 8,324 | **skipped**: the page says "You are not allowed to modify, distribute or use this work ... without permission of the author" |
+| [401837](https://gamebanana.com/mods/401837) | bhop_polyworld | 18 | 3,553 | downloaded, pending/: no finish marked |
+| [126441](https://gamebanana.com/mods/126441) | kz_bhop_algetic_fix | 18 | 12,347 | not downloaded: 146 MB archive, game_ui minigames, single-hop system |
+| [126447](https://gamebanana.com/mods/126447) | kz_bhop_communityjump3_v2 | 18 | 11,186 | not downloaded: 104 MB archive, about 37 mappers' levels, like bhop_communityjump in pending/ |
+| [126232](https://gamebanana.com/mods/126232) | bhop_toroux | 17 | 4,374 | imported: `start` to the 80x80 teleport to `end` past level 3 (`bhop_toroux`) |
+| [124958](https://gamebanana.com/mods/124958) | bhop_epiphany2 | 16 | 10,079 | not downloaded: 187 MB archive |
+| [124816](https://gamebanana.com/mods/124816) | bhop_depot | 16 | 14,920 | imported: 29 stages, finish at door5's credit trigger (`bhop_depot`) |
+| [125105](https://gamebanana.com/mods/125105) | bhop_fury | 16 | 11,306 | imported: ten levels, finish at the teleport to `dest13` (`bhop_fury`) |
+| [289480](https://gamebanana.com/mods/289480) | bhop_tron_evolution(CSS) | 16 | 5,191 | downloaded, pending/: a contest base map with no teleports and no finish |
+| [125200](https://gamebanana.com/mods/125200) | bhop_hellish_dream_css | 15 | 4,049 | imported: spawn pit to `cp1`, finish at the teleport to `finish` (`bhop_hellish_dream_css`) |
+| [126487](https://gamebanana.com/mods/126487) | kz_bhop_skodna | 15 | 4,277 | downloaded, pending/: 213 teleports, 14 class filters and 7 gravity triggers, route unread |
+| [126287](https://gamebanana.com/mods/126287) | Bhop_unreality | 15 | 7,947 | downloaded, pending/: 39 teleports all to `startstop`, no finish found |
+| [302686](https://gamebanana.com/mods/302686) | bhop_brodderlands | 15 | 3,704 | zoned, pending/: 2.5 million triangles, a 146 MB mesh over GitHub's 100 MB file limit |
+| [125939](https://gamebanana.com/mods/125939) | bhop_serenity | 15 | 7,355 | downloaded, pending/: no finish marked |
+
+**Next by likes** (page 1-2, not held, not yet read): bhop_verisimilitude [126310] (129 MB archive), bhop_null_v2 [125638], bhop_hive [125215], bhop_trikz_caverns_v2 [126251], bhop_decay [441900], bhop_monotonous CSS [125555], bhop_strength_v2 [126122], bhop_abyss [124368], bhop_lego [125406], kz_bhop_liminal [663808], bhop_exanimo [369680], bhop_pharma [125728], bhop_pharos_fix [125729], bhop_atmosphere [124486], bhop_psykeeysss [125780], bhop_treason [601212], bhop_giga_citadel [125120], bhop_alvo2 [124417].
