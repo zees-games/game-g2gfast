@@ -172,6 +172,11 @@ var rotation_ends_maps: bool = true
 var clock_fn: Callable = Callable()
 var timers: DotTimerManager = null
 var boards: DotLeaderboardManager = null
+## Where the boards live; null builds one layered from [constant BOARDS_CONFIG_PATH].
+var boards_config: G2GBoardsConfig = null
+
+const BOARDS_CONFIG_PATH := "user://g2g_boards.json"
+
 var world: Node3D = null
 
 ## The tunables every player is on, before their style. Rebuilt on a cvar change.
@@ -518,7 +523,15 @@ func _build_styles() -> void:
 func _build_boards() -> void:
 	boards = DotLeaderboardManager.new()
 	boards.name = "Leaderboards"
-	boards.store = DotLeaderboardStoreMemory.new()
+	if boards_config == null:
+		boards_config = G2GBoardsConfig.new()
+		var layered := boards_config.load_layered(BOARDS_CONFIG_PATH)
+		if not layered.ok:
+			DotLog.warn(CHANNEL, "the boards configuration is not usable, using memory", {
+				"why": str(layered.error),
+			})
+			boards_config = G2GBoardsConfig.new()
+	boards.backend = boards_config.backend
 	boards.report_to_backbone = config.report_to_backbone
 	add_child(boards)
 
@@ -1961,7 +1974,7 @@ func _on_record_accepted(record: DotTimerRecord, _previous: DotTimerRecord, rank
 	var ranked := not is_legacy_key(record.player_id)
 
 	if ranked:
-		await boards.submit(&"fastest", scope, record.player_id, record.player_name, record.time)
+		await boards.submit_async(&"fastest", scope, record.player_id, record.player_name, record.time)
 
 	# Completions are a counter. Points are NOT: they used to be added here too, record
 	# by record, so every improvement added the run's whole worth on top of what the

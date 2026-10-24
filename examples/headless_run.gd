@@ -1175,7 +1175,7 @@ func _test_bhop_run() -> void:
 		await get_tree().process_frame
 	_check(filed.size() == 1, "and is offered to the store", str(filed))
 
-	var page: DotResult = await game.boards.page(&"fastest", {"map": "bhop_g2g_intro", "track": "0", "style": "normal"})
+	var page: DotResult = await game.boards.page_async(&"fastest", {"map": "bhop_g2g_intro", "track": "0", "style": "normal"})
 	_check((page.value as Array).size() >= 1 or (filed.size() == 1 and filed[0][1] != ""),
 		"and reaches the leaderboard, or says why not", str(filed))
 	_done()
