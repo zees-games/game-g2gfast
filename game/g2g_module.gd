@@ -1050,6 +1050,11 @@ func _build_netcode() -> DotResult:
 			return bool((menu_half as Object).call(&"may_change", ctx))
 		return DotAdminFlags.granted(session.permissions, DotAdminFlags.CHANGEMAP)
 
+	# Avatar actions: the relay, and the loadouts the join/leave handlers below tell.
+	var avatar := DotGameAvatarActionRelay.serve(net, self, server)
+	if not avatar.ok:
+		log_warn("avatar actions not served", {"why": avatar.error.message})
+
 	net.messages.seal()
 	# [b]A client whose game messages cannot work with this server's is dropped, in words.[/b]
 	# dot-net compares the two schema tables and refuses a pair where either lacks a type
@@ -1233,6 +1238,10 @@ func _on_client_spawn(event: DotEvent) -> void:
 
 	_joined[session.userid] = true
 
+	var loadouts := DotGameAvatarActionRelay.loadouts_of(net)
+	if loadouts != null:
+		loadouts.add_peer(session.peer_id)
+
 	if services != null:
 		services.add_peer(session.peer_id)
 
@@ -1261,6 +1270,10 @@ func _on_client_disconnected(session: DotClientSession, _reason: String = "") ->
 	if _joined.has(session.userid):
 		bridge.remove_peer(session.peer_id)
 		_joined.erase(session.userid)
+
+		var loadouts := DotGameAvatarActionRelay.loadouts_of(net)
+		if loadouts != null:
+			loadouts.remove_peer(session.peer_id)
 
 
 ## The avatar dot-platform resolved for this session, if there is a dot-platform.
