@@ -173,7 +173,7 @@ var clock_fn: Callable = Callable()
 var timers: DotTimerManager = null
 var boards: DotLeaderboardManager = null
 ## Where the boards live; null builds one layered from [constant BOARDS_CONFIG_PATH].
-var boards_config: G2GBoardsConfig = null
+var boards_config: DotBoardsConfig = null
 
 const BOARDS_CONFIG_PATH := "user://g2g_boards.json"
 
@@ -524,13 +524,13 @@ func _build_boards() -> void:
 	boards = DotLeaderboardManager.new()
 	boards.name = "Leaderboards"
 	if boards_config == null:
-		boards_config = G2GBoardsConfig.new()
+		boards_config = DotBoardsConfig.for_game("g2g")
 		var layered := boards_config.load_layered(BOARDS_CONFIG_PATH)
 		if not layered.ok:
 			DotLog.warn(CHANNEL, "the boards configuration is not usable, using memory", {
 				"why": str(layered.error),
 			})
-			boards_config = G2GBoardsConfig.new()
+			boards_config = DotBoardsConfig.for_game("g2g")
 	boards.backend = boards_config.backend
 	boards.report_to_backbone = config.report_to_backbone
 	add_child(boards)
