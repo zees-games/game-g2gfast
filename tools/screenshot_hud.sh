@@ -2,6 +2,7 @@
 # Renders this game's HUD to screenshots/ so a person can look at it.
 #
 #   tools/screenshot_hud.sh
+#   tools/screenshot_hud.sh --action emote dance   # another runner playing an avatar action
 #
 # The map half is tools/bsp_preview.sh. This is the other half, and until now this was
 # the only game in the family with no way to look at its own interface at all.

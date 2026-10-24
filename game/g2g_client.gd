@@ -260,8 +260,21 @@ func _ready() -> void:
 	var listed := servers.setup()
 	DotLog.result("g2g.client", "the server browser", listed)
 
+	# The starter set: the equipped list needs a credential the client does not hold (the server reads it).
+	DotLog.result("g2g.client", "avatar actions", platform.add_avatar_actions(net, _avatar_figure))
+
 	_grab_mouse()
 	set_process(true)
+
+
+## The figure an avatar action plays on: that peer's player, or the local one offline.
+func _avatar_figure(peer_id: int) -> Object:
+	var who: G2GPlayer = null
+	if bridge != null and peer_id != 0 and game != null:
+		who = game.players.get(StringName("u%d" % bridge.player_for_peer(peer_id)), null)
+	if who == null and player != null and (net == null or peer_id == net.local_peer_id):
+		who = player
+	return who.rig.person if who != null and who.rig != null else null
 
 
 # --- The load gate ---------------------------------------------------------
@@ -703,6 +716,8 @@ func _build_netcode() -> DotResult:
 	if not attached.ok:
 		return attached
 
+	# Before the seal and in the server's order (after the bridge), or the actions stay local.
+	DotLog.result("g2g.client", "avatar action message", DotGameAvatarActionMessage.register(net))
 	net.messages.seal()
 
 	# The client halves. Built here rather than in `_ready` because both need the

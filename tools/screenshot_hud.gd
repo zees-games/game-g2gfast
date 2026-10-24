@@ -139,7 +139,7 @@ func _process(delta: float) -> bool:
 			var callable: Callable = shot["arrange"]
 			callable.call()
 			shot["arranged"] = true
-			_wait = SETTLE
+			_wait = int(shot.get("wait", SETTLE))
 			return false
 
 		if _wait > 0:
@@ -166,6 +166,15 @@ func _process(delta: float) -> bool:
 func _stage() -> void:
 	if _fx_only:
 		_stage_fx()
+		return
+
+	var action_at := OS.get_cmdline_user_args().find("--action")
+	if action_at >= 0 and action_at + 2 < OS.get_cmdline_user_args().size():
+		var spec := OS.get_cmdline_user_args()
+		_shots = [
+			{"name": "hud_action_%s_a" % spec[action_at + 2], "arrange": _arrange_action.bind(StringName(spec[action_at + 1]), spec[action_at + 2]), "arranged": false},
+			{"name": "hud_action_%s_b" % spec[action_at + 2], "arrange": func() -> void: pass, "arranged": false, "wait": 40},
+		]
 		return
 
 	if _splits_only:
@@ -282,6 +291,23 @@ func _arrange_beacon() -> void:
 	_other.controller.state.position = ahead
 	_other.global_position = ahead
 	_other.beacon = true
+
+
+## `--action <kind> <id>` (`--action emote dance`): another runner four metres ahead playing an
+## avatar action, early and later in the clip. The id goes through dot-user-avatar's own list.
+func _arrange_action(kind: StringName, action: String) -> void:
+	_player.controller.state.velocity = Vector3.ZERO
+	_player.controller.current_command = DotFpsCommand.new()
+	var here := _player.controller.state.position
+	var yaw := deg_to_rad(_player.controller.state.yaw)
+	var ahead := here + Vector3(-sin(yaw), 0.0, -cos(yaw)) * 2.5
+	_other = _game.add_player(&"u2", "Actor")
+	_other.controller.state.position = ahead
+	_other.global_position = ahead
+	_other.controller.state.yaw = _player.controller.state.yaw + 180.0
+	var entry := DotAvatarActions.defaults().find(kind, action)
+	var ok: bool = _other.rig != null and _other.rig.person != null and _other.rig.person.play_action(StringName(action), bool(entry.get("loop", false)), 0.0)
+	print("action %s/%s: played=%s" % [kind, action, ok])
 
 
 ## A confirmed headshot on the beaconed runner ahead: the hit marker round the crosshair
