@@ -7,6 +7,7 @@
 # A shipped build copies them in instead.
 /addons/dot_core
 /addons/dot_game
+/addons/dot_workbench
 /addons/dot_entity
 /addons/dot_net
 /addons/dot_server
