@@ -126,7 +126,7 @@ func _build_combat() -> DotResult:
 	manager.trace = trace
 
 	var rules := DotDamageRules.new()
-	rules.friendly_fire = true
+	rules.friendly_fire = game.config.friendly_fire
 	# Off. Rocket jumping is what self damage is for and there is nothing here that
 	# rockets; what self damage would actually do on a surf map is kill people who
 	# landed badly, which is the fall damage this game deliberately does not have.
@@ -198,7 +198,7 @@ func _adjust_damage(damage: DotDamage) -> void:
 func _build_match() -> DotResult:
 	match_node = DotMatch.new()
 	match_node.name = "Match"
-	match_node.rules = G2GArsenal.match_rules(score_limit)
+	match_node.rules = G2GArsenal.match_rules(score_limit, game.config.respawn_delay, game.config.spawn_protection)
 	apply_killcam_wait()
 	match_node.register_service = false
 
@@ -223,7 +223,7 @@ func _build_match() -> DotResult:
 ## The final killcam plays inside the match's end, so the end waits that much longer.
 func apply_killcam_wait() -> void:
 	if match_node != null:
-		match_node.rules.match_end_sec = G2GArsenal.match_rules(score_limit).match_end_sec \
+		match_node.rules.match_end_sec = G2GArsenal.match_rules(score_limit, game.config.respawn_delay, game.config.spawn_protection).match_end_sec \
 			+ maxf(game.config.killcam_seconds, 0.0)
 
 

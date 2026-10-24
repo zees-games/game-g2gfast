@@ -72,6 +72,27 @@ var _joined: Dictionary = {}
 
 const SNAPSHOT_RATE := 32
 
+## Config fields that already have a hand-written cvar above (field -> cvar). The binder leaves
+## these cvars alone; a workbench or file edit is pushed through the cvar so its handler runs.
+const HAND_CVARS := {
+	"auto_bhop": "sv_autobunnyhopping", "enable_bunnyhopping": "sv_enablebunnyhopping",
+	"air_accelerate": "sv_airaccelerate", "accelerate": "sv_accelerate", "gravity": "sv_gravity",
+	"friction": "sv_friction", "stop_speed": "sv_stopspeed", "max_speed": "sv_maxspeed",
+	"max_velocity": "sv_maxvelocity", "air_wish_cap": "sv_airwishcap", "step_size": "sv_stepsize",
+	"edge_friction": "sv_edgefriction", "jump_buffer": "sv_jumpbuffer", "crest_launch": "sv_crestlaunch",
+	"show_replay_bot": "sv_replay_bot", "allow_thirdperson": "sv_allow_thirdperson",
+	"flashlight": "sv_flashlight", "stagger_snapshots": "sv_stagger_snapshots",
+	"spectator_list": "sv_spec_list", "map_content_owner": "sv_map_content_owner",
+	"content_maps": "sv_content_maps", "map_rotation_file": "sv_map_rotation_file",
+	"map_sync_seconds": "sv_map_sync_timeout", "deathmatch": "sv_deathmatch",
+	"killcam_seconds": "mp_killcam_time", "hunters": "sv_hunters", "placeable_props": "sv_props",
+}
+
+## dot-team's block rules (`mp_teamblock`, `!block`, `!noblock`); null without dot-team.
+var noblock: DotGameNoblock = null
+## dot-workbench: the F9 panel in debug builds, the loopback page when `workbench.enabled`.
+var workbench: DotGameWorkbench = null
+
 
 func _module_name() -> String:
 	return "g2gfast"
@@ -414,6 +435,10 @@ func _module_load() -> DotResult:
 			if game.props != null and not game.config.placeable_props:
 				game.props.clear()
 	)
+
+	var configured := _bind_config()
+	if not configured.ok:
+		return configured
 
 	server.client_disconnected.connect(_on_client_disconnected)
 
@@ -1214,6 +1239,8 @@ func _on_client_spawn(event: DotEvent) -> void:
 
 func _on_client_disconnected(session: DotClientSession, _reason: String = "") -> void:
 	_painters.erase(_player_id(session))
+	if noblock != null:
+		noblock.rules.call(&"forget", session.userid)
 
 	if services != null:
 		services.remove_peer(session.peer_id)
@@ -1937,3 +1964,60 @@ func _refuse_peer(peer_id: int, error: DotError) -> void:
 	var session: DotClientSession = server.session_of(peer_id) if server != null else null
 	if session != null:
 		server.kick(session, error.message, error)
+
+
+## The config as cvars (`g2g_<field>`), commands, the workbench and the block rules.
+func _bind_config() -> DotResult:
+	var binder := game.config_binder
+	var made := DotGameNoblock.create(G2GGame.CONFIG_GAME_ID, Callable(game, "block_side"))
+	var wanted := made.ok
+	if not wanted and made.error.code != DotError.CODE_UNSUPPORTED:
+		return made.wrap("noblock")
+	if not wanted:
+		DotLog.warn(CHANNEL, "noblock unavailable: dot-team is not in this build")
+
+	workbench = DotGameWorkbench.new()
+	workbench.name = "Workbench"
+	workbench.dedicated = DisplayServer.get_name() == "headless"
+	workbench.add_set(binder.profile_set(), "Game settings")
+	if wanted:
+		workbench.add_set((made.value as DotGameNoblock).binder.profile_set(), "Block rules")
+	add_child(workbench)
+	var started := workbench.start()
+	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
+
+	var covered := PackedStringArray()
+	for field: String in HAND_CVARS:
+		covered.append("g2g_%s" % field)
+	binder.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE,
+		func(name: String) -> bool: return covered.has(name) or console.has_name(name))
+	binder.bind_commands(add_command)
+	binder.field_changed.connect(_on_config_field)
+	if runtime != null:
+		binder.attach(runtime)
+
+	if wanted:
+		noblock = made.value
+		var bound := noblock.bind(add_cvar, self, runtime)
+		if not bound.ok:
+			return bound.wrap("noblock")
+		noblock.feed(game.body_rules)
+		game.block_rules = noblock.rules
+	return DotResult.success(null)
+
+
+## A workbench or file edit of a field: pushed through its cvar, or applied directly.
+func _on_config_field(key: String, _value: Variant, source: String) -> void:
+	if source == "cvar":
+		return
+	if HAND_CVARS.has(key):
+		var text: Variant = game.config.get(key)
+		if text is bool:
+			text = "1" if text else "0"
+		elif text is PackedStringArray:
+			text = " ".join(text)
+		console.set_cvar(HAND_CVARS[key], str(text))
+	elif key == "lethal_damage" and game.mechanics != null:
+		game.mechanics.lethal_damage = game.config.lethal_damage
+	elif key == "score_limit" and game.combat != null:
+		game.combat.score_limit = game.config.score_limit

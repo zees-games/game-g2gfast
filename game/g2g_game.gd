@@ -42,6 +42,7 @@ const G2GUnits := preload("g2g_units.gd")
 const CHANNEL := "g2g"
 
 ## The registry name a dot-server module finds this under.
+const CONFIG_GAME_ID := "game-g2gfast"
 const SERVICE := &"g2g_game"
 
 ## The ghost's player id. Session ids are dot-server userids, which never get
@@ -86,6 +87,33 @@ signal player_removed(player_id: StringName)
 
 ## A JSON file layered over [member config]'s defaults, or empty.
 @export var config_file: String = ""
+
+## The config as an operator surface (cvars, cfg/ profile, workbench, yml diff). Built in
+## [method _ready] over [member config].
+var config_binder: DotGameConfigBinder = null
+
+## Whether players are solid to each other. Off: a timer server's runners pass through each
+## other (the genre), so nothing builds hulls; dot-team's block rules ride on its `pair_fn`
+## for the day it is turned on.
+var body_rules: DotPlayerBodyRules = _make_body_rules()
+
+## dot-team's `DotTeamBlockRules` (`mp_teamblock`, `!block`, `!noblock`), set by the module or
+## the client's `add_noblock`; null while dot-team is not in the build.
+var block_rules: Object = null
+
+
+static func _make_body_rules() -> DotPlayerBodyRules:
+	var rules := DotPlayerBodyRules.new()
+	rules.solid = false
+	return rules
+
+
+## The side a player stands on for the block rules: the one team of a free-for-all, "" without one.
+func block_side(id: Variant) -> Variant:
+	if player_stack == null or player_stack.teams == null:
+		return ""
+	var team := String(player_stack.teams.team_of(str(id)))
+	return team
 
 ## Fallback tick rate when nothing has told the engine. A dot-server always has.
 @export_range(1, 240, 1) var tick_rate: int = 128
@@ -291,12 +319,17 @@ func _ready() -> void:
 	if not view_rules.changed.is_connected(_on_view_rules_changed):
 		view_rules.changed.connect(_on_view_rules_changed)
 
-	var loaded := config.load_layered(config_file)
+	config_binder = DotGameConfigBinder.create(config, CONFIG_GAME_ID, "g2g", config_file)
+	var loaded := config_binder.load_layers()
 
 	if not loaded.ok:
 		DotLog.error(CHANNEL, "the g2gfast configuration is not usable", {
 			"why": loaded.error.message
 		})
+		# Strict (a dedicated server): a typo in a config file stops the boot.
+		if config_binder.strict:
+			DotGameConfigBinder.fail_boot(get_tree(), loaded)
+			return
 
 	authoritative = config.authoritative
 	tick_rate = _resolve_tick_rate()
@@ -821,6 +854,7 @@ func _build_layers() -> void:
 		combat.name = "Combat"
 		combat.game = self
 		combat.enabled = config.deathmatch
+		combat.score_limit = config.score_limit
 		add_child(combat)
 
 		var armed := combat.setup()
@@ -1778,6 +1812,7 @@ func _on_map_changed(map: DotMapDef, loaded: Node) -> void:
 	timers.set_zones(zones)
 
 	mechanics = G2GMapMechanics.new()
+	mechanics.lethal_damage = config.lethal_damage
 	if bsp != null:
 		mechanics.read(bsp.manifest)
 	if not mechanics.is_empty():

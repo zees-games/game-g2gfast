@@ -53,6 +53,8 @@ Short forms; the reasoning is in the linked file.
 
 - A map may change movement cvars through `cfg/game/game-g2gfast/dot_map/map/%.yml` (`G2GMapConfig`; default `sv_airaccelerate` 1000 for every map, 100 for the two maps that ask for it), restored on the next map. [movement](docs/movement.md#a-map-may-change-some-movement-cvars)
 
+- Every `G2GConfig` field is also a `g2g_<field>` cvar (not where an `sv_` one exists: `G2GModule.HAND_CVARS`), a `config` profile in `cfg/` and a dot-workbench field; add a tunable as a documented `@export` there, never as a constant. Strict on a dedicated server. `mp_teamblock`/`!noblock` ride on `game.body_rules`, which stays not solid. [README](README.md#every-setting-as-a-file-a-cvar-and-a-panel)
+
 **Timer**
 
 - No admin tool can help a run: noclip and speed/gravity steps taint every tick; freeze, blind and beacon do not. [timer](docs/timer.md#what-taints-a-run)

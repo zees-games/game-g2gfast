@@ -333,6 +333,28 @@ func map_content_id(id: StringName) -> String:
 ## board with one time set over a placed block is a board nobody trusts.
 @export var placeable_props: bool = false
 
+@export_group("Deathmatch")
+
+## Score that ends a deathmatch. `sv_deathmatch` has to be on.
+@export_range(0, 500, 1) var score_limit: int = 40
+
+## Whether a player can hurt a teammate. Everybody is on one team here, so off makes deathmatch inert.
+@export var friendly_fire: bool = true
+
+## Seconds between a death and the respawn.
+@export_range(0.0, 60.0, 0.5) var respawn_delay: float = 1.0
+
+## Seconds a respawned player cannot be hurt.
+@export_range(0.0, 30.0, 0.5) var spawn_protection: float = 2.0
+
+## Damage at or above which a map's `trigger_hurt` kills a runner; less is ignored.
+@export_range(1.0, 10000.0, 1.0) var lethal_damage: float = 100.0
+
+@export_group("Server")
+
+## Most players at once, ghost and bots included.
+@export_range(1, 128, 1) var max_players: int = 64
+
 @export_group("Role")
 
 ## Whether this instance times, ranks and decides. A client sets this false.

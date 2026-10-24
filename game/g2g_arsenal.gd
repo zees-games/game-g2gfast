@@ -253,12 +253,12 @@ static func loadout_schema() -> DotLoadoutSchema:
 ## Free-for-all, no rounds, no warmup worth the name. A round-based deathmatch on a
 ## timer server would stop everybody who came to run, and stopping them is the one
 ## thing this half must never do.
-static func match_rules(limit: int = 40) -> DotMatchRules:
+static func match_rules(limit: int = 40, respawn_delay: float = 1.0, protection: float = 2.0) -> DotMatchRules:
 	var rules := DotMatchRules.deathmatch(limit)
 	rules.display_name = "Deathmatch"
 	# Fast. The map is the point and dying is a detour.
-	rules.respawn_delay_sec = 1.0
-	rules.spawn_protection_sec = 2.0
+	rules.respawn_delay_sec = respawn_delay
+	rules.spawn_protection_sec = protection
 	rules.warmup_sec = 0.0
 	rules.countdown_sec = 0.0
 	rules.min_players = 2

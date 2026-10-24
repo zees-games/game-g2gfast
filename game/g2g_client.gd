@@ -54,6 +54,9 @@ var gate: DotLoadGate = null
 ## and whether this client is offline. See [DotGameClient].
 var platform: DotGameClient = null
 
+## dot-workbench's tuning window. See [method _build_workbench].
+var workbench: DotGameWorkbench = null
+
 ## The server browser: dot-browser's client half.
 ##
 ## Built whether or not this client is connected, because looking for a server is what
@@ -203,6 +206,7 @@ func _ready() -> void:
 	DotLog.result("g2g.client", "the presentation layer", presentation.setup())
 	_wire_chat_window()
 	_build_overlays()
+	_build_workbench()
 
 	# Every effect drawn is somewhere on the map that just went away, and the landing
 	# watcher would otherwise read the first frame on the new one as a fall.
@@ -294,6 +298,26 @@ func _build_gate() -> void:
 	gate.hold(&"map", "Loading the map")
 	# The cover blocks input too, so the sampler is still while it is up.
 	platform.input_blocked_changed.connect(func(_blocked: bool) -> void: _refresh_suspended())
+
+
+## dot-workbench over the config: the F9 panel in the editor and debug builds (never in production);
+## a window of its own, so a client has no HTTP page.
+func _build_workbench() -> void:
+	workbench = DotGameWorkbench.new()
+	workbench.name = "Workbench"
+	workbench.listen_host_fn = platform.listen_host_fn
+	workbench.config = {"enabled": false}
+	workbench.add_set(game.config_binder.profile_set(), "Game settings")
+	var started := workbench.start()
+	if started.ok and workbench.api != null:
+		game.config_binder.attach(workbench.api.runtime)
+	# This game's menu and console stand in for the platform's (it builds neither itself), only
+	# for the call that hooks the window and the `workbench` command up.
+	platform.menu = menu
+	platform.console = presentation.console if presentation != null else null
+	platform.add_workbench(workbench)
+	platform.menu = null
+	platform.console = null
 
 
 ## Releases the map hold once the first level is in, and holds again for each map change.
@@ -763,6 +787,11 @@ func _build_netcode() -> DotResult:
 		# The server's mp_forceview: this end places its own camera (G2GGame keeps every
 		# camera under it).
 		var _view := game.view_rules.follow_cvars(link)
+		# mp_teamblock, mp_enemyblock and the `!block` requests, followed so this end predicts
+		# against the same pairs. Needs dot-team; without it players are not blocked at all.
+		var blocked := platform.add_noblock(game, Callable(game, "block_side"))
+		if not blocked.ok:
+			DotLog.result("g2g.client", "the block rules", blocked)
 		# mp_forcecamera, mp_freeroam and mp_freeroam_speed: whether the free camera is
 		# offered, and how fast it flies.
 		if game.spectate != null and game.spectate.manager != null:

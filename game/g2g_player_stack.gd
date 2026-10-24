@@ -141,7 +141,7 @@ func _build_roster() -> void:
 
 	var config := DotPlayerConfig.new()
 	config.tick_rate = game.tick_rate
-	config.max_players = 64
+	config.max_players = game.config.max_players
 	# Five minutes. A run takes minutes and a player who drops mid-run and comes
 	# straight back should still be the same person to the boards.
 	config.reconnect_window_sec = 300.0

@@ -26,8 +26,8 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## aborts that function; the section counter sees it, and the checks it never reached are
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
-const SECTIONS := 20
-const CHECKS := 231
+const SECTIONS := 21
+const CHECKS := 244
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -76,6 +76,7 @@ func _run() -> void:
 		await _test_autobhop_live()
 		_test_thirdperson_cvar()
 		_test_stagger_cvar()
+		_test_config_and_noblock()
 		_test_commands()
 		_test_replay_bot_cvar()
 		_test_query_and_chat()
@@ -403,6 +404,38 @@ func _test_stagger_cvar() -> void:
 		"sv_stagger_snapshots 0 reaches the running netcode, not only the config")
 	_run_command("sv_stagger_snapshots 1")
 	_check(net != null and net.config.stagger_snapshots, "and 1 turns it back on")
+	_done()
+
+
+func _test_config_and_noblock() -> void:
+	_section("the config surface and the block rules")
+	var module := server.modules.get_module("g2gfast")
+	var binder: DotGameConfigBinder = game.config_binder
+	_check(binder != null and binder.diff().is_empty(), "the config binder is built and the defaults hold no diff")
+	_check(server.console.find_cvar("g2g_score_limit") != null and server.console.get_int("g2g_max_players") == 64,
+		"the deathmatch and server fields are g2g_ cvars")
+	_check(server.console.find_cvar("g2g_gravity") == null, "a field with an sv_ cvar of its own does not get a second one")
+	_run_command("g2g_respawn_delay 3")
+	_check(game.config.respawn_delay == 3.0 and binder.source_of("respawn_delay") == "cvar", "a g2g_ cvar writes the field")
+	_run_command("g2g_respawn_delay 1")
+	var set: DotProfileSet = binder.profile_set()
+	var edit: Variant = module.workbench.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": set.rel_path, "id": binder.profile_id, "key": "gravity", "value": 700})
+	_check(edit is DotResult and edit.ok and game.config.gravity == 700.0 and server.console.get_int("sv_gravity") == 700,
+		"a workbench edit of a hand-bound field reaches the field and its sv_ cvar")
+	_run_command("sv_gravity 800")
+	var noblock: Variant = module.get("noblock")
+	_check(noblock != null and server.console.get_int("mp_teamblock") == 0 and server.console.get_int("mp_enemyblock") == 1,
+		"mp_teamblock 0 and mp_enemyblock 1 by default")
+	_check(server.console.find_command("block") != null and server.console.find_command("noblock") != null, "!block and !noblock are commands")
+	_check(game.block_rules == noblock.rules and game.body_rules.pair_fn.is_valid(), "the game's body rules ask the block rules")
+	_check(not game.body_rules.blocks(1, 2), "players are not solid to each other on this server")
+	var rules: Object = noblock.rules
+	_check(rules.call("blocks", 1, 2), "two runners are enemies in a free-for-all: they block when solid")
+	var asked: DotResult = rules.call("request", 1, [DotTeamBlockRules.Relation.ENEMY], 0, true)
+	_check(asked.ok and not rules.call("blocks", 1, 2), "!noblock: a request to pass wins")
+	rules.call("forget", 1)
+	_check(rules.call("blocks", 1, 2), "a player leaving forgets the request")
+	_check(binder.write_schema("user://schema_check.json").ok, "write_schema works")
 	_done()
 
 

@@ -108,6 +108,11 @@ sv_map_rotation_file cfg/maps.yml   // which installed maps rotate; see below
 
 A player killed in deathmatch or by a hunter falls as a ragdoll ([dot-player-char](https://github.com/modcommunity/dot-player-char)) until they are back at the start; the server picks how each one goes down and everybody sees the same fall. `sv_ragdoll_style` picks ragdoll, stiff, topple or hide, `sv_ragdoll_time` and `sv_ragdoll_max` say how long and how many, and `sv_ragdoll_reactions` weights the falls (`limp`, `face_plant`, `crumple`, `headshot_launch`, `power_launch`; 0 turns one off).
 
+### Every setting as a file, a cvar and a panel
+Each field of the server's configuration (`game/g2g_config.gd`, with its `##` description and range) is also a `g2g_<field>` cvar, unless it already has an `sv_` one. Layers, weakest first: the code default, `cfg/game/game-g2gfast/config/game.yml`, `cfg/server/game/game-g2gfast/config/game.yml`, `G2G_*` environment, `--g2g-*` arguments, then live cvars and the workbench. A dedicated server refuses to start on an unknown key or a bad value. Per-map movement lives in `cfg/game/game-g2gfast/dot_map/map/<map>.yml`. `g2g_config_dump` lists every field with the layer it came from; `g2g_config_diff save` writes what you changed as a file to copy into `cfg/game/game-g2gfast/config/game.yml` as the new defaults. dot-workbench's tuning panel (F9 in debug builds, `workbench http` for a loopback page when `workbench.enabled` is set in `cfg/server.yml`) edits the same fields and the block rules; an exported build needs `*.html` in the preset's `include_filter`.
+
+`mp_teamblock` (0) and `mp_enemyblock` (1) with the `!block` and `!noblock` chat commands are dot-team's block rules. Runners are not solid to each other on this server (as in the genre), so they matter only once players are made solid.
+
 ### Which maps rotate
 Put the maps you want played in `cfg/maps.yml` (named rotations, wildcards and `sv_map_rotation <name>`: see dot-map docs/rotation.md). A map you leave out stays installed: `g2g_map <id>` still loads it and **M** lists it, marked "not in rotation". It just never comes round on its own, and the vote and nominations don't offer it.
 
@@ -236,6 +241,8 @@ g2g_zone_save           // write them to disk
 | `headless_stack` | The whole stack of addons together |
 | `headless_imported` | Every imported map loads and has its zones |
 | `headless_mechanics` | Every imported map's teleports, sinking blocks, pushes and water do what they should, with a player on them |
+| `headless_config` | Every config field as a cvar and a profile, and the deathmatch rules reading them |
+| `headless_workbench` | dot-workbench over the config: an edit, and the export as cfg/ defaults |
 | `dedicated` | A real server: boots, loads the game, runs its commands |
 
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.

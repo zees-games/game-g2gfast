@@ -37,6 +37,9 @@ enum Event { NONE, BLOCK_SANK, HURT }
 ## Damage at or above this is a death in Source (every player has 100).
 const LETHAL_DAMAGE := 100.0
 
+## The lethal threshold in force; [member G2GConfig.lethal_damage] sets it.
+var lethal_damage: float = LETHAL_DAMAGE
+
 ## How far a foot may be off a block's top and still be standing on it, metres.
 const STAND_TOLERANCE := 3.0 * G2GUnits.METRES_PER_UNIT
 
@@ -137,7 +140,7 @@ func simulate(rider: Rider, motor: DotFpsMotor, state: DotFpsState, delta: float
 
 	for i in hurt.size():
 		var h: Dictionary = hurt[i]
-		if float(h["damage"]) >= LETHAL_DAMAGE and (h["box"] as AABB).intersects(hull):
+		if float(h["damage"]) >= lethal_damage and (h["box"] as AABB).intersects(hull):
 			rider.last_index = i
 			rider.block = -1
 			return Event.HURT
