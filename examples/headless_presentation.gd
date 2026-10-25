@@ -27,7 +27,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 205
+const CHECKS := 207
 
 var _passed := 0
 var _failed := 0
@@ -133,6 +133,10 @@ func _test_a_runner_is_not_shaken() -> void:
 	)
 	# fgr-g2g-audio-1: effects are quieter than the stock 1.0, and the wind is cvars.
 	_check(float(s.find(&"sfx_volume").default_value) < 1.0, "effect sounds default below full volume")
+	_check(s.find(&"ambience_volume") != null and is_zero_approx(float(s.find(&"ambience_volume").default_value)),
+		"the wind and birdsong bed is off by default, and still a setting")
+	_check(DotMenuStock.audio_page().sections.any(func(sec) -> bool: return sec.rows.any(func(r) -> bool: return r.key == &"ambience_volume")),
+		"and the Audio page has its slider")
 	_check(s.find(&"snd_wind_min") != null and s.find(&"snd_wind_max") != null
 		and s.find(&"snd_wind_full_speed") != null, "the wind curve is three settings")
 	var calm := G2GPresentation.wind_level(0.0, 0.3, 1.1, 1500.0)

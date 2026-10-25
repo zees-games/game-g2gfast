@@ -255,6 +255,9 @@ static func schema() -> DotSettingsSchema:
 	# hears hundreds of times a minute. Declared before the stock set so it is the one kept;
 	# a player who wants the old level still has the slider.
 	s.add(DotSettingsDef.number(&"sfx_volume", 0.6, 0.0, 1.0, &"audio"))
+	# The wind and birdsong bed is off until a player turns it up: a runner listens for the
+	# landings and the timer. Still a slider (Audio page), and Effects scales it as well.
+	s.add(DotSettingsDef.number(&"ambience_volume", 0.0, 0.0, 1.0, &"audio"))
 	# The wind is the speedometer's second half: the bed's level runs from `snd_wind_min` at
 	# a standstill to `snd_wind_max` at `snd_wind_full_speed` genre units a second, linearly,
 	# so a slow walk is a breeze and a surf at 3000 is a roar. Settings, so each one is a cvar.
