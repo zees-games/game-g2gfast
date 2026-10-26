@@ -12,6 +12,8 @@
 # content_maps: []
 # Whose namespace a map is fetched from. `sv_map_content_owner`.
 # map_content_owner: ""
+# Draw an imported map from its dot-map world document (`worlds/<id>`, written by `bsp.py regen`) when one ex...
+# global_worlds: false
 # Seconds a map runs before the next is chosen. 0 disables it. [0.0..86400.0]
 # map_seconds: 2700.0
 # map_seconds for a game played OFFLINE: by yourself, with nobody waiting for the next map. 0, no limit, by d... [0.0..86400.0]

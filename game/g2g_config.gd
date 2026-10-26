@@ -196,6 +196,9 @@ const G2GUnits := preload("g2g_units.gd")
 ## owners still serves.
 @export var map_content_owner: String = ""
 
+## Draw an imported map from its dot-map world document (`worlds/<id>`, written by `bsp.py regen`) when one exists, instead of the legacy manifest's surfaces. Zones, spawns and collision still come from the manifest. `g2g_global_worlds`.
+@export var global_worlds: bool = false
+
 ## The cvar that sets [member map_content_owner]. One spelling for the module that registers
 ## it and for [method G2GGame._adopt_descriptor_owner], which reads it out of a game
 ## descriptor before the module exists.

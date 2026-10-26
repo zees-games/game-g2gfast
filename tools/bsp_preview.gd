@@ -33,6 +33,8 @@ func _ready() -> void:
 		return
 	var map: Node3D = packed.instantiate()
 	if map is G2GBspMap:
+		# PREVIEW_WORLDS=1 draws it from the dot-map world document (g2g_global_worlds).
+		(map as G2GBspMap).global_worlds = OS.get_environment("PREVIEW_WORLDS") == "1"
 		(map as G2GBspMap).build_from(def)
 	add_child(map)
 	await get_tree().process_frame

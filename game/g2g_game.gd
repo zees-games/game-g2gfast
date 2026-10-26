@@ -1784,6 +1784,7 @@ func _on_map_changed(map: DotMapDef, loaded: Node) -> void:
 	# legitimate thing for a map to have.
 	var bsp := loaded as G2GBspMap
 	if bsp != null:
+		bsp.global_worlds = config != null and config.global_worlds
 		bsp.build_from(map)
 
 	var zones: DotTimerZoneSet = g2g_map.timer_zones() if g2g_map != null else null

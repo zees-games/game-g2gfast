@@ -130,3 +130,7 @@ Needs numpy, scipy and trimesh, and refuses a map whose zones file has no attrib
 - **Zones and spawns come from the entity lump** (`maps/<name>/entities/default_ents.vents_c`, decoded with `-f ... -b DATA`): `[PR#]map_start` and `[PR#]map_end` triggers, one pit per `trigger_teleport`, `info_player_start` as the spawn.
 - **No author textures and no baked light.** Surfaces are `prototype` and tinted by a palette keyed on material name (`PALETTE`); the lightmap is a white patch. CS2's `irradiance.exr` is not decoded: a known gap. The stand-in materials are listed `none` in `textures/stock/substitutes.json`.
 - **glTF de-duplicates material names with a counter** (`side_rail_ramp_mat_66`); `material_of` strips it.
+
+## Pilot: drawing through dot-map's world document (`g2g_global_worlds`, default off)
+
+`bhop_training_fun` and `bhop_eazy` are also converted by `bsp.py regen g2g/<id> --out worlds/<id>` into `../g2gfast-maps/worlds/` (the layout mg-wipeout-maps uses; `worlds`, `pbr-library` and `model-library` are gitignored links here). With `g2g_global_worlds 1`, `G2GBspMap` builds a `DotMapWorld` (drawn, no collision) in place of the manifest's surfaces and hides those; collision, zones, spawns, lighting and dressing are still the manifest's. `examples/headless_global_worlds.tscn` checks it; `PREVIEW_WORLDS=1 tools/bsp_preview.sh <id> spawn` renders it. The plan for every map is the nightly item `g2g-global-migrate-1`.

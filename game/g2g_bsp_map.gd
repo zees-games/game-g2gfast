@@ -94,6 +94,11 @@ const KINDS := {
 ## [member ambient] does and the same reason.
 @export_range(0.0, 1.0) var prototype_ambient: float = 0.32
 
+## Draw from the dot-map world document when one is found (see [member G2GConfig.global_worlds]). Set before [method build_from].
+var global_worlds := false
+## The [DotMapWorld] drawn in place of the manifest's surfaces, or null.
+var global_world: DotMapWorld = null
+
 var manifest: Dictionary = {}
 var _bounds_min := Vector3.ZERO
 var _bounds_max := Vector3.ZERO
@@ -203,6 +208,8 @@ func _construct() -> void:
 		written += mi.mesh.get_surface_count()
 
 	var solids := _build_collision(drawn, blob)
+	if global_worlds:
+		_draw_global_world(drawn + props.filter(func(mi: MeshInstance3D) -> bool: return mi.name.begins_with("Props")))
 
 	# [b]The map's own lighting, not this game's.[/b] `G2GGeometry.sun` puts the
 	# hand-built maps' one daylight over them, which is right for the maps it was written
@@ -220,6 +227,36 @@ func _construct() -> void:
 		"mesh_instances": drawn.size() + props.size(),
 		"collision_shapes": solids,
 	})
+
+
+## Where the world document for [param id] is, without extension, or "".
+func _world_prefix(id: String) -> String:
+	var prefix := G2GPaths.rebase("res://worlds").path_join(id)
+	return prefix if FileAccess.file_exists(prefix + ".json") and FileAccess.file_exists(prefix + ".bin") else ""
+
+
+## Draws the map through dot-map's [DotMapWorld] and hides [param legacy], the manifest's own meshes: those stay built so
+## probes find `World`, and collision, zones and spawns are still the manifest's.
+func _draw_global_world(legacy: Array) -> void:
+	var id := str(manifest.get("id", ""))
+	var prefix := _world_prefix(id)
+	if prefix.is_empty():
+		DotLog.info(CHANNEL, "no world document, drawing the manifest", {"map": id})
+		return
+	var built := DotMapWorld.build(prefix, {}, {
+		"authoritative": false, "collision": false, "environment": false, "sounds": false,
+		"props": true, "map_id": id, "draw": true,
+	})
+	if not built.ok:
+		DotLog.warn(CHANNEL, "the world document would not build, drawing the manifest",
+			{"map": id, "why": str(built.error)})
+		return
+	global_world = built.value
+	global_world.name = "GlobalWorld"
+	add_child(global_world)
+	for mi: MeshInstance3D in legacy:
+		mi.visible = false
+	DotLog.info(CHANNEL, "drawn from the world document", {"map": id, "prefix": prefix})
 
 
 ## Which instance family a manifest surface is drawn in: `World`, `Props` or `Sky`.
