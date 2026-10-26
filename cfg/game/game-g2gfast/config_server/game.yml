@@ -1,0 +1,10 @@
+# game-g2gfast: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/game-g2gfast/config_server/game.yml. Layers: defaults < this < env < argv.
+
+# --- Server
+# Most players at once, ghost and bots included. [1..128]
+# max_players: 64
+
+# --- Role
+# Whether this instance times, ranks and decides. A client sets this false.
+# authoritative: true

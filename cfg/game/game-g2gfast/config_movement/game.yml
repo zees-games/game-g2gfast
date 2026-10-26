@@ -1,0 +1,54 @@
+# game-g2gfast: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/game-g2gfast/config_movement/game.yml. Layers: defaults < this < env < argv.
+
+# --- Bunny-hopping
+# Hold jump to hop. The familiar sv_autobunnyhopping.
+# auto_bhop: true
+# Whether hopping may keep and build speed. sv_enablebunnyhopping.
+# enable_bunnyhopping: true
+# Seconds before touchdown a jump press is still honoured. 0 is "on the tick". [0.0..0.2]
+# jump_buffer: 0.0
+
+# --- Movement (genre units)
+# sv_gravity, in units per second squared. [1.0..4000.0]
+# gravity: 800.0
+# sv_accelerate. [0.1..100.0]
+# accelerate: 5.0
+# sv_airaccelerate. The game default is 1000 for every map; a surf map may lower it. [0.0..10000.0]
+# air_accelerate: 1000.0
+# sv_friction. [0.0..50.0]
+# friction: 4.0
+# sv_stopspeed, in units per second. [0.0..500.0]
+# stop_speed: 75.0
+# Run speed, in units per second. The genre's knife speed. [10.0..2000.0]
+# max_speed: 250.0
+# sv_maxvelocity, in units per second. A backstop, not a gameplay number. [100.0..100000.0]
+# max_velocity: 3500.0
+# Airborne wish-speed cap, in units per second. Hard-coded at 30 in those games. [0.0..1000.0]
+# air_wish_cap: 30.0
+# Vertical velocity on a jump, in units per second. [10.0..2000.0]
+# jump_velocity: 301.993377
+# sv_stepsize, in units. [0.0..64.0]
+# step_size: 18.0
+# Steepest floor a player can stand on, in degrees. A 0.7 floor normal is 45.57°. [1.0..89.0]
+# max_slope: 45.57
+# sv_edgefriction. 1 disables it; those games ship 2. [1.0..10.0]
+# edge_friction: 1.0
+# `sv_crestlaunch`: speed, as a multiple of `sv_maxspeed`, above which the top of a walkable ramp throws a pl... [0.0..10.0]
+# crest_launch: 1.25
+
+# --- View
+# fov_desired: horizontal field of view at 4:3, as those games define it. [30.0..150.0]
+# fov_desired: 90.0
+# sensitivity, with the meaning it has everywhere else: degrees per count is this × 0.022. [0.01..50.0]
+# sensitivity: 2.5
+# Whether players may use the third-person camera at all.
+# allow_thirdperson: true
+# Which view a player starts in.
+# default_thirdperson: false
+# sv_flashlight: whether a player may switch on their own flashlight.
+# flashlight: true
+# sv_stagger_snapshots: spread the snapshot work over the ticks between snapshots, a share of the peers on ea...
+# stagger_snapshots: true
+# sv_spec_list: whether a player is told who is spectating them (and the people watching the same runner are ...
+# spectator_list: true

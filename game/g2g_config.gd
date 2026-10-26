@@ -367,6 +367,23 @@ func sensitive_keys() -> PackedStringArray:
 	return PackedStringArray(["records_database_token"])
 
 
+## `@export_group` -> the cfg file it lives in: `cfg/game/game-g2gfast/config_<file>/game.yml`.
+const CFG_FILES := {
+	"Bunny-hopping": "movement", "Movement (genre units)": "movement", "View": "movement",
+	"Content": "content", "Records": "content",
+	"Modes": "modes", "Deathmatch": "modes",
+	"Server": "server", "Role": "server",
+}
+
+
+## The binder every entry point uses: [param config] layered, one cfg file per [constant CFG_FILES] entry.
+static func make_binder(config: DotConfig, json_path := "") -> DotGameConfigBinder:
+	var b := DotGameConfigBinder.create(config, "game-g2gfast", "g2g", json_path)
+	b.grouped = true
+	b.group_files = CFG_FILES
+	return b
+
+
 func env_prefix() -> String:
 	return "G2G_"
 

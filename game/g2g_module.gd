@@ -1992,7 +1992,8 @@ func _bind_config() -> DotResult:
 	workbench = DotGameWorkbench.new()
 	workbench.name = "Workbench"
 	workbench.dedicated = DisplayServer.get_name() == "headless"
-	workbench.add_set(binder.profile_set(), "Game settings")
+	for set: DotProfileSet in binder.profile_sets():
+		workbench.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
 	if wanted:
 		workbench.add_set((made.value as DotGameNoblock).binder.profile_set(), "Block rules")
 	add_child(workbench)

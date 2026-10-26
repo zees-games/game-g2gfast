@@ -1,0 +1,51 @@
+# game-g2gfast: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/game-g2gfast/config_content/game.yml. Layers: defaults < this < env < argv.
+
+# --- Content
+# The map a server loads when it boots.
+# initial_map: "surf_mesa"
+# An extra directory to find imported maps in, outside the build.
+# maps_directory: ""
+# A map catalogue JSON file. Empty uses the maps this build ships.
+# catalogue_path: ""
+# Map ids to fetch from the content origin at boot, beyond the one being loaded.
+# content_maps: []
+# Whose namespace a map is fetched from. `sv_map_content_owner`.
+# map_content_owner: ""
+# Seconds a map runs before the next is chosen. 0 disables it. [0.0..86400.0]
+# map_seconds: 2700.0
+# map_seconds for a game played OFFLINE: by yourself, with nobody waiting for the next map. 0, no limit, by d... [0.0..86400.0]
+# offline_map_seconds: 0.0
+# The file that says which maps a server ROTATES: `cfg/maps.yml`, layered over the game's own shipped `res://...
+# map_rotation_file: "cfg/maps.yml"
+# Seconds a map change waits for every connected client to say it has the new map. `sv_map_sync_timeout`. [1.0..3600.0]
+# map_sync_seconds: 30.0
+
+# --- Records
+# Where records go. Empty keeps them in memory only.
+# records_directory: "user://g2gfast/records"
+# A database for records instead of files: sqlite, or postgres / mysql through dot-sql's HTTP gateway. Empty ...
+# records_database: ""
+# SQLite only: the database file.
+# records_database_path: "user://g2gfast/records.db"
+# Postgres or MySQL: the gateway's URL, e.g. http://10.0.0.5:8780.
+# records_database_url: ""
+# Table name prefix, so several games can share one database.
+# records_table_prefix: "dot_timer_"
+# Seconds a cached board read is served. Another server's new record is at most this old on this server's HUD... [0.0..600.0]
+# records_cache_seconds: 10.0
+# How records are scored: curve, tiered or placement. See DotTimerPoints. `timer_points_formula`.
+# points_formula: "curve"
+# Decay down a player's list of records when totalling them. 1 = a plain sum. [0.5..1.0]
+# points_weighting: 0.975
+# Whether a finish must have crossed every stage line to be filed.
+# enforce_stages: true
+# Seconds a dropped player's run is kept for them to come back to. 0 = off. [0.0..86400.0]
+# resume_seconds: 600.0
+# record_replays: true
+# Whether the server record's replay runs the map as a ghost everybody can see — A replay bot, as every commu...
+# show_replay_bot: true
+# Whether published boards reach the TMC backbone. Off by default: it sends player names and times off the se...
+# report_to_backbone: false
+# Whether the server counts per-player statistics and awards achievements.
+# keep_progress: true

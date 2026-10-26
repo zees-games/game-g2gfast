@@ -1,0 +1,24 @@
+# game-g2gfast: every key of this file at its code default, commented out. Uncomment a line to change it;
+# an operator overrides in cfg/server/game/game-g2gfast/config_modes/game.yml. Layers: defaults < this < env < argv.
+
+# --- Modes
+# Whether players can shoot each other. `sv_deathmatch`.
+# deathmatch: false
+# Seconds of the final killcam when a deathmatch ends, added to the end's wait. `mp_killcam_time`; 0 is off. [0.0..30.0]
+# killcam_seconds: 7.0
+# Whether hunters walk the course. `sv_hunters`.
+# hunters: false
+# Whether an admin can place practice blocks. `sv_props`.
+# placeable_props: false
+
+# --- Deathmatch
+# Score that ends a deathmatch. `sv_deathmatch` has to be on. [0..500]
+# score_limit: 40
+# Whether a player can hurt a teammate. Everybody is on one team here, so off makes deathmatch inert.
+# friendly_fire: true
+# Seconds between a death and the respawn. [0.0..60.0]
+# respawn_delay: 1.0
+# Seconds a respawned player cannot be hurt. [0.0..30.0]
+# spawn_protection: 2.0
+# Damage at or above which a map's `trigger_hurt` kills a runner; less is ignored. [1.0..10000.0]
+# lethal_damage: 100.0

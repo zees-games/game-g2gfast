@@ -320,7 +320,8 @@ func _build_workbench() -> void:
 	workbench.name = "Workbench"
 	workbench.listen_host_fn = platform.listen_host_fn
 	workbench.config = {"enabled": false}
-	workbench.add_set(game.config_binder.profile_set(), "Game settings")
+	for set: DotProfileSet in game.config_binder.profile_sets():
+		workbench.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
 	var started := workbench.start()
 	if started.ok and workbench.api != null:
 		game.config_binder.attach(workbench.api.runtime)

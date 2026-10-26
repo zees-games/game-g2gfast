@@ -319,7 +319,7 @@ func _ready() -> void:
 	if not view_rules.changed.is_connected(_on_view_rules_changed):
 		view_rules.changed.connect(_on_view_rules_changed)
 
-	config_binder = DotGameConfigBinder.create(config, CONFIG_GAME_ID, "g2g", config_file)
+	config_binder = G2GConfig.make_binder(config, config_file)
 	var loaded := config_binder.load_layers()
 
 	if not loaded.ok:

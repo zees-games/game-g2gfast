@@ -418,8 +418,7 @@ func _test_config_and_noblock() -> void:
 	_run_command("g2g_respawn_delay 3")
 	_check(game.config.respawn_delay == 3.0 and binder.source_of("respawn_delay") == "cvar", "a g2g_ cvar writes the field")
 	_run_command("g2g_respawn_delay 1")
-	var set: DotProfileSet = binder.profile_set()
-	var edit: Variant = module.workbench.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": set.rel_path, "id": binder.profile_id, "key": "gravity", "value": 700})
+	var edit: Variant = module.workbench.api.handle(DotGameWorkbench.LOCAL_ACTOR, {"op": "set", "kind": "config_movement", "id": binder.profile_id, "key": "gravity", "value": 700})
 	_check(edit is DotResult and edit.ok and game.config.gravity == 700.0 and server.console.get_int("sv_gravity") == 700,
 		"a workbench edit of a hand-bound field reaches the field and its sv_ cvar")
 	_run_command("sv_gravity 800")
