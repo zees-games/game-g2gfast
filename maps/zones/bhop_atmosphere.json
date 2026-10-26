@@ -1,0 +1,37 @@
+{
+ "id": "bhop_atmosphere",
+ "author": "ampbhop",
+ "attribution": {
+  "author": "ampbhop",
+  "source": "https://gamebanana.com/mods/124486 (submitter ampbhop; the page lists its record times; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_atmopshere.rar",
+  "recorded": "2026-10-26"
+ },
+ "notes": "A start and finish read from the teleport graph (chk-maps run 85). One spawn at the `spawn` destination; seven wall teleports tele1..tele7 join the sections, and the 754-wide wall teleport to `end` is the finish (past it a teleport to `credits`). Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "spawn",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round the spawn"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "spawn"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "the single wall teleport to `end`"
+  }
+ ]
+}

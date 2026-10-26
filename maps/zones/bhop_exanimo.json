@@ -1,0 +1,36 @@
+{
+ "id": "bhop_exanimo",
+ "author": "WorldspawN, Drouzefa",
+ "attribution": {
+  "author": "WorldspawN, Drouzefa",
+  "source": "https://gamebanana.com/mods/369680 (mappers WorldspawN and Drouzefa; materials and props credited on the page to Antosha, FOOL, komaokc, NOUG4AT, Acehigh, Gatorlangman, Zindex, TopHATTwaffle, Valve; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_exanimo.rar",
+  "recorded": "2026-10-26"
+ },
+ "notes": "A start and finish read from the teleport graph (chk-maps run 85). Two spawns; door teleports lead to level1, level2, level3, level4 and the underground run, and the 207x12 door teleport to `ending` is the finish. Not published.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     4896,
+     15132,
+     154
+    ],
+    "extents": [
+     256,
+     256,
+     96
+    ]
+   },
+   "note": "round the two spawns"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "ending",
+   "note": "the single door teleport to `ending`"
+  }
+ ]
+}

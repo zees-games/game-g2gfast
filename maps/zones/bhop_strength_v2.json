@@ -1,0 +1,43 @@
+{
+ "id": "bhop_strength_v2",
+ "author": "BLENDIE",
+ "attribution": {
+  "author": "BLENDIE",
+  "source": "https://gamebanana.com/mods/126122 (mapper BLENDIE; textures Ghost1397314; beta testers Aimerrr, epic^; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_strength_v2.rar",
+  "recorded": "2026-10-26"
+ },
+ "notes": "A start and finish read from the teleport graph (chk-maps run 85). The spawns stand over a teleport to the `start room` destination, where the course starts; levels level1..level31 follow, each joined by a 75x28 door teleport, and the last door goes to `slut` (Danish for end), the finish. ekstra1..3 are side rooms. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "The anti-standing trap: touching a block renames the player `activator` after 0.09 s and back to `default` after 0.1 s; the teleports behind filter_activator fire only on that name. Run as sinking blocks."
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "start room",
+    "extents": [
+     256,
+     256,
+     96
+    ]
+   },
+   "note": "round the `start room` destination: the spawns stand over a teleport that sends there"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "start room"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "slut",
+   "note": "the single door teleport to `slut` after level 31"
+  }
+ ]
+}

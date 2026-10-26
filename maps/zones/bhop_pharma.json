@@ -1,0 +1,42 @@
+{
+ "id": "bhop_pharma",
+ "author": "frostiee_",
+ "attribution": {
+  "author": "frostiee_",
+  "source": "https://gamebanana.com/mods/125728 (submitter frostiee_; the page ships bhop_pharma_2.rar; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_pharma_2.rar",
+  "recorded": "2026-10-26"
+ },
+ "notes": "A start and finish read from the teleport graph (chk-maps run 85). Levels level1..level22 follow `start`; the last shaft drops past the thank-you lights to a 128x128 teleport to `end`, the finish. The f_1..f_7 teleports are the per-level fall floors that send by the name a level gives. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "The anti-standing trap: touching a block renames the player `activator` after 0.09 s and back to `default` after 0.1 s; the teleports behind filter_activator fire only on that name. Run as sinking blocks."
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     -6584,
+     -15184,
+     6900
+    ],
+    "extents": [
+     256,
+     256,
+     192
+    ]
+   },
+   "note": "round the `start` destination (-6584 -15184 6968), reaching down to the floor about 240 units under it where the player lands"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "the single teleport to `end` at the foot of the final shaft"
+  }
+ ]
+}

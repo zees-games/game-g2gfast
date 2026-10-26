@@ -1,0 +1,47 @@
+{
+ "id": "bhop_null_fix",
+ "author": "Tony Montana",
+ "attribution": {
+  "author": "Tony Montana",
+  "source": "https://gamebanana.com/mods/125638 (bhop_null_v2; submitter tmontana, key author Tony Montana, contributor Chris528; the page ships bhop_null_fix.zip as its fixed file; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0, nothing on the page against porting; credited, with removal on request)",
+  "archive": "bhop_null_fix.zip",
+  "recorded": "2026-10-26"
+ },
+ "notes": "A start and finish read from the teleport graph (chk-maps run 85). The spawn room floor is a 1200x1200 teleport to `spawn`, where the course starts; stages stage1_1..stage9_2 follow, and a 64x64 teleport over the last booster sends to `end`, the room whose trigger marks the finisher. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "The anti-standing trap: touching a block renames the player `activator` after 0.09 s and back to `default` after 0.1 s; the teleports behind filter_activator fire only on that name. Run as sinking blocks."
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     0,
+     0,
+     280
+    ],
+    "extents": [
+     256,
+     256,
+     240
+    ]
+   },
+   "note": "round the `spawn` destination (0 0 432) the spawn room floor teleport sends to, reaching down to the floor 376 units under it where the player lands"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "spawn"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "the one 64x64 teleport to `end`, over the booster after stage 9"
+  }
+ ]
+}

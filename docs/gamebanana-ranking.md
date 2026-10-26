@@ -202,3 +202,25 @@ Not held, in like order, and what became of each:
 | [125939](https://gamebanana.com/mods/125939) | bhop_serenity | 15 | 7,355 | downloaded, pending/: no finish marked |
 
 **Next by likes** (page 1-2, not held, not yet read): bhop_verisimilitude [126310] (129 MB archive), bhop_null_v2 [125638], bhop_hive [125215], bhop_trikz_caverns_v2 [126251], bhop_decay [441900], bhop_monotonous CSS [125555], bhop_strength_v2 [126122], bhop_abyss [124368], bhop_lego [125406], kz_bhop_liminal [663808], bhop_exanimo [369680], bhop_pharma [125728], bhop_pharos_fix [125729], bhop_atmosphere [124486], bhop_psykeeysss [125780], bhop_treason [601212], bhop_giga_citadel [125120], bhop_alvo2 [124417].
+
+## Imported 2026-10-26
+
+From the "Next by likes" list above, in like order (the ranking was not extended: it still had candidates). Every page is game 2 and states CC BY-NC-ND 4.0; each was read for anything against porting before downloading. Every file downloaded is VBSP 20; CS:GO/CS2 skipped: 0.
+
+| Page | Map | Likes | Views | Status |
+| --- | --- | ---: | ---: | --- |
+| [125638](https://gamebanana.com/mods/125638) | bhop_null_v2 | 15 | 25,992 | imported as `bhop_null_fix` (the page's fixed file): start round `spawn`, finish at the teleport to `end` |
+| [125215](https://gamebanana.com/mods/125215) | bhop_hive | 14 | 9,646 | downloaded, pending/: a story map whose route is buttons, a wand and timed doors |
+| [126251](https://gamebanana.com/mods/126251) | bhop_trikz_caverns_v2 | 14 | 13,187 | not downloaded: its trikz part needs a second player to boost |
+| [441900](https://gamebanana.com/mods/441900) | bhop_decay | 14 | 2,777 | downloaded, pending/: pit chains behind anti-glitch name filters, no finish marked |
+| [125555](https://gamebanana.com/mods/125555) | bhop_monotonous CSS | 14 | 8,282 | downloaded, pending/: nine floor teleports, no finish marked |
+| [126122](https://gamebanana.com/mods/126122) | bhop_strength_v2 | 14 | 8,594 | imported: start round `start room`, finish at the door to `slut` |
+| [124368](https://gamebanana.com/mods/124368) | bhop_abyss | 14 | 7,389 | not downloaded: 169 MB archive |
+| [125406](https://gamebanana.com/mods/125406) | bhop_lego | 14 | 23,026 | downloaded, pending/: the end teleport waits on a 35-second timed rename |
+| [663808](https://gamebanana.com/mods/663808) | kz_bhop_liminal | 13 | 1,908 | not downloaded: 171 MB archive |
+| [369680](https://gamebanana.com/mods/369680) | bhop_exanimo | 13 | 3,173 | imported: start round the spawns, finish at the door to `ending` |
+| [125728](https://gamebanana.com/mods/125728) | bhop_pharma | 13 | 10,507 | imported: start round `start`, finish at the teleport to `end`; 60% of its triangles are the prototype grid |
+| [125729](https://gamebanana.com/mods/125729) | bhop_pharos_fix | 13 | 7,027 | downloaded, pending/: name and class gates, two doors to `end`, finish not read |
+| [124486](https://gamebanana.com/mods/124486) | bhop_atmosphere | 13 | 3,514 | imported: start round `spawn`, finish at the wall teleport to `end` |
+
+**Next by likes**, not yet read: bhop_psykeeysss [125780], bhop_treason [601212], bhop_giga_citadel [125120], bhop_alvo2 [124417], bhop_verisimilitude [126310] (129 MB archive). After those, read page 3 of the Bunny Hop most-liked browse.
