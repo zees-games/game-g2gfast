@@ -28,7 +28,7 @@ const BhopIntro := preload("res://maps/bhop_g2g_intro.gd")
 const SurfIntro := preload("res://maps/surf_g2g_intro.gd")
 const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 
-const CHECKS := 252
+const CHECKS := 255
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -2908,6 +2908,14 @@ func _test_ghost() -> void:
 	look.mouse_capture_override = true
 	_check(look.mouse_drives_view(),
 		"and a captured one is")
+	# A modal that holds the pointer keeps the click-to-capture from taking it back.
+	look.platform = DotGameClient.new()
+	_check(look.click_may_capture(), "a click may capture with no modal open")
+	look.platform.hold_pointer(&"shop")
+	_check(not look.click_may_capture(), "but not while a modal holds the pointer")
+	look.platform.release_pointer(&"shop")
+	_check(look.click_may_capture(), "and again once it is released")
+	look.platform.free()
 	look.free()
 	_done()
 

@@ -1177,6 +1177,11 @@ func mouse_drives_view() -> bool:
 	return Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 
 
+## Whether a click may take the pointer back: not while a modal holds it through [method DotGameClient.hold_pointer] (or a `dot_pointer_modal` node). Spectating is exempt because it is also "busy" to the platform and still needs the click.
+func click_may_capture() -> bool:
+	return platform == null or is_spectating() or not platform.is_input_blocked()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _covered():
 		return
@@ -1201,7 +1206,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# because no player exists yet is a click that never captures the cursor — after
 	# which the only affordance the game offers is one it has already ignored.
 	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and click_may_capture():
 			_awaiting_click = false
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			if hud != null:
