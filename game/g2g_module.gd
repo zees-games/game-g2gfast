@@ -92,6 +92,11 @@ const HAND_CVARS := {
 var noblock: DotGameNoblock = null
 ## dot-workbench: the F9 panel in debug builds, the loopback page when `workbench.enabled`.
 var workbench: DotGameWorkbench = null
+## Carries the workbench's profile runtime (rows down) over this manager; null without a workbench.
+var profile_link: DotNetProfileLink = null
+## The noblock half and the workbench runtime, made before the netcode so the profile link can bind to it.
+var _noblock_made: DotResult = null
+var _wb_runtime: DotProfileRuntime = null
 
 
 func _module_name() -> String:
@@ -112,6 +117,9 @@ func _module_load() -> DotResult:
 	if game == null:
 		return DotResult.fail(DotError.CODE_STATE, "No G2GGame is registered.")
 
+	var wb_made := _make_workbench()
+	if not wb_made.ok:
+		return wb_made
 	var netted := _build_netcode()
 	if not netted.ok:
 		return netted
@@ -955,6 +963,10 @@ func _player_named(text: String) -> StringName:
 
 
 func _module_unload() -> void:
+	# The link and the runtime hold each other through broadcast.
+	if profile_link != null:
+		profile_link.release()
+		profile_link = null
 	if map_config != null:
 		map_config.restore()
 	if server != null and server.client_disconnected.is_connected(_on_client_disconnected):
@@ -1057,6 +1069,18 @@ func _build_netcode() -> DotResult:
 	var avatar := DotGameAvatarActionRelay.serve(net, self, server)
 	if not avatar.ok:
 		log_warn("avatar actions not served", {"why": avatar.error.message})
+
+	# The remote workbench's frame, inert until sv_workbench_remote is 1; and the profile rows, so an admin's edit reaches every client.
+	var bench := DotGameWorkbenchRemote.serve(net)
+	if not bench.ok:
+		log_warn("remote workbench not served", {"why": bench.error.message})
+	if _wb_runtime != null:
+		profile_link = DotNetProfileLink.attach(net, _wb_runtime)
+		if bench.ok and workbench.serve_remote(net) == null:
+			log_warn("remote workbench not bound", {})
+		bridge.peer_ready_fn = func(peer: int) -> void:
+			if profile_link != null:
+				profile_link.peer_joined(peer)
 
 	net.messages.seal()
 	# [b]A client whose game messages cannot work with this server's is dropped, in words.[/b]
@@ -1982,26 +2006,32 @@ func _refuse_peer(peer_id: int, error: DotError) -> void:
 		server.kick(session, error.message, error)
 
 
-## The config as cvars (`g2g_<field>`), commands, the workbench and the block rules.
-func _bind_config() -> DotResult:
-	var binder := game.config_binder
-	var made := DotGameNoblock.create(G2GGame.CONFIG_GAME_ID, Callable(game, "block_side"))
-	var wanted := made.ok
-	if not wanted and made.error.code != DotError.CODE_UNSUPPORTED:
-		return made.wrap("noblock")
-	if not wanted:
-		DotLog.warn(CHANNEL, "noblock unavailable: dot-team is not in this build")
-
+## The workbench node and its runtime, before the netcode: the remote frame and the profile link register before the seal.
+func _make_workbench() -> DotResult:
+	_noblock_made = DotGameNoblock.create(G2GGame.CONFIG_GAME_ID, Callable(game, "block_side"))
+	if not _noblock_made.ok and _noblock_made.error.code != DotError.CODE_UNSUPPORTED:
+		return _noblock_made.wrap("noblock")
 	workbench = DotGameWorkbench.new()
 	workbench.name = "Workbench"
 	workbench.dedicated = DisplayServer.get_name() == "headless"
-	for set: DotProfileSet in binder.profile_sets():
+	for set: DotProfileSet in game.config_binder.profile_sets():
 		workbench.add_set(set, "Game settings: %s" % set.rel_path.trim_prefix("config_"))
-	if wanted:
-		workbench.add_set((made.value as DotGameNoblock).binder.profile_set(), "Block rules")
+	if _noblock_made.ok:
+		workbench.add_set((_noblock_made.value as DotGameNoblock).binder.profile_set(), "Block rules")
 	add_child(workbench)
 	var started := workbench.start()
-	var runtime: DotProfileRuntime = workbench.api.runtime if started.ok and workbench.api != null else null
+	_wb_runtime = workbench.api.runtime if started.ok and workbench.api != null else null
+	return DotResult.success(null)
+
+
+## The config as cvars (`g2g_<field>`), commands, the workbench and the block rules.
+func _bind_config() -> DotResult:
+	var binder := game.config_binder
+	var made := _noblock_made
+	var wanted := made.ok
+	if not wanted:
+		DotLog.warn(CHANNEL, "noblock unavailable: dot-team is not in this build")
+	var runtime := _wb_runtime
 
 	var covered := PackedStringArray()
 	for field: String in HAND_CVARS:

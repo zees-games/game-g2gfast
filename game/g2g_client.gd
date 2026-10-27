@@ -57,6 +57,11 @@ var platform: DotGameClient = null
 
 ## dot-workbench's tuning window. See [method _build_workbench].
 var workbench: DotGameWorkbench = null
+## Asks a server whether this player may edit it (sv_workbench_remote); null offline.
+var _workbench_remote: DotGameWorkbenchRemoteClient = null
+## The profile rows the server broadcasts (an admin's edit reaches every client); null offline.
+var _profile_link: DotNetProfileLink = null
+var _profile_runtime: DotProfileRuntime = null
 
 ## The server browser: dot-browser's client half.
 ##
@@ -207,7 +212,8 @@ func _ready() -> void:
 	DotLog.result("g2g.client", "the presentation layer", presentation.setup())
 	_wire_chat_window()
 	_build_overlays()
-	_build_workbench()
+	if _offline:
+		_build_workbench()
 
 	# Every effect drawn is somewhere on the map that just went away, and the landing
 	# watcher would otherwise read the first frame on the new one as a fall.
@@ -250,6 +256,8 @@ func _ready() -> void:
 	else:
 		var netted := _build_netcode()
 		DotLog.result("g2g.client", "netcode", netted)
+		if netted.ok and link != null:
+			_start_remote_workbench()
 
 	# The server browser. Built on every client, connected or not: looking for a
 	# server is what you do when you are not on one, and a browser that only existed
@@ -333,6 +341,34 @@ func _build_workbench() -> void:
 	platform.add_workbench(workbench)
 	platform.menu = null
 	platform.console = null
+
+
+## Online: no local trust and no panel until the server names this player an admin (sv_workbench_remote).
+func _start_remote_workbench() -> void:
+	if _workbench_remote == null:
+		return
+	var wb := DotGameWorkbench.new()
+	wb.name = "Workbench"
+	wb.remote_client = _workbench_remote
+	wb.remote_fn = func() -> bool: return true
+	var started := wb.start(_profile_runtime)
+	DotLog.result("g2g.client", "the remote workbench", started)
+	if not started.ok:
+		wb.queue_free()
+		return
+	workbench = wb
+	platform.menu = menu
+	platform.console = presentation.console if presentation != null else null
+	platform.add_workbench(wb)
+	platform.menu = null
+	platform.console = null
+
+
+func _say_ready() -> void:
+	if _workbench_remote != null:
+		_workbench_remote.ask()
+	if bridge != null:
+		bridge.ask_ready()
 
 
 ## Releases the map hold once the first level is in, and holds again for each map change.
@@ -731,6 +767,10 @@ func _build_netcode() -> DotResult:
 
 	# Before the seal and in the server's order (after the bridge), or the actions stay local.
 	DotLog.result("g2g.client", "avatar action message", DotGameAvatarActionMessage.register(net))
+	# The server's order again: the remote workbench's frame and the profile rows.
+	_workbench_remote = DotGameWorkbenchRemoteClient.attach(net)
+	_profile_runtime = DotProfileRuntime.new()
+	_profile_link = DotNetProfileLink.attach(net, _profile_runtime)
 	net.messages.seal()
 
 	# The client halves. Built here rather than in `_ready` because both need the
@@ -846,9 +886,9 @@ func _build_netcode() -> DotResult:
 	DotFpsSampler.register_default_actions(_sampler)
 
 	if link.has_method("is_playing") and bool(link.call("is_playing")):
-		bridge.ask_ready()
+		_say_ready()
 	elif link.has_signal("spawned"):
-		link.connect("spawned", bridge.ask_ready, CONNECT_ONE_SHOT)
+		link.connect("spawned", _say_ready, CONNECT_ONE_SHOT)
 
 	# ENet's own round trip on UDP and the early heartbeats' on WebSocket (dot-server's
 	# `rtt_ms`); the plain heartbeat on a link older than that. Duck-typed, because a pack

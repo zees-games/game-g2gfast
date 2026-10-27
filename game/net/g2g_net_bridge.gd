@@ -120,6 +120,9 @@ var commands_fn: Callable = Callable()
 ## admins to ask about).
 var may_change_map_fn: Callable = Callable()
 
+## `(peer: int) -> void`: a peer was admitted (it said READY and was seated). Set by the module to send the workbench's rows.
+var peer_ready_fn: Callable = Callable()
+
 ## The server's map list arrived, for the M screen.
 signal maps_received(rows: Array)
 
@@ -876,6 +879,8 @@ func _admit(peer_id: int) -> void:
 
 	# Last, so everything above describes the world the announce is about to put it in.
 	_map_admit(peer_id)
+	if peer_ready_fn.is_valid():
+		peer_ready_fn.call(peer_id)
 
 
 # --- Spectating -----------------------------------------------------------------
