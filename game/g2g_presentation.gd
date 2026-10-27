@@ -561,7 +561,7 @@ func _build_audio() -> DotResult:
 	ambience = DotAudioAmbience.new()
 	ambience.name = "Ambience"
 	ambience.manager = audio
-	ambience.level = 0.7
+	ambience.level = 0.3
 	add_child(ambience)
 	ambience.set_map_bed(bed_for(&""))
 
