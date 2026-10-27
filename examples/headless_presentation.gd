@@ -27,7 +27,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 207
+const CHECKS := 215
 
 var _passed := 0
 var _failed := 0
@@ -54,6 +54,7 @@ func _run() -> void:
 	_test_the_sounds_follow_the_timer()
 	_test_a_run_is_drawn()
 	_test_the_landing_is_a_speedometer()
+	_test_the_weapons_are_heard()
 	_test_console_is_prefixed()
 	_test_a_party_run_is_tainted()
 	await _test_party_over_http()
@@ -433,6 +434,35 @@ func _test_the_landing_is_a_speedometer() -> void:
 
 # --- 4 ----------------------------------------------------------------------
 
+func _test_the_weapons_are_heard() -> void:
+	_section("The deagle and the knife play dot-audio's stock recordings")
+
+	var p := _make()
+	var sink := p.audio.sink as DotAudioSinkNull
+	p.audio.listener_position = Vector3.ZERO
+
+	_check(p.audio.catalogue.has(&"weapon_magnum_fire"), "the game's catalogue carries the weapon stock (DotAudioStock.add_to)")
+	var def: DotAudioDef = p.audio.catalogue.find(&"weapon_magnum_fire")
+	_check(def != null and def.variants.size() >= 4 and ResourceLoader.exists(def.variants[0]), "and its deagle report has real variant files")
+
+	sink.forget()
+	p.on_weapon_used(&"deagle", Vector3.ZERO, Vector3.ZERO)
+	_check(sink.count_of(&"weapon_magnum_fire") == 1, "a deagle shot plays the magnum report")
+	p.on_weapon_used(&"deagle", Vector3(200.0, 0.0, 0.0), Vector3.ZERO)
+	_check(sink.count_of(&"weapon_magnum_far") == 1, "and a far one plays the distant recording")
+	p.on_weapon_used(&"knife", Vector3.ZERO, Vector3.ZERO)
+	_check(sink.count_of(&"weapon_swing") == 1, "a knife plays a swing")
+	p.on_weapon_dry(Vector3.ZERO)
+	_check(sink.count_of(&"weapon_dry") == 1, "the trigger on nothing clicks")
+	p.on_weapon_equipped(Vector3.ZERO)
+	_check(sink.count_of(&"weapon_equip") == 1, "a weapon coming up is heard")
+	p.on_weapon_used(&"nothing", Vector3.ZERO, Vector3.ZERO)
+	_check(sink.played().size() == 5, "and an unknown weapon plays nothing")
+
+	p.queue_free()
+	_done()
+
+
 func _test_console_is_prefixed() -> void:
 	_section("Two consoles whose names mean opposite things")
 
@@ -763,7 +793,7 @@ func _test_every_sound_has_a_voice() -> void:
 	var uncovered: Array[String] = []
 	for id in cat.ids():
 		# dot-audio's stock footsteps and beds are files the addon ships: no stand-in needed.
-		if not recipes.has(id) and not DotAudioStock.ids().has(id):
+		if not recipes.has(id) and not DotAudioStock.ids().has(id) and not String(id).begins_with(DotAudioWeaponStock.PREFIX):
 			uncovered.append(String(id))
 	_check(
 		uncovered.is_empty(),

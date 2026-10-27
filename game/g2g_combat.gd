@@ -48,6 +48,15 @@ signal player_killed(entry: DotKillFeed.Entry)
 ## A dead player is alive again, back at a start. A client shows the figure it hid.
 signal player_respawned(player_id: StringName)
 
+## A player's weapon went off (a fresh tick, never a replay): for the presentation's report.
+signal weapon_used(player_id: StringName, weapon: StringName, at: Vector3)
+
+## A trigger was pulled on an empty weapon.
+signal weapon_dry(player_id: StringName, at: Vector3)
+
+## A player took up a weapon.
+signal weapon_equipped(player_id: StringName, weapon: StringName, at: Vector3)
+
 ## A player's shot took health off somebody: the shooter's hit marker and damage number.
 ## Only what the authority applied, never a client's prediction, and never a refused hit,
 ## a hit that took nothing (a body, spawn protection) or one on yourself.
@@ -456,6 +465,14 @@ func _arm(player: G2GPlayer) -> void:
 	if not armed.ok:
 		push_error(armed.error.message)
 
+	var owner_id := player.player_id
+	arsenal.dry_used.connect(func(_slot: int) -> void:
+		weapon_dry.emit(owner_id, player.eye_position()))
+	arsenal.switched.connect(func(_from: int, to: int) -> void:
+		var carried := arsenal.slot_at(to)
+		if carried != null:
+			weapon_equipped.emit(owner_id, carried.def.id, player.eye_position()))
+
 	hitboxes.register_with(manager, entity)
 	manager.register_health(entity, health)
 	manager.set_authoritative_origin(entity, player.eye_position())
@@ -620,6 +637,10 @@ func tick(delta: float) -> void:
 		player.set_meta("g2g_fire_previous", command.duplicate_command())
 
 		shots.append_array(outcome.shots)
+
+		if outcome.used and not ctx.replayed:
+			var weapon := arsenal.current_def()
+			weapon_used.emit(id, weapon.id if weapon != null else &"", player.eye_position())
 
 		# Heard by the hunters: a gunfight on a course brings them.
 		if not outcome.shots.is_empty() and game.hunters != null:

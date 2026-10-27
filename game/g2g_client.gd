@@ -485,6 +485,15 @@ func _build_ragdolls() -> void:
 			var _fell := fall(id, who.death if who != null else null)
 		)
 		game.combat.player_respawned.connect(rise)
+		# The deagle and the knife are heard (dot-audio's weapon stock).
+		game.combat.weapon_used.connect(func(_id: StringName, weapon: StringName, at: Vector3) -> void:
+			var cam: Camera3D = player.camera.active() if player != null and player.camera != null else null
+			presentation.on_weapon_used(weapon, at, cam.global_position if cam != null else at))
+		game.combat.weapon_dry.connect(func(_id: StringName, at: Vector3) -> void:
+			presentation.on_weapon_dry(at))
+		game.combat.weapon_equipped.connect(func(id: StringName, _weapon: StringName, at: Vector3) -> void:
+			if player != null and id == player.player_id:
+				presentation.on_weapon_equipped(at))
 		game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
 			var killer := game.combat.player_id_for(entry.killer_key.to_int()) if entry.killer_key != "" else &""
 			if killcam != null:

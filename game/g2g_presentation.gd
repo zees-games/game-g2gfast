@@ -897,6 +897,36 @@ func watch_movement(grounded: bool, speed: float, at: Vector3) -> void:
 			settings.get_float(&"snd_wind_full_speed", 1500.0))
 
 
+## The stock weapon sound each of this game's two weapons plays (dot-audio's weapon stock,
+## in the catalogue through DotAudioStock.add_to).
+const WEAPON_SOUNDS := {&"deagle": &"weapon_magnum_fire", &"knife": &"weapon_swing"}
+
+## Beyond this, a deagle is heard as its distant recording.
+const FAR_METRES := 60.0
+
+
+## A weapon went off at [param at]. Positional, so a shot across a course has a direction.
+func on_weapon_used(weapon: StringName, at: Vector3, listener: Vector3) -> void:
+	var id: StringName = WEAPON_SOUNDS.get(weapon, &"")
+	if id == &"" or audio == null:
+		return
+	if weapon == &"deagle" and listener.distance_to(at) > FAR_METRES:
+		id = &"weapon_magnum_far"
+	var _voice := audio.play_at(id, at)
+
+
+## The trigger fell on nothing.
+func on_weapon_dry(at: Vector3) -> void:
+	if audio != null:
+		var _voice := audio.play_at(&"weapon_dry", at)
+
+
+## A weapon came up.
+func on_weapon_equipped(at: Vector3) -> void:
+	if audio != null:
+		var _voice := audio.play_at(&"weapon_equip", at)
+
+
 ## The bed's level for a horizontal speed in genre units a second. Static so the curve can be
 ## checked without an audio device, which a headless run does not have.
 static func wind_level(units_per_second: float, level_min: float, level_max: float, full_speed: float) -> float:
