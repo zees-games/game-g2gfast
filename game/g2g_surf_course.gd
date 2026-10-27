@@ -27,6 +27,8 @@ const G2GUnits := preload("g2g_units.gd")
 ## and filled the beam (surf_beginner stage 3). A door is only ever reached from above or level: nothing on these
 ## stages rises 256 units.
 const BELOW_UNITS := 256.0
+## Downward speed, m/s (2400 u/s), past which a state counts as fallen into a pit.
+const STUCK_FALL := 45.7
 
 var map_id: StringName = &""
 var stage := 1
@@ -192,6 +194,12 @@ func event_at(state: Variant) -> int:
 	var position: Vector3 = state.position
 	if position.y < floor_y:
 		return EVENT_BELOW
+	# A fall faster than any drop on these maps is a motor exploit (a state frozen in a pit slab
+	# while vy grows), not a ride.
+	if state.velocity.y < -STUCK_FALL:
+		return EVENT_PIT
+	if goal_fn.is_valid() and bool(goal_fn.call(state)):
+		return EVENT_GOAL
 	for goal: DotTimerZone in goal_zones:
 		if goal.contains(position):
 			return EVENT_GOAL

@@ -141,6 +141,15 @@ func _run() -> void:
 		print("[surf] traced search: %s %s" % [found["found"], found["why"]])
 		get_tree().quit(0)
 		return
+	# `--chain "x,y,z,hx,hy,hz,speed"`: a first leg from the stage's start to a goal box (centre
+	# and half extents in units, and a minimum horizontal speed in u/s), then the stage's own
+	# search from the state the first leg arrives in, with `--guide2` as that leg's guide. One
+	# ride of both is saved as the stage: how a stage whose way on starts at a standstill is cached.
+	var chain_at := args.find("--chain")
+	if chain_at >= 0 and chain_at + 1 < args.size():
+		var code := _chain(args, args[chain_at + 1], course, sim, base, path, id, number, guide_units)
+		get_tree().quit(code)
+		return
 	if plan:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 1000 + number
@@ -235,6 +244,71 @@ func _run() -> void:
 			failed += 1
 
 	get_tree().quit(1 if failed > 0 else 0)
+
+
+## `--chain`: see [method _run]. Returns the exit code.
+func _chain(args: PackedStringArray, box_arg: String, course: DotBotSurfCourse, sim: DotFpsSimulator,
+		base: DotFpsState, path: String, id: StringName, number: int, guide1: Array) -> int:
+	var b := box_arg.split(",")
+	var centre := G2GUnits.vector_to_metres(Vector3(float(b[0]), float(b[1]), float(b[2])))
+	var half := G2GUnits.vector_to_metres(Vector3(float(b[3]), float(b[4]), float(b[5])))
+	var min_speed := G2GUnits.to_metres(float(b[6]))
+	var box := AABB(centre - half, half * 2.0)
+	var real_goals: Array[DotTimerZone] = course.goal_zones.duplicate()
+	course.goal_zones.clear()
+	course.goal_fn = func(s: Variant) -> bool:
+		return box.has_point(s.position) and Vector2(s.velocity.x, s.velocity.z).length() >= min_speed
+	var planner := DotBotSurfPlanner.new()
+	planner.seconds = RIDE_SECONDS
+	planner.width = _opt(args, "--width", planner.width)
+	planner.trace = func(depth: int, best: Dictionary) -> void:
+		if depth % 4 == 0:
+			var st: DotFpsState = best["state"]
+			print("[surf]   %.1f s best %s u, velocity %s u/s" % [(depth + 1) * planner.hold / 128.0,
+				str(G2GUnits.vector_to_units(st.position).round()), str(G2GUnits.vector_to_units(st.velocity).round())])
+	var found: Dictionary = planner.search(base, course, sim)
+	print("[surf] first leg: %s %s" % [found["found"], found["why"]])
+	if not bool(found["found"]):
+		return 1
+	var reference := course.reference_yaw()
+	var s: DotFpsState = base.duplicate_state()
+	var entries := PackedFloat32Array()
+	for action: int in found["actions"]:
+		for _t in range(planner.hold):
+			entries.append_array([s.position.x, s.position.y, s.position.z, s.velocity.x, s.velocity.y, s.velocity.z, float(action)])
+			if sim.step(s, DotBotSurfPilot.command_for(sim, action, s, reference)) != DotBotSurfCourse.EVENT_NONE:
+				break
+	print("[surf]   first leg arrives at %s u, %s u/s after %d ticks" % [str(G2GUnits.vector_to_units(s.position).round()),
+		str(G2GUnits.vector_to_units(s.velocity).round()), entries.size() / DotBotSurfPilot.STRIDE])
+	course.goal_fn = Callable()
+	course.goal_zones = real_goals
+	var guide2: Array = []
+	var g2_at := args.find("--guide2")
+	if g2_at >= 0 and g2_at + 1 < args.size():
+		course.guide = PackedVector3Array([s.position])
+		for part in args[g2_at + 1].split(";"):
+			var xyz := part.split(",")
+			guide2.append([float(xyz[0]), float(xyz[1]), float(xyz[2])])
+			course.guide.append(G2GUnits.vector_to_metres(Vector3(float(xyz[0]), float(xyz[1]), float(xyz[2]))))
+	course.height_weight = float(_opt(args, "--height2", 0))
+	found = planner.search(s, course, sim)
+	print("[surf] second leg: %s %s" % [found["found"], found["why"]])
+	if not bool(found["found"]):
+		return 1
+	var ride := DotBotSurfPlanner.trajectory(s, found["actions"], planner.hold, course, sim)
+	if int(ride["event"]) != DotBotSurfCourse.EVENT_GOAL:
+		print("[surf] second leg did not replay to the goal")
+		return 1
+	entries.append_array(ride["entries"])
+	var total := entries.size() / DotBotSurfPilot.STRIDE
+	print("[surf]   chained ride of %d ticks (%.2f s)" % [total, total * sim.delta])
+	var whole: Array = guide1.duplicate()
+	whole.append_array(guide2)
+	_save_stage(path, id, number, course, {"seconds": [snappedf(total * sim.delta, 0.01)],
+		"lengths": PackedInt32Array([total]), "rides": entries, "rounds": [], "searches": 2}, whole,
+		{"starts": 1, "chain": box_arg, "seconds": 0.0})
+	print("[surf]   saved the chained ride to %s" % G2GSurfCourse.cache_path(id))
+	return 0
 
 
 ## [method DotBotSurfPlanner.build], saving as it goes. The addon's returns only when every
