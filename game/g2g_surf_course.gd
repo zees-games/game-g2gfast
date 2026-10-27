@@ -32,6 +32,9 @@ var map_id: StringName = &""
 var stage := 1
 var goal_zones: Array[DotTimerZone] = []
 var pit_zones: Array[DotTimerZone] = []
+## Score per metre a line is under the guide's height at its own place along it; 0 keeps the
+## guide to plan only. For a stage whose way on is a climb the energy term cannot ask for.
+var height_weight := 0.0
 
 
 ## The course for stage [param number] of the main track of the map [param game] has loaded (0 is
@@ -139,6 +142,27 @@ func progress(p: Vector3) -> float:
 			best = along + t * length
 		along += length
 	return best
+
+
+func score(state: Variant) -> float:
+	var s := super.score(state)
+	if height_weight <= 0.0 or guide.size() < 2:
+		return s
+	var p: Vector3 = state.position
+	var flat := Vector3(p.x, 0.0, p.z)
+	var best_d := INF
+	var want := p.y
+	for i in range(guide.size() - 1):
+		var a := guide[i]
+		var b := guide[i + 1]
+		var fa := Vector3(a.x, 0.0, a.z)
+		var seg := Vector3(b.x, 0.0, b.z) - fa
+		var t := clampf((flat - fa).dot(seg) / maxf(seg.length_squared(), 0.0001), 0.0, 1.0)
+		var d := flat.distance_squared_to(fa + seg * t)
+		if d < best_d:
+			best_d = d
+			want = lerpf(a.y, b.y, t)
+	return s - height_weight * maxf(0.0, want - p.y)
 
 
 ## The door nearest the start is what the straight line aims at: a stage's own exit, not the

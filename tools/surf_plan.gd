@@ -96,6 +96,7 @@ func _run() -> void:
 		course.guide = PackedVector3Array([course.start])
 		for g: Array in guide_units:
 			course.guide.append(G2GUnits.vector_to_metres(Vector3(g[0], g[1], g[2])))
+	course.height_weight = float(_opt(args, "--height", 0))
 	var bot := game.add_player(&"bot", "Bot", true)
 	bot.sampler = null
 	await get_tree().physics_frame
@@ -119,6 +120,15 @@ func _run() -> void:
 	# half second, and nothing saved. How a stage that finds no ride is diagnosed: where the
 	# best line dies says which guide (or which mechanic) it wants.
 	if args.has("--trace"):
+		# `--from "x,y,z,vx,vy,vz"` (units, Godot axes): search from a state already in flight,
+		# to ask whether a line exists from, say, a flank at 1500 u/s.
+		var from_at := args.find("--from")
+		if from_at >= 0 and from_at + 1 < args.size():
+			var f := args[from_at + 1].split(",")
+			base.position = G2GUnits.vector_to_metres(Vector3(float(f[0]), float(f[1]), float(f[2])))
+			base.velocity = G2GUnits.vector_to_metres(Vector3(float(f[3]), float(f[4]), float(f[5])))
+			base.mode = DotFpsState.Mode.AIR
+			base.yaw = rad_to_deg(atan2(-base.velocity.x, -base.velocity.z))
 		var tracer := DotBotSurfPlanner.new()
 		tracer.seconds = RIDE_SECONDS
 		tracer.width = _opt(args, "--width", tracer.width)
