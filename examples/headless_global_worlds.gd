@@ -10,10 +10,10 @@ const G2GBspMap := preload("../game/g2g_bsp_map.gd")
 const G2GMapCatalogue := preload("../game/g2g_map_catalogue.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
 
-const PILOT := ["bhop_training_fun", "bhop_eazy"]
-const CHECKS := 18
-## A drawn share below this is a map that went back to flat colours.
-const MIN_PHOTO_SHARE := 0.8
+const PILOT := ["bhop_training_fun", "bhop_eazy", "bhop_aztec", "bunnyhop_pro", "bhop_amor", "bhop_eazy_v2", "bhop_grove", "surf_eclipse", "surf_year3000", "surf_greensway", "surf_beginner", "surf_kitsune"]
+const CHECKS := 108
+## A drawn share below this is a map that went back to flat colours; water and foliage cards are generated on purpose (aztec and beginner are a quarter water).
+const MIN_PHOTO_SHARE := 0.7
 
 var _passed := 0
 var _failed := 0
@@ -63,7 +63,12 @@ func _run() -> void:
 			for s: Dictionary in spawns:
 				if start.contains(s["origin"]):
 					inside += 1
-			_check(inside == spawns.size(), "%s: the START zone holds the world's spawns (%d of %d)" % [id, inside, spawns.size()])
+			var inside_old := 0
+			for o: Dictionary in old:
+				if start.contains(G2GUnits.vector_to_metres(Vector3(o["origin"][0], o["origin"][1], o["origin"][2]))):
+					inside_old += 1
+			# Surf maps spawn on every stage and some zones sit off the spawns: the world must agree with the manifest, not hold them all.
+			_check(inside == inside_old, "%s: the START zone holds as many world spawns as the manifest's (%d of %d)" % [id, inside, spawns.size()])
 		else:
 			_check(true, "%s: a credit-only map has no START to hold spawns" % id)
 		var seen := 0

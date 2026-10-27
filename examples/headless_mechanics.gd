@@ -36,7 +36,9 @@ const SAMPLE := 12
 ## mapper's own `info_teleport_destination` in a wall or over nothing. Asserted both ways
 ## (a listed map whose destinations all stand fails), so the list cannot outlive its
 ## reason. Filled from this suite's own first run.
-const DESTINATIONS_THAT_FALL := {}
+## bhop_pharma: the `credits` destination is the top of the final shaft, which the map
+## means to be fallen down on the way to the `end` teleport.
+const DESTINATIONS_THAT_FALL := {"bhop_pharma": ["(14792 -2843 14884) falls freely"]}
 
 ## The maps whose anti-standing trap names the player in a trigger's SECOND output of
 ## the same event (`OnTrigger` rename to `default`, then to `activator`), with the fewest
