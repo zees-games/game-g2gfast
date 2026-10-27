@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 ## G2GConfig through DotGameConfigBinder: fields, cvars, the deathmatch rules reading them, strict refusal, the diff.
 ##
@@ -14,21 +14,10 @@ const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
 const CHECKS := 24
 
-var _passed := 0
-var _failed := 0
-
 
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.FATAL)
 	_run.call_deferred()
-
-
-func _check(ok: bool, what: String) -> void:
-	if ok:
-		_passed += 1
-	else:
-		_failed += 1
-		print("FAIL: ", what)
 
 
 func _run() -> void:

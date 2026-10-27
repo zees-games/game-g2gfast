@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -23,11 +23,8 @@ const MAP := &"fixture_hill"
 const OTHER_KIND := &"fixture_sandbox"
 const PREFIX := "res://examples/workshop_fixture/"
 
-var _passed := 0
-var _failed := 0
 var _entered := 0
 var _completed := 0
-var _failures: Array[String] = []
 var _index: DotContentIndex = null
 var _game: G2GGame = null
 
@@ -206,14 +203,3 @@ func _test_online() -> void:
 	_check(G2GMapCatalogue.discover(PackedStringArray(), late).get_map(MAP) == null,
 		"a catalogue built online never lists it")
 	_completed += 1
-
-
-func _check(condition: bool, what: String, detail: String = "") -> bool:
-	if condition:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append(what if detail == "" else "%s — %s" % [what, detail])
-		print("  FAIL  %s%s" % [what, "" if detail == "" else " — " + detail])
-	return condition
