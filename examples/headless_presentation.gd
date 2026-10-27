@@ -1,6 +1,7 @@
 extends Node
 
 const G2GParty := preload("../game/g2g_party.gd")
+const G2GWeaponIcons := preload("../game/g2g_weapon_icons.gd")
 const G2GPresentation := preload("../game/g2g_presentation.gd")
 const G2GVote := preload("../game/g2g_vote.gd")
 const G2GRig := preload("../game/g2g_rig.gd")
@@ -27,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 215
+const CHECKS := 219
 
 var _passed := 0
 var _failed := 0
@@ -474,6 +475,8 @@ func _test_console_is_prefixed() -> void:
 		if not p.console.all_names().has(String(key)):
 			missing.append(String(key))
 	_check(missing.is_empty(), "every setting is reachable (%s)" % ", ".join(missing))
+	_check(p.console.all_names().has("cl_weapon_icons") and p.console.all_names().has("cl_weapon_icon_profile"),
+		"the weapon icon cvars are at the console")
 
 	p.console.submit("sensitivity 4")
 	_check(
@@ -1812,6 +1815,21 @@ func _test_the_weapon_in_hand_is_named() -> void:
 	_check(hud.ammo.footprint().size != Vector2.ZERO
 			and not hud.ammo.get_global_rect().intersects(hud.element_rect(&"timer")),
 		"drawn bottom right, clear of the clock", "%s / %s" % [hud.ammo.get_global_rect(), hud.element_rect(&"timer")])
+
+	var icons: DotWeaponIconStyle = G2GWeaponIcons.shared
+	var unmapped := PackedStringArray()
+	for weapon in G2GWeaponIcons.TAGS:
+		if not icons.icon_set().has_icon(weapon):
+			unmapped.append(String(weapon))
+	_check(unmapped.is_empty() and hud.weapon_icon.visible and hud.weapon_icon.texture == icons.texture(ada.held_weapon),
+		"the HUD draws the held weapon's sprite, and every mapped weapon has one", ", ".join(unmapped))
+	_check(hud.weapon_icon.get_global_rect().end.y <= hud.ammo.get_global_rect().position.y + 4.0
+			and not hud.weapon_icon.get_global_rect().intersects(hud.element_rect(&"timer")),
+		"the sprite sits over the counter, clear of the clock", str(hud.weapon_icon.get_global_rect()))
+	var _silhouette := icons.set_style(&"silhouette")
+	hud._process(1.0 / 60.0)
+	_check(not hud.weapon_icon.visible, "cl_weapon_icons silhouette hides the sprite")
+	var _pixel := icons.set_style(&"pixel")
 
 	game.combat.enabled = false
 	for _i in range(4):

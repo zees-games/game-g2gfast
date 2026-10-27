@@ -5,6 +5,7 @@ const G2GGame := preload("g2g_game.gd")
 const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GArsenal := preload("g2g_arsenal.gd")
+const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
 
 ## The competitive-shooter timer HUD: the clock, the speed in u/s, the keys, the strafes.
 ##
@@ -37,6 +38,8 @@ var hit_marker: DotHitMarker = null
 ## have no magazine and an endless reserve (`G2GArsenal`), and "∞ | ∞" is a count that never
 ## moves. Nothing at all on a pure timer server.
 var ammo: DotAmmoCounter = null
+## The held weapon's sprite over [member ammo] (`cl_weapon_icons`); hidden when it has none.
+var weapon_icon: TextureRect = null
 ## The confirmed hits' numbers, on the bodies they landed on.
 var damage_numbers: DotDamageNumbers = null
 var _notice_until: float = 0.0
@@ -242,6 +245,13 @@ func _ready() -> void:
 	ammo.name = "Ammo"
 	ammo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ammo)
+	weapon_icon = TextureRect.new()
+	weapon_icon.name = "WeaponIcon"
+	weapon_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	weapon_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	weapon_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	weapon_icon.visible = false
+	add_child(weapon_icon)
 
 	# Things that just happened: a finish, a rank, a map change, a cvar an admin
 	# moved. Above the clock, where a player's eye already is.
@@ -543,6 +553,8 @@ func place() -> void:
 	if clock_rect.intersects(Rect2(ammo_at, ammo_size)):
 		ammo_at.y = clock_rect.position.y - ammo_size.y - 8.0
 	_put(ammo, _clamp_into(ammo_at, ammo_size, area), ammo_size)
+	var icon_size := Vector2(ammo_size.x, 56.0)
+	_put(weapon_icon, _clamp_into(Vector2(ammo.position.x, ammo.position.y - icon_size.y - 2.0), icon_size, area), icon_size)
 
 	# The spectator list: down the right, centred vertically.
 	var list_size := _list_size()
@@ -744,7 +756,12 @@ func show_weapon(player: G2GPlayer) -> void:
 	var id: StringName = player.held_weapon if player != null else &""
 	if id == &"":
 		ammo.clear()
+		weapon_icon.visible = false
 		return
+	var sprite := G2GWeaponIcons.shared.texture(id)
+	weapon_icon.texture = sprite
+	weapon_icon.visible = sprite != null
+	G2GWeaponIcons.shared.filter(weapon_icon, true)
 	var def: DotWeaponDef = _weapon_defs().get(id)
 	ammo.show_ammo(def.display_name if def != null else String(id), -1, -1, false, true)
 

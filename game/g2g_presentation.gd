@@ -3,6 +3,7 @@ extends Node
 const G2GBindings := preload("g2g_bindings.gd")
 const G2GPaths := preload("g2g_paths.gd")
 const G2GVote := preload("g2g_vote.gd")
+const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
 const G2GUnits := preload("g2g_units.gd")
 
 ## Settings, audio, effects and a console, on a client whose whole output is a number.
@@ -672,6 +673,9 @@ func _build_fx() -> DotResult:
 ## [ServerPrefixed] put in: `server <line>`.
 func build_console(menu: Object = null) -> void:
 	console = DotConsoleKit.build(self, settings, menu)
+	var kit_sources: Array = console.sources()
+	if not kit_sources.is_empty() and kit_sources[0] is DotConsoleLocal:
+		var _icons_bound := G2GWeaponIcons.shared.bind_console(kit_sources[0])
 
 	var bridged: DotConsoleBridge = null
 	for s in console.sources().slice(1):
