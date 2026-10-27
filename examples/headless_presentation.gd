@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 219
+const CHECKS := 220
 
 var _passed := 0
 var _failed := 0
@@ -443,6 +443,8 @@ func _test_the_weapons_are_heard() -> void:
 	p.audio.listener_position = Vector3.ZERO
 
 	_check(p.audio.catalogue.has(&"weapon_magnum_fire"), "the game's catalogue carries the weapon stock (DotAudioStock.add_to)")
+	var stock_problems := DotWeaponSound.check_stock()
+	_check(stock_problems.is_empty(), "every weapon class resolves a non-silent, unclipped stock voice (%s)" % ", ".join(stock_problems))
 	var def: DotAudioDef = p.audio.catalogue.find(&"weapon_magnum_fire")
 	_check(def != null and def.variants.size() >= 4 and ResourceLoader.exists(def.variants[0]), "and its deagle report has real variant files")
 
