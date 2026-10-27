@@ -5,6 +5,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
 const RouteBot := preload("../game/g2g_route_bot.gd")
+const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 
 ## Rides a stage of a map from where `!s<n>` puts a player, and says where it got to.
 ##
@@ -29,6 +30,12 @@ const RouteBot := preload("../game/g2g_route_bot.gd")
 ## the manifest's units (Godot axes: x, up, z) and a yaw, which replaces the stage's own
 ## for this ride only -- so a new destination can be tried before it is written into a
 ## zones file and re-imported.
+##
+## [b]A planned stage is ridden by the pilot.[/b] When `maps/routes/<id>.surf.json` holds the
+## stage (`tools/surf_plan.tscn`), the bot follows that line with dot-bot's [DotBotSurfPilot]
+## instead of the rule below: a rule cannot find the line off a standstill deck over a gable
+## (surf_beginner2 stage 2 presses into the face and perches on the ridge). `RIDE_RULE=1`
+## forces the rule.
 ##
 ## [b]The bot surfs.[/b] Each tick it traces under and beside itself; over a face too
 ## steep to stand on it looks along the face in the direction it is already moving and
@@ -138,6 +145,9 @@ func _run() -> void:
 		else:
 			print("[ride] %s: following its route, %d points" % [id, route.size()])
 		router = RouteBot.new(route, finish)
+	var pilot: DotBotSurfPilot = null
+	if not whole and not override and not OS.has_environment("RIDE_RULE"):
+		pilot = _pilot_for(id, number, bot)
 	var finished: Array[float] = []
 	bot.timer.run_finished.connect(func(run: DotTimerRun) -> void: finished.append(run.time()))
 	var on_effect := func(pid: StringName, zone: DotTimerZone) -> void:
@@ -184,8 +194,11 @@ func _run() -> void:
 			heading = rad_to_deg(atan2(-flat.x, -flat.z))
 
 		var c := DotFpsCommand.new()
-		var ramp := Vector3.ZERO if router != null else _ramp_under(bot, flat, limit)
-		if router != null:
+		var ramp := Vector3.ZERO if router != null or pilot != null else _ramp_under(bot, flat, limit)
+		if pilot != null:
+			c = pilot.command(state)
+			surfed += 1 if not state.is_grounded() else 0
+		elif router != null:
 			c = router.command(state, get_world_3d().direct_space_state, bot.controller.tunables, 1.0 / float(game.tick_rate))
 		elif ramp != Vector3.ZERO:
 			# Along the face, in the direction already moving (or the heading at a
@@ -289,3 +302,27 @@ func _ramp_under(bot: G2GPlayer, flat: Vector3, limit: float) -> Vector3:
 		if angle > limit and angle < 85.0:
 			return n
 	return Vector3.ZERO
+
+
+## The pilot over this stage's cached line, or null when the map has no cache for it.
+func _pilot_for(id: StringName, number: int, bot: G2GPlayer) -> DotBotSurfPilot:
+	var path := G2GSurfCourse.cache_path(id)
+	if not FileAccess.file_exists(path):
+		return null
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(parsed) != TYPE_DICTIONARY or typeof(parsed.get("stages")) != TYPE_DICTIONARY:
+		return null
+	var data: Dictionary = parsed["stages"].get(str(number), {})
+	if data.is_empty():
+		return null
+	var why: Array = []
+	var course := G2GSurfCourse.for_stage(game, number, why)
+	if course == null:
+		return null
+	var pilot := DotBotSurfPilot.new()
+	pilot.load_stage(data, G2GUnits.METRES_PER_UNIT)
+	pilot.sim = course.simulator_for(bot.controller, game.mechanics)
+	pilot.score = course.score
+	pilot.reset()
+	print("[ride] riding the cached line of stage %d with the pilot" % number)
+	return pilot
