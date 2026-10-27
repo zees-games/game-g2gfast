@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 ## The pilot of drawing imported maps through dot-map's world document (`g2g_global_worlds`): the switch is off by default and changes nothing; on, a map is drawn from `worlds/<id>` while its zones, spawns and collision stay the manifest's.
 ##
@@ -15,9 +15,6 @@ const CHECKS := 108
 ## A drawn share below this is a map that went back to flat colours; water and foliage cards are generated on purpose (aztec and beginner are a quarter water).
 const MIN_PHOTO_SHARE := 0.7
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 
 
 func _ready() -> void:
@@ -84,14 +81,7 @@ func _run() -> void:
 		legacy.free()
 		global.free()
 	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected." % [_passed + _failed, CHECKS])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report(CHECKS)
 
 
 func _build(def: DotMapDef, on: bool) -> G2GBspMap:
@@ -114,12 +104,3 @@ func _photo_share(path: String) -> float:
 			photo += area
 	return photo / all if all > 0.0 else 0.0
 
-
-func _check(ok: bool, what: String) -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append(what)
-		print("  FAIL  %s" % what)

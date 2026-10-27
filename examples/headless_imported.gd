@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GBspMap := preload("../game/g2g_bsp_map.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
@@ -244,9 +244,6 @@ const SECTIONS_PER_MAP := 13
 var _expected := 0
 var _map_id: StringName = &""
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 var game: G2GGame = null
@@ -297,19 +294,7 @@ func _run() -> void:
 		_failed += 1
 		_failures.append("the suite ran %d checks and should run %d — one aborted"
 			% [_passed + _failed, _expected])
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered
-	])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	var sections := SECTIONS_PER_MAP * ids.size()
-	if _entered != sections or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected. One aborted or was skipped." % [
-			_entered, _completed, sections
-		])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, SECTIONS_PER_MAP * ids.size())
 
 
 func _section(title: String) -> void:
@@ -338,16 +323,6 @@ func _imported_ids() -> Array[StringName]:
 	# By text: sort() orders StringNames by interning, so the run order changed per process.
 	out.sort_custom(func(a: StringName, b: StringName) -> bool: return String(a) < String(b))
 	return out
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append("%s%s" % [what, "" if detail.is_empty() else "  (%s)" % detail])
-		print("  FAIL  %s%s" % [what, "" if detail.is_empty() else "  (%s)" % detail])
 
 
 func _test_loads(manifest_path: String) -> void:

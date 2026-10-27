@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GAvatars := preload("../game/g2g_avatars.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
@@ -45,9 +45,6 @@ const CHECKS := 247
 ## total above is the other half — see docs/testing.md.
 const SECTIONS := 32
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
@@ -105,7 +102,7 @@ func _run() -> void:
 		_test_spectating_reaches_the_client()
 		_test_leave()
 	_test_the_remote_workbench()
-	_report()
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 ## sv_workbench_remote over the real frames, in the order G2GModule and G2GClient register them: an admin gets a
@@ -228,39 +225,7 @@ func _test_the_remote_workbench() -> void:
 
 
 
-func _report() -> void:
-	print("")
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered
-	])
-	for f in _failures:
-		print("  FAIL " + f)
-	if _entered != SECTIONS or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected. One aborted or was skipped." % [
-			_entered, _completed, SECTIONS
-		])
-		get_tree().quit(1)
-		return
-	# The total the section counter cannot be. A runtime error inside a section aborts
-	# that function, and the counter is satisfied because the section had already
-	# announced itself. See docs/testing.md.
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, CHECKS
-		])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
 
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok   " + what)
-	else:
-		_failed += 1
-		_failures.append(what + (": " + detail if detail != "" else ""))
-		print("  FAIL " + what + (": " + detail if detail != "" else ""))
 
 
 func _section(name: String) -> void:

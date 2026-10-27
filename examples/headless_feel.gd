@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GClient := preload("../game/g2g_client.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
@@ -71,9 +71,6 @@ const SLIPS := 12
 var _verbose := false
 var _only := ""
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
@@ -190,11 +187,7 @@ func _run() -> void:
 		_check(_passed + _failed + 1 == expected + 1, "every check ran (%d of %d)" % [_passed + _failed, expected])
 
 	print("")
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	get_tree().quit(1 if _failed > 0 or _completed != _entered else 0)
+	_report_sections(_entered, _completed, _entered)
 
 
 func _section(title: String) -> void:
@@ -205,17 +198,6 @@ func _section(title: String) -> void:
 
 func _done() -> void:
 	_completed += 1
-
-
-func _check(condition: bool, what: String, detail: String = "") -> bool:
-	if condition:
-		_passed += 1
-		print("  ok    %s%s" % [what, "" if detail == "" else "  (%s)" % detail])
-	else:
-		_failed += 1
-		_failures.append(what if detail == "" else "%s -- %s" % [what, detail])
-		print("  FAIL  %s%s" % [what, "" if detail == "" else "  (%s)" % detail])
-	return condition
 
 
 func _until(condition: Callable, seconds: float) -> bool:

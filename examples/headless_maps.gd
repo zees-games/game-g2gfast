@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -52,9 +52,6 @@ const SECTIONS := 8
 ## check below fails the moment a map gains one.
 const STANDABLE_RAMPS := {}
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 var game: G2GGame = null
@@ -83,27 +80,7 @@ func _run() -> void:
 		_failed += 1
 		_failures.append("the suite ran %d checks and should run %d — one aborted"
 			% [_passed + _failed, expected])
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered
-	])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	if _entered != SECTIONS or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected. One aborted or was skipped." % [
-			_entered, _completed, SECTIONS
-		])
-		get_tree().quit(1)
-		return
-	# The total the section counter cannot be. A runtime error inside a section aborts
-	# that function, and the counter is satisfied because the section had already
-	# announced itself. See docs/testing.md.
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, CHECKS
-		])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 func _section(title: String) -> void:
@@ -114,16 +91,6 @@ func _section(title: String) -> void:
 ## A section reached its last line. See [constant SECTIONS].
 func _done() -> void:
 	_completed += 1
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append("%s%s" % [what, "" if detail.is_empty() else "  (%s)" % detail])
-		print("  FAIL  %s%s" % [what, "" if detail.is_empty() else "  (%s)" % detail])
 
 
 func _test_discovery() -> void:

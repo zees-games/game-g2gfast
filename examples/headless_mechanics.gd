@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GBspMap := preload("../game/g2g_bsp_map.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
@@ -49,9 +49,6 @@ const TRAP_BLOCK_FLOORS := {&"bhop_japan": 200, &"bhop_interloper": 400, &"bhop_
 
 var game: G2GGame = null
 var _map_id: StringName = &""
-var _passed := 0
-var _failed := 0
-var _failures: PackedStringArray = PackedStringArray()
 var _entered := 0
 var _completed := 0
 var _planned := 0
@@ -97,18 +94,11 @@ func _run() -> void:
 	print("pits that do not stand, by map (for DESTINATIONS_THAT_FALL):")
 	for id: String in _falls:
 		print("  %s: %s" % [id, str(_falls[id])])
-	if _passed + _failed != _planned:
-		_failed += 1
-		_failures.append("ran %d checks, planned %d -- one aborted" % [_passed + _failed, _planned])
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	if _entered != sections or _completed != _entered:
-		print("ERROR: %d sections entered, %d completed, %d expected" % [_entered, _completed, sections])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, sections, _planned)
+
+
+func _failure_prefix() -> String:
+	return "%s: " % _map_id
 
 
 func _imported_ids() -> Array[StringName]:
@@ -134,17 +124,6 @@ func _section(title: String) -> void:
 
 func _done() -> void:
 	_completed += 1
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	var line := "%s: %s%s" % [_map_id, what, "" if detail.is_empty() else "  (%s)" % detail]
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		_failures.append(line)
-		print("  FAIL  %s%s" % [what, "" if detail.is_empty() else "  (%s)" % detail])
 
 
 func _load(id: StringName) -> void:

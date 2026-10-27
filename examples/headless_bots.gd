@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -55,9 +55,6 @@ const NAV_CACHE := "user://g2g_bots_nav_cache"
 var server: DotServer = null
 var game: G2GGame = null
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
@@ -83,18 +80,7 @@ func _run() -> void:
 	DotPaths.remove_tree(SERVER_DIR)
 
 	print("")
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [_passed, _failed, _completed, _entered])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	if _entered != SECTIONS or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected." % [_entered, _completed, SECTIONS])
-		get_tree().quit(1)
-		return
-	if _passed + _failed != CHECKS - _skipped_checks:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS - _skipped_checks])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS - _skipped_checks)
 
 
 func _boot() -> void:
@@ -336,13 +322,3 @@ func _section(title: String) -> void:
 func _done() -> void:
 	_completed += 1
 
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		var line := what if detail == "" else "%s (%s)" % [what, detail]
-		_failures.append(line)
-		print("  FAIL  %s" % line)

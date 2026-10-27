@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GAvatars := preload("../game/g2g_avatars.gd")
@@ -38,9 +38,6 @@ const CHECKS := 244
 ## has the two suites that began failing on an unchanged tree over exactly this.
 const SERVER_DIR := "user://g2g_dedicated"
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 ## The app's URL segment on the website, which is this game's code name.
@@ -99,31 +96,10 @@ func _run() -> void:
 	DotPaths.remove_tree(SERVER_DIR)
 
 	print("")
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered
-	])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-
 	# The copy of this suite that the exit probe runs does not run the probe itself.
 	var sections := SECTIONS - (1 if _is_exit_probe() else 0)
 	var checks := CHECKS - (EXIT_PROBE_CHECKS if _is_exit_probe() else 0)
-
-	if _entered != sections or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected. One aborted or was skipped." % [
-			_entered, _completed, sections
-		])
-		get_tree().quit(1)
-		return
-
-	if _passed + _failed != checks:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, checks
-		])
-		get_tree().quit(1)
-		return
-
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, sections, checks)
 
 
 ## Takes the server down before quitting, so nothing is left for the engine to tear out
@@ -160,17 +136,6 @@ func _section(title: String) -> void:
 
 func _done() -> void:
 	_completed += 1
-
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("  ok    %s" % what)
-	else:
-		_failed += 1
-		var line := what if detail == "" else "%s (%s)" % [what, detail]
-		_failures.append(line)
-		print("  FAIL  %s" % line)
 
 
 func _run_command(line: String) -> PackedStringArray:

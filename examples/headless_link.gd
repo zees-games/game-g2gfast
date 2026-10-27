@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 ## A module reload leaves ONE link under the server, and a real client over a real socket
 ## still hears the server's RPCs afterwards.
@@ -25,9 +25,6 @@ const MAP := &"bhop_g2g_intro"
 const SECTIONS := 3
 const CHECKS := 9
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
@@ -200,25 +197,5 @@ func _done() -> void:
 	_completed += 1
 
 
-func _check(ok: bool, what: String, detail: String = "") -> bool:
-	if ok:
-		_passed += 1
-		print("  ok   %s" % what)
-	else:
-		_failed += 1
-		_failures.append(what)
-		print("  FAIL %s %s" % [what, detail])
-	return ok
-
-
 func _finish() -> void:
-	var total := _passed + _failed
-	if _completed != _entered or _entered != SECTIONS:
-		_failed += 1
-		print("FAIL sections: %d entered, %d completed, %d expected" % [_entered, _completed, SECTIONS])
-	if total != CHECKS:
-		_failed += 1
-		print("FAIL checks: %d ran, %d expected" % [total, CHECKS])
-	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)

@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GClient := preload("../game/g2g_client.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -25,9 +25,6 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 const CHECKS := 82
 const SECTIONS := 15
 
-var _passed := 0
-var _failed := 0
-var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
@@ -81,22 +78,7 @@ func _run() -> void:
 	await _test_the_end_of_a_deathmatch()
 
 	print("")
-	print("%d passed, %d failed, %d of %d sections ran to their last line" % [
-		_passed, _failed, _completed, _entered
-	])
-	for f in _failures:
-		print("  FAIL " + f)
-	if _entered != SECTIONS or _completed != _entered:
-		print("ERROR: %d sections entered and %d completed, %d expected." % [_entered, _completed, SECTIONS])
-		get_tree().quit(1)
-		return
-	# The total the section counter cannot be: a runtime error inside a section aborts that
-	# function after it announced itself. See docs/testing.md.
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS])
-		get_tree().quit(1)
-		return
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 ## Holds W for [param frames] physics frames and returns how far the player went, in metres.
@@ -685,12 +667,3 @@ func _section(title: String) -> void:
 func _done() -> void:
 	_completed += 1
 
-
-func _check(ok: bool, what: String, detail: String = "") -> void:
-	if ok:
-		_passed += 1
-		print("   ok   " + what)
-	else:
-		_failed += 1
-		_failures.append(what + (" (" + detail + ")" if detail != "" else ""))
-		print("   FAIL " + what + (" (" + detail + ")" if detail != "" else ""))

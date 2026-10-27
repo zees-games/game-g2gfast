@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 ## The arena's config through the workbench: DotGameWorkbench over the binder's set, an edit, and the
 ## "Export changes as defaults" diff in the cfg/ layout.
@@ -10,21 +10,11 @@ extends Node
 const G2GConfig := preload("../game/g2g_config.gd")
 const CHECKS := 9
 
-var _passed := 0
-var _failed := 0
 
 
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.FATAL)
 	_run.call_deferred()
-
-
-func _check(ok: bool, what: String) -> void:
-	if ok:
-		_passed += 1
-	else:
-		_failed += 1
-		print("FAIL: ", what)
 
 
 func _run() -> void:
@@ -55,10 +45,5 @@ func _run() -> void:
 	_check(not other.ok, "another actor is refused without a permit")
 	wb.permit_fn = func(actor: Variant, _flag: String) -> bool: return actor == "mod"
 	_check(wb.api.handle("mod", {"op": "set", "kind": kind, "id": binder.profile_id, "key": "score_limit", "value": 27}).ok, "a permitted actor edits")
-	print("%d passed, %d failed" % [_passed, _failed])
 	wb.free()
-	
-	if _passed + _failed != CHECKS:
-		_failed += 1
-		print("FAIL: expected %d checks" % CHECKS)
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report(CHECKS)

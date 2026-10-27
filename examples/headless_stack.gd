@@ -1,4 +1,4 @@
-extends Node
+extends DotGameCheckSuite
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
@@ -27,8 +27,6 @@ const G2GPlayerStack := preload("../game/g2g_player_stack.gd")
 
 const CHECKS := 29
 
-var _passed := 0
-var _failed := 0
 var _section_count := 0
 var _sections := 0
 
@@ -55,24 +53,7 @@ func _run() -> void:
 	_test_protection_is_shut_without_deathmatch()
 
 	print("")
-	print("%d sections, %d passed, %d failed" % [_section_count, _passed, _failed])
-
-	if _section_count != _sections:
-		print("ERROR: %d of %d sections ran." % [_section_count, _sections])
-		get_tree().quit(1)
-		return
-
-	# The total the section counter cannot be: a runtime error inside a section aborts
-	# that function and the counter is already satisfied, because the section announced
-	# itself before it ran. See docs/testing.md.
-	if _passed + _failed != CHECKS:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [
-			_passed + _failed, CHECKS
-		])
-		get_tree().quit(1)
-		return
-
-	get_tree().quit(1 if _failed > 0 else 0)
+	_report_sections(_section_count, _section_count, _sections, CHECKS)
 
 
 func _build() -> bool:
@@ -305,11 +286,3 @@ func _section(title: String) -> void:
 	print("")
 	print("-- %s" % title)
 
-
-func _check(condition: bool, what: String) -> void:
-	if condition:
-		_passed += 1
-		print("   ok   %s" % what)
-	else:
-		_failed += 1
-		print("  FAIL  %s" % what)
