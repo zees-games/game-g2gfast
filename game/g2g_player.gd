@@ -377,7 +377,16 @@ func _play_replay(delta: float) -> void:
 			replay.seek(0.0)
 
 
+## Drops the motor's remembered quarter probe: the level it was asked in is gone.
+func forget_probes() -> void:
+	if controller != null and controller.motor != null:
+		controller.motor.invalidate_probe_cache()
+
+
 func _on_simulated(_tick: int, state: DotFpsState) -> void:
+	var world := get_parent()
+	if world != null and world.has_method("world_is_static"):
+		controller.motor.static_world = world.world_is_static()
 	if mechanics != null and replay == null:
 		var step := 1.0 / float(maxi(controller.tick_rate, 1))
 		var event := mechanics.simulate(rider, controller.motor, state, step)

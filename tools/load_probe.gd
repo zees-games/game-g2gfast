@@ -36,6 +36,8 @@ const ACK_LAG := 2                ## LOAD_ACKS=1: snapshots a peer is behind whe
 var _bytes: Dictionary = {}       ## method -> bytes sent to one watched peer
 var phase: Dictionary = {}        ## LOAD_PHASES=1: microseconds per step of a snapshot
 var _watched_peer := 2
+var _hashing := false             ## LOAD_HASH=1: print a hash of every state, every tick
+var _hash: int = 0
 var _acking := false              ## LOAD_ACKS=1
 var _net: DotNetManager           ## the row's server, for the acks
 var _sent_ticks: Dictionary = {}  ## peer -> ticks of snapshots sent and not yet acked
@@ -52,6 +54,7 @@ func _ready() -> void:
 		counts = [1, 8, 16, 32, 64]
 
 	_acking = OS.get_environment("LOAD_ACKS") == "1"
+	_hashing = OS.get_environment("LOAD_HASH") == "1"
 	print("[load] %s, %d measured ticks per row, %s" % [map_id, MEASURED_TICKS,
 		"peers ack (LOAD_ACKS=1)" if _acking else "no acks (the no-ack host)"])
 	print("[load]  players  tick mean   p99    worst  budget  snap B/s/peer  (mean split)")
@@ -189,6 +192,11 @@ func _measure(map_id: StringName, players: int) -> void:
 			else:
 				_send_snapshots_timed(net, tick, identities)
 		var ended := Time.get_ticks_usec()
+		if _hashing:
+			# Determinism gate: every player's exact float bits, every tick.
+			for session_id in bridge._behaviours:
+				var st: DotFpsState = bridge._behaviours[session_id].player.controller.state
+				_hash = hash([_hash, st.position, st.velocity, st.mode, st.ground_normal])
 		if t >= WARMUP_TICKS:
 			times.append(float(ended - started) / 1000.0)
 			net_ms += float(ended - mid) / 1000.0
@@ -215,6 +223,9 @@ func _measure(map_id: StringName, players: int) -> void:
 	print("[load]  %7d  %6.2f ms %6.2f %6.2f  %5.2f   %7d   game %.2f snapshots %.2f" % [
 		players, mean, p99, worst, 1000.0 / float(game.tick_rate), int(snap),
 		game_ms / float(MEASURED_TICKS), net_ms / float(MEASURED_TICKS)])
+
+	if _hashing:
+		print("[load]  state hash %d" % _hash)
 
 	if _acking:
 		# Proof the row is the acked shape: a peer the server never heard from is still

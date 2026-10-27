@@ -102,6 +102,12 @@ var body_rules: DotPlayerBodyRules = _make_body_rules()
 var block_rules: Object = null
 
 
+## Whether nothing a player's body queries moves between ticks: no placed props (rigid bodies)
+## and no player hulls. Lets the motor reuse a ground probe across ticks.
+func world_is_static() -> bool:
+	return props == null and not body_rules.solid
+
+
 static func _make_body_rules() -> DotPlayerBodyRules:
 	var rules := DotPlayerBodyRules.new()
 	rules.solid = false
@@ -1780,6 +1786,7 @@ func _on_map_changing(_from: DotMapDef, _to: DotMapDef) -> void:
 	remove_player(GHOST_ID)
 	for id in players:
 		var player: G2GPlayer = players[id]
+		player.forget_probes()
 		if player.timer != null:
 			player.timer.stop(DotTimer.REASON_RESET)
 
