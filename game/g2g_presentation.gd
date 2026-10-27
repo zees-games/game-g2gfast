@@ -889,11 +889,11 @@ func watch_movement(grounded: bool, speed: float, at: Vector3) -> void:
 	_was_grounded = grounded
 	_last_at = at
 	if ambience != null and settings != null:
-		ambience.level = wind_level(
+		ambience.drive = wind_level(
 			speed * G2GUnits.UNITS_PER_METRE,
 			settings.get_float(&"snd_wind_min", 0.3),
 			settings.get_float(&"snd_wind_max", 1.1),
-			settings.get_float(&"snd_wind_full_speed", 1500.0))
+			settings.get_float(&"snd_wind_full_speed", 1500.0)) / DotAudioAmbience.DEFAULT_LEVEL
 
 
 ## The stock weapon sound each of this game's two weapons plays (dot-audio's weapon stock,
