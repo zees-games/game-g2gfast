@@ -244,6 +244,10 @@ var combat: G2GCombat = null
 ## has no combat layer and still draws every fall.
 var ragdoll_rules: DotPlayerRagdollRules = DotPlayerRagdollRules.new()
 
+## `sv_falldamage*` (dot-combat), explicitly off: a run is made of long drops and a landing must
+## never cost the run or a life. No DotFallDamage is built, so only an edit here turns it on.
+var fall_rules: DotFallDamageRules = make_fall_rules()
+
 ## Hunters on the course. Null unless `sv_hunters` built them.
 var hunters: G2GHunters = null
 
@@ -1189,6 +1193,12 @@ func _release_record_key(id: StringName) -> void:
 	_record_keys.erase(id)
 	if key != &"":
 		_match_ids.erase(key)
+
+
+static func make_fall_rules() -> DotFallDamageRules:
+	var rules := DotFallDamageRules.new()
+	rules.enabled = false
+	return rules
 
 
 func add_player(

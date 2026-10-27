@@ -8,10 +8,11 @@ extends Node
 
 const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
+const G2GGame := preload("../game/g2g_game.gd")
 const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
 const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
-const CHECKS := 21
+const CHECKS := 24
 
 var _passed := 0
 var _failed := 0
@@ -57,6 +58,12 @@ func _run() -> void:
 	_check(not config.validate().ok, "validate refuses a max_velocity below max_speed")
 	_check(binder.schema()[0]["description"].length() > 5, "doc comments reach the schema")
 	_check(binder.write_schema("user://g2g_schema_check.json").ok, "write_schema works")
+	var fall := G2GGame.make_fall_rules()
+	var _made := fall.bind_cvars(console.cvar, DotConVar.FLAG_NOTIFY)
+	_check(console.get_int("sv_falldamage") == 0 and not fall.enabled, "fall damage is off in this game by default")
+	_check(fall.damage_for(60.0) == 0.0, "a 60 m/s landing costs nothing while it is off")
+	console.set_cvar("sv_falldamage", "1")
+	_check(fall.enabled and fall.damage_for(60.0) > 0.0, "the cvar is the only way on (and it works)")
 	_layers()
 	_templates(binder)
 	var wb := DotGameWorkbench.new()
