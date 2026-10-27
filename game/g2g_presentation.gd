@@ -543,7 +543,7 @@ func _build_audio() -> DotResult:
 	audio.voices = 12
 	# Measured toward the family's -17 LUFS (dot-audio docs/loudness.md): a 40 s stand-in run on
 	# the intro read -26.9 LUFS with the bed and the steps in, -21.6 at +8. The bed is held back a little
-	# (ambience.level) so a timer game's quiet is a breeze, not a wall of wind.
+	# (the speed-driven wind level below) so a timer game's quiet is a breeze.
 	audio.loudness_trim_db = 12.0
 	add_child(audio)
 
@@ -561,7 +561,6 @@ func _build_audio() -> DotResult:
 	ambience = DotAudioAmbience.new()
 	ambience.name = "Ambience"
 	ambience.manager = audio
-	ambience.level = 0.3
 	add_child(ambience)
 	ambience.set_map_bed(bed_for(&""))
 
