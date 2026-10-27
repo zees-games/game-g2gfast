@@ -20,6 +20,7 @@ const G2GPlayer := preload("g2g_player.gd")
 const G2GPresentation := preload("g2g_presentation.gd")
 const G2GSoloMaps := preload("g2g_solo_maps.gd")
 const G2GUnits := preload("g2g_units.gd")
+const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
 
 ## A playable g2gfast: one local player, a camera, a HUD, and the keys.
 ##
@@ -378,6 +379,8 @@ func _build_killcam() -> void:
 	killcam.weapon_name_fn = func(id: String) -> String:
 		var def: DotWeaponDef = G2GArsenal.weapon_catalogue().get_def(StringName(id)) if id != "" else null
 		return def.display_name if def != null and def.display_name != "" else id.capitalize()
+	killcam.weapon_icon_fn = func(id: String) -> Texture2D:
+		return G2GWeaponIcons.shared.menu_texture(StringName(id))
 	killcam.over.connect(func(_skipped: bool) -> void: _reveal_winner())
 	add_child(killcam)
 	winner_reveal = DotWinnerReveal.new()

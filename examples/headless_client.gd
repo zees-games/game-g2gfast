@@ -22,7 +22,7 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 81
+const CHECKS := 82
 const SECTIONS := 15
 
 var _passed := 0
@@ -368,6 +368,9 @@ func _test_the_end_of_a_deathmatch() -> void:
 	kc.killcam.advance(step)
 	_check(kc.killcam.banner != null and kc.killcam.banner.killer_label.text == "Rival",
 		"under a banner naming the killer")
+	kc.killcam.banner.present({"killer": "Rival", "weapon": "Deagle", "weapon_id": "deagle"})
+	_check(kc.killcam.banner.icon_rect.visible and kc.killcam.banner.icon_rect.texture != null,
+		"the banner shows the weapon's icon from the real G2GWeaponIcons")
 	var n := 0
 	while kc.is_playing() and n < 1000:
 		kc.killcam.advance(step)
