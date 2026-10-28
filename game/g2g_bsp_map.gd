@@ -142,19 +142,8 @@ func build_from_path(path: String) -> bool:
 
 
 func _construct() -> void:
-	if manifest_path.is_empty():
-		push_error("G2GBspMap: no manifest_path")
+	if not _read_manifest():
 		return
-	var text := FileAccess.get_file_as_string(manifest_path)
-	if text.is_empty():
-		DotLog.error(CHANNEL, "cannot read the manifest", {"path": manifest_path})
-		return
-	var parsed: Variant = JSON.parse_string(text)
-	if typeof(parsed) != TYPE_DICTIONARY:
-		DotLog.error(CHANNEL, "not a manifest", {"path": manifest_path})
-		return
-	manifest = parsed
-
 	var dir := manifest_path.get_base_dir()
 	tier = int(manifest.get("tier", 3))
 
@@ -179,26 +168,11 @@ func _construct() -> void:
 		})
 		return
 
-	# [b]One MeshInstance3D per 256 surfaces, because that is the engine's cap on a mesh.[/b]
-	# Past it `add_surface_from_arrays` refuses with an engine error and the surface is
-	# simply not drawn: `bhop_monster_jam` has 311 and lost the last 55, one error each,
-	# at every load. Collision was never affected — it is built from the brushes below,
-	# not from these — which is why nothing but the picture and the log could say so.
-	#
-	# The first instance keeps the name `World`, which the suite and the probes look up.
-	#
-	# [b]And each drawn surface remembers which manifest surface it came from.[/b] The
-	# materials used to be assigned by position in a second loop, which is only the same
-	# index while no surface is skipped; one empty surface would have given every surface
-	# after it its neighbour's texture.
+	# One MeshInstance3D per 256 surfaces (the engine's cap); the first is named `World`.
+	# Each drawn surface remembers its manifest index, so a skipped one cannot shift materials.
 	var surfaces: Array = manifest.get("surfaces", [])
-	# [b]Static props are drawn in their own instances, `Props`, `Props2`...[/b] They are
-	# scenery with no collision of the world's kind, and the probes that sample `World`
-	# for floors and ramps (collision_probe, surf_probe, bhop_probe) must not start asking
-	# a coral or a torch whether a player can stand on it.
-	#
-	# [b]And the 3D skybox in `Sky`[/b], for the same reason: its faces are drawn many
-	# times their compiled size far outside the play space, and nothing stands on them.
+	# Props and the 3D skybox (`Sky`) are separate instances: the probes sampling `World`
+	# for floors must not ask scenery whether a player can stand on it.
 	var drawn := _build_meshes(surfaces, blob, dir, lightmap, "World")
 	var props := _build_meshes(surfaces, blob, dir, lightmap, "Props")
 	props.append_array(_build_meshes(surfaces, blob, dir, lightmap, "Sky"))
@@ -211,15 +185,7 @@ func _construct() -> void:
 	if global_worlds:
 		_draw_global_world(drawn + props.filter(func(mi: MeshInstance3D) -> bool: return mi.name.begins_with("Props")))
 
-	# [b]The map's own lighting, not this game's.[/b] `G2GGeometry.sun` puts the
-	# hand-built maps' one daylight over them, which is right for the maps it was written
-	# for and wrong for every imported one — each of those
-	# carries its own sun angle, sun colour, ambient colour, fog range and sky name, and
-	# not one of them had ever been read. See [G2GLighting].
-	G2GLighting.apply(self, manifest.get("lighting", {}))
-	_apply_packed_sky(manifest.get("lighting", {}), dir)
-	# Sky, glow and props for the areas the pack could not carry (maps/dressing/<id>.json).
-	G2GMapDressing.apply(self, str(manifest.get("id", "")))
+	_apply_lighting(dir)
 	DotLog.info(CHANNEL, "imported map built", {
 		"map": str(manifest.get("id", "?")),
 		"surfaces": written,
@@ -227,6 +193,31 @@ func _construct() -> void:
 		"mesh_instances": drawn.size() + props.size(),
 		"collision_shapes": solids,
 	})
+
+
+## The map's own lighting (sun, ambient, fog, sky), not the hand-built maps' daylight.
+func _apply_lighting(dir: String) -> void:
+	G2GLighting.apply(self, manifest.get("lighting", {}))
+	_apply_packed_sky(manifest.get("lighting", {}), dir)
+	# Sky, glow and props for the areas the pack could not carry (maps/dressing/<id>.json).
+	G2GMapDressing.apply(self, str(manifest.get("id", "")))
+
+
+## Loads [member manifest] from [member manifest_path]; false (logged) when it cannot.
+func _read_manifest() -> bool:
+	if manifest_path.is_empty():
+		push_error("G2GBspMap: no manifest_path")
+		return false
+	var text := FileAccess.get_file_as_string(manifest_path)
+	if text.is_empty():
+		DotLog.error(CHANNEL, "cannot read the manifest", {"path": manifest_path})
+		return false
+	var parsed: Variant = JSON.parse_string(text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		DotLog.error(CHANNEL, "not a manifest", {"path": manifest_path})
+		return false
+	manifest = parsed
+	return true
 
 
 ## Where the world document for [param id] is, without extension, or "".

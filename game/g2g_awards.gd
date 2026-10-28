@@ -32,8 +32,13 @@ const CAT_COMBAT := &"combat"
 
 static func catalogue() -> DotAchievementCatalogue:
 	var out: Array[DotAchievement] = []
+	_add_timer(out)
+	_add_movement(out)
+	_add_server_and_combat(out)
+	return DotAchievementCatalogue.of(out)
 
-	# --- Finishing --------------------------------------------------------
+
+static func _add_timer(out: Array[DotAchievement]) -> void:
 	out.append(_sum(
 		&"g2g.first_finish", "Made It", G2GStats.RUNS_FINISHED, 1,
 		"Finish a course.", CAT_TIMER, 5, &"g2g.finisher", 1
@@ -61,11 +66,8 @@ static func catalogue() -> DotAchievementCatalogue:
 		"Hold ten server records.", CAT_TIMER, 90, &"g2g.record_holder", 2
 	))
 
-	# --- A time, which is the awkward one ---------------------------------
-	#
-	# See the class note: a LOWEST stat with an AT_MOST rule is satisfied by a player
-	# who has never been recorded at all, because a missing stat reads as zero. The
-	# second rule is what makes it mean what it says.
+	# A LOWEST stat with AT_MOST is met by a never-recorded player (missing reads as
+	# zero); the second rule makes it mean what it says. See the class note.
 	var quick: Array[DotAchievementRule] = [
 		DotAchievementRule.make(
 			G2GStats.BEST_TIME, 30.0,
@@ -79,15 +81,14 @@ static func catalogue() -> DotAchievementCatalogue:
 	sub_thirty.points = 30
 	out.append(sub_thirty)
 
-	# --- Movement ---------------------------------------------------------
+
+static func _add_movement(out: Array[DotAchievement]) -> void:
 	out.append(_sum(
 		&"g2g.ten_thousand_jumps", "Springs", G2GStats.JUMPS, 10000,
 		"Ten thousand jumps.", CAT_MOVEMENT, 25
 	))
 
-	# A perfect jump is one that landed and left on the same tick. Five thousand of
-	# them is a player who can actually bhop, which is a different claim from having
-	# jumped a lot — hence a separate entry rather than a ratio.
+	# Perfect jumps (landed and left on one tick) are a different claim from many jumps.
 	out.append(_sum(
 		&"g2g.perfect_thousand", "Frame Perfect", G2GStats.PERFECT_JUMPS, 5000,
 		"Five thousand perfect jumps.", CAT_MOVEMENT, 60
@@ -107,7 +108,8 @@ static func catalogue() -> DotAchievementCatalogue:
 		"Travel a marathon.", CAT_MOVEMENT, 50
 	))
 
-	# --- The server -------------------------------------------------------
+
+static func _add_server_and_combat(out: Array[DotAchievement]) -> void:
 	out.append(_sum(
 		&"g2g.tourist", "Tourist", G2GStats.MAPS_PLAYED, 25,
 		"Play twenty-five maps.", CAT_SERVER, 20
@@ -117,7 +119,6 @@ static func catalogue() -> DotAchievementCatalogue:
 		"Twenty-four hours on the server.", CAT_SERVER, 60
 	))
 
-	# --- The other halves -------------------------------------------------
 	out.append(_sum(
 		&"g2g.duellist", "Duellist", G2GStats.KILLS, 100,
 		"A hundred kills in deathmatch.", CAT_COMBAT, 25
@@ -126,8 +127,6 @@ static func catalogue() -> DotAchievementCatalogue:
 		&"g2g.hunted", "Hunted", G2GStats.HUNTERS_KILLED, 50,
 		"Put down fifty hunters.", CAT_COMBAT, 30
 	))
-
-	return DotAchievementCatalogue.of(out)
 
 
 static func _sum(

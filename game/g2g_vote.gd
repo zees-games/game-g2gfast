@@ -138,17 +138,8 @@ func setup() -> DotResult:
 			DotError.CODE_STATE, "The vote needs a game with a map session."
 		)
 
-	# dot-vote's own map source, rather than a subclass. It duck-types the catalogue
-	# and the session as [Object]s — which is why dot-vote installs in a project that
-	# has never heard of dot-map — and `apply` calls `session.change_to(id)`.
-	#
-	# [b]The session it is given is the GAME's, not `game.maps`.[/b] It was `game.maps`,
-	# and `DotMapSession.change_to` swaps this process's world and tells nobody: a vote
-	# moved the server to bhop_fur while every client stayed on surf_mesa, and the
-	# respawn that follows a change put each of them at bhop_fur's start — in the sky
-	# over a map they were still drawing. `G2GGame.change_map` is what an admin's
-	# `g2g_map` and the time limit call: it goes through the map-sync host, which tells
-	# the clients, waits for them, and only then swaps.
+	# The session is the GAME's, not game.maps: change_map goes through the map-sync host,
+	# which tells the clients; DotMapSession.change_to swaps this process's world alone.
 	# Our subclass of it, which adds the pack's title to a Workshop map's choice.
 	source = G2GVoteMapSource.new()
 	source.catalogue = game.maps.catalogue
@@ -170,7 +161,28 @@ func setup() -> DotResult:
 	director.register_service = authoritative
 
 	director.player_count_fn = _player_count
+	_wire_callbacks()
+	add_child(director)
+	_wire_signals()
 
+	feed = DotVoteBallotFeed.of(director, func(state: Dictionary) -> void:
+		if ballot_fn.is_valid():
+			ballot_fn.call(state)
+	)
+	feed.title = "Vote for the next map"
+	feed.people_fn = func(voter: StringName) -> Dictionary:
+		return people_fn.call(voter) if people_fn.is_valid() else {}
+
+	# Whatever the server booted on, so the clock starts and the history has an entry.
+	game.maps.changed.connect(_on_map_changed)
+
+	if game.maps.current != null:
+		director.begin(game.maps.current.id)
+
+	return DotResult.success(self)
+
+
+func _wire_callbacks() -> void:
 	director.voters_fn = func() -> Array:
 		var out: Array = []
 
@@ -193,8 +205,8 @@ func setup() -> DotResult:
 		if announce_fn.is_valid():
 			announce_fn.call(line)
 
-	add_child(director)
 
+func _wire_signals() -> void:
 	director.vote_opened.connect(
 		func(options: Array, seconds: float) -> void:
 			vote_opened.emit(options, seconds)
@@ -221,22 +233,6 @@ func setup() -> DotResult:
 		func(seconds_left: int, runoff: bool) -> void:
 			cue_due.emit(&"", seconds_left, runoff)
 	)
-
-	feed = DotVoteBallotFeed.of(director, func(state: Dictionary) -> void:
-		if ballot_fn.is_valid():
-			ballot_fn.call(state)
-	)
-	feed.title = "Vote for the next map"
-	feed.people_fn = func(voter: StringName) -> Dictionary:
-		return people_fn.call(voter) if people_fn.is_valid() else {}
-
-	# Whatever the server booted on, so the clock starts and the history has an entry.
-	game.maps.changed.connect(_on_map_changed)
-
-	if game.maps.current != null:
-		director.begin(game.maps.current.id)
-
-	return DotResult.success(self)
 
 
 ## [method _rules], with the server owner's layers over it. See [member config_path].
