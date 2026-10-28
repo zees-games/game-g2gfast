@@ -64,7 +64,7 @@ func _ready() -> void:
 
 
 func _measure(map_id: StringName, players: int) -> void:
-	# LOAD_TICKRATE=64: the row at another server tick rate. The game takes its rate from
+	# Set LOAD_TICKRATE=64 for the row at another server tick rate. The game takes its rate from
 	# the engine (as sv_tickrate does on a real server) and puts the engine back on its own
 	# when it is built, so this is set before every row.
 	var rate := OS.get_environment("LOAD_TICKRATE")
@@ -104,10 +104,10 @@ func _measure(map_id: StringName, players: int) -> void:
 	nc.enable_lag_compensation = false
 	nc.enable_prediction = true
 	nc.world_extent = 512.0
-	# LOAD_STAGGER=1: snapshots spread over the ticks between them (DotNetConfig.stagger_snapshots),
+	# Set LOAD_STAGGER=1 to spread snapshots over the ticks between them (DotNetConfig.stagger_snapshots),
 	# so a row can be compared both ways.
 	nc.stagger_snapshots = OS.get_environment("LOAD_STAGGER") == "1"
-	# DOT_NET_SNAPSHOT_WORKERS=n: the config is built here, so the layered environment is not read.
+	# For DOT_NET_SNAPSHOT_WORKERS=n: the config is built here, so the layered environment is not read.
 	nc.snapshot_workers = int(OS.get_environment("DOT_NET_SNAPSHOT_WORKERS")) if OS.get_environment("DOT_NET_SNAPSHOT_WORKERS") != "" else 0
 	net.config = nc
 	side.add_child(net)

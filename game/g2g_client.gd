@@ -286,7 +286,7 @@ func _avatar_figure(peer_id: int) -> Object:
 	return who.rig.person if who != null and who.rig != null else null
 
 
-# --- The load gate ---------------------------------------------------------
+# The load gate
 
 ## The screen stays covered, and the local body and the input stay still, until the level is
 ## built, the local player exists and its camera is current.
@@ -390,7 +390,7 @@ func _covered() -> bool:
 	return gate != null and not gate.is_open()
 
 
-# --- The end of a deathmatch: final killcam, winner reveal, board ------------------
+# The end of a deathmatch: final killcam, winner reveal, board
 
 ## How long the board stays up after the reveal, with nobody holding Tab.
 const SUMMARY_BOARD_SEC := 8.0
@@ -495,7 +495,7 @@ func _leave_match_end() -> void:
 		menu.scoreboard.close()
 
 
-# --- Dead bodies -------------------------------------------------------------
+# Dead bodies
 
 ## The yard the dead lie in, the presentation's sound, and the solo game's own deaths. Built
 ## once; emptied on a map change (a body on the old map's floor would hang in the new one's
@@ -910,7 +910,7 @@ func _build_netcode() -> DotResult:
 	return net.start()
 
 
-# --- Chat ------------------------------------------------------------------
+# Chat
 
 ## Joins the chat box to the two things it needs: a way out, and a way to stop the runner.
 ##
@@ -1413,7 +1413,7 @@ func _restart_key(now_msec: int = -1) -> int:
 	return mode
 
 
-# --- Themes and the HUD's layout -------------------------------------------------------
+# Themes and the HUD's layout
 
 ## The theme the menu just changed to, onto the HUD and the zone editor. The menus restyle
 ## themselves (dot-menu rebuilds them rather than recolouring, for the reason its CLAUDE.md
@@ -1510,7 +1510,7 @@ func menu_edit_layout() -> void:
 	open_hud_editor()
 
 
-# --- Menus ---------------------------------------------------------------------
+# Menus
 
 ## The pieces of the HUD a player can move, and what the editor calls them.
 const HUD_PIECES := {
@@ -1696,7 +1696,7 @@ func _refresh_menu_words() -> void:
 	menu.screen.set_action_text(&"leave", menu_leave_label())
 
 
-# --- Spectating -------------------------------------------------------------------
+# Spectating
 
 ## The server said whom this client watches. The camera follows on its own (the bridge
 ## has told the mirror); this is the rest: the HUD's line and clock, the sampler, and the
@@ -1826,7 +1826,7 @@ func _refresh_suspended() -> void:
 			(sampler as DotFpsSampler).suspended = busy
 
 
-# --- Flashlight and the others ----------------------------------------------------
+# Flashlight and the others
 
 func toggle_flashlight() -> void:
 	if flashlight == null:
@@ -1883,7 +1883,7 @@ func _watched_from_inside() -> StringName:
 	return StringName(view.target)
 
 
-# --- Settings that land on the client ------------------------------------------------
+# Settings that land on the client
 
 ## Everything in the settings document that is the client's to apply rather than the
 ## presentation layer's: the HUD switches, the view, the mouse. Cheap, and called on any
@@ -1964,7 +1964,7 @@ func _restore_style() -> void:
 			return
 
 
-# --- What the menu asks the client (see G2GMenu.host) --------------------------------
+# What the menu asks the client (see G2GMenu.host)
 
 func menu_where() -> String:
 	var map_name := game.maps.current.label() if game != null and game.maps != null \

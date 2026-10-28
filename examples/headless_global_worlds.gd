@@ -1,10 +1,7 @@
 extends DotGameCheckSuite
 
 ## The pilot of drawing imported maps through dot-map's world document (`g2g_global_worlds`): the switch is off by default and changes nothing; on, a map is drawn from `worlds/<id>` while its zones, spawns and collision stay the manifest's.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_global_worlds.tscn
-## [/codeblock]
+## Run: godot --headless --path . res://examples/headless_global_worlds.tscn
 
 const G2GBspMap := preload("../game/g2g_bsp_map.gd")
 const G2GMapCatalogue := preload("../game/g2g_map_catalogue.gd")

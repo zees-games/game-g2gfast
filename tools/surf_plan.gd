@@ -141,10 +141,9 @@ func _run() -> void:
 		print("[surf] traced search: %s %s" % [found["found"], found["why"]])
 		get_tree().quit(0)
 		return
-	# `--chain "x,y,z,hx,hy,hz,speed"`: a first leg from the stage's start to a goal box (centre
-	# and half extents in units, and a minimum horizontal speed in u/s), then the stage's own
-	# search from the state the first leg arrives in, with `--guide2` as that leg's guide. One
-	# ride of both is saved as the stage: how a stage whose way on starts at a standstill is cached.
+	# `--chain "x,y,z,hx,hy,hz,speed"`: a first leg to a goal box (centre, half extents in units,
+	# minimum u/s), then the stage's own search from where it arrives, `--guide2` guiding the leg.
+	# One ride of both is saved: how a stage whose way on starts at a standstill is cached.
 	var chain_at := args.find("--chain")
 	if chain_at >= 0 and chain_at + 1 < args.size():
 		var code := _chain(args, args[chain_at + 1], course, sim, base, path, id, number, guide_units)

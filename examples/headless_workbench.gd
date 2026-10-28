@@ -1,11 +1,7 @@
 extends DotGameCheckSuite
 
-## The arena's config through the workbench: DotGameWorkbench over the binder's set, an edit, and the
-## "Export changes as defaults" diff in the cfg/ layout.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_workbench.tscn
-## [/codeblock]
+## The arena's config through the workbench: DotGameWorkbench over the binder's set, an edit, and the "Export changes as defaults" diff.
+## Run: godot --headless --path . res://examples/headless_workbench.tscn
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const CHECKS := 9

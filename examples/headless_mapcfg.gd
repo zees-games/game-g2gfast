@@ -1,10 +1,7 @@
 extends DotGameCheckSuite
 
 ## A map gets its shipped movement settings and the next map restores them, on the server's cvars and on a client's config.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_mapcfg.tscn
-## [/codeblock]
+## Run: godot --headless --path . res://examples/headless_mapcfg.tscn
 
 const G2GMapConfig := preload("../game/g2g_map_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")

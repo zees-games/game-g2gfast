@@ -1,10 +1,7 @@
 extends DotGameCheckSuite
 
 ## G2GConfig through DotGameConfigBinder: fields, cvars, the deathmatch rules reading them, strict refusal, the diff.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_config.tscn
-## [/codeblock]
+## Run: godot --headless --path . res://examples/headless_config.tscn
 
 const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GConfig := preload("../game/g2g_config.gd")

@@ -1,9 +1,7 @@
 extends Node
 
-## The final killcam. Client side: every frame drawn goes into dot-replay's [DotKillcamBuffer]
-## (what the snapshots already brought, no new traffic), every kill is noted, and when the match
-## ends on one, [DotKillcam] replays it from the killer's eye before the podium.
-## The length is the server's `mp_killcam_time`, sent with the match's end; 0 skips to [signal over].
+## The final killcam, client side: every drawn frame goes into dot-replay's [DotKillcamBuffer] (no new traffic), and when the match ends on a kill [DotKillcam] replays it from the killer's eye.
+## The length is the server's `mp_killcam_time`; 0 skips to [signal over].
 
 const G2GPlayer := preload("g2g_player.gd")
 const G2GRig := preload("g2g_rig.gd")

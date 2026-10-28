@@ -5,16 +5,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 
 ## Bot soak on the real timer game: N bots ride one map for M simulated minutes through dot-bot's
 ## DotBotSoak, fed by dot-spawn's DotSpawnWatch. Bots here are the course riders of g2g_bots.gd.
-##
-## [codeblock]
-## ./game.sh soak [map] [minutes]
-## godot --headless --path . res://tools/soak.tscn -- --map surf_beginner --bots 4 --minutes 2
-## [/codeblock]
-##
-## --trace prints one TRACE line a second for the first bot.
-## Takes the harness's own flags too (--soak-max-stuck-sec and the rest of DotBotSoakConfig).
-## Writes .godot/test-logs/soak-<map>.json, prints the SOAK line, exits 1 when the run fails.
-## There is no combat here, so the harness's kill check is off and the kill columns stay 0.
+## Run: ./game.sh soak [map] [minutes] (--trace, plus DotBotSoakConfig flags); writes .godot/test-logs/soak-<map>.json, prints SOAK, exits 1 on failure. No combat: the kill check is off.
 
 const DEFAULT_MAP := &"bhop_g2g_intro"
 const DEFAULT_MINUTES := 1.0

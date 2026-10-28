@@ -33,7 +33,7 @@ func _ready() -> void:
 		return
 	var map: Node3D = packed.instantiate()
 	if map is G2GBspMap:
-		# PREVIEW_WORLDS=1 draws it from the dot-map world document (g2g_global_worlds).
+		# With PREVIEW_WORLDS=1 it is drawn from the dot-map world document (g2g_global_worlds).
 		(map as G2GBspMap).global_worlds = OS.get_environment("PREVIEW_WORLDS") == "1"
 		(map as G2GBspMap).build_from(def)
 	add_child(map)
@@ -73,7 +73,7 @@ func _ready() -> void:
 				m.set_shader_parameter("ambient", 0.0)
 				m.set_shader_parameter("light_boost", 1.0)
 
-	# PREVIEW_MARK=<substring> draws every surface whose material names it in flat
+	# With PREVIEW_MARK=<substring>, draws every surface whose material names it in flat
 	# magenta, double-sided. A face that is missing in a frame is either not drawn or
 	# drawn and then covered, and this is what tells the two apart.
 	var mark := OS.get_environment("PREVIEW_MARK")
@@ -113,8 +113,8 @@ func _ready() -> void:
 		if not keep_env:
 			found.get_parent().remove_child(found)
 			found.queue_free()
-		# PREVIEW_NOGLOW=1 turns the map's glow off, to tell a surface that is bright from
-		# one the bloom made bright (surf_lt_unicorn's white portal discs, 2026-10-11).
+		# Setting PREVIEW_NOGLOW turns the map's glow off, to tell a bright surface from one the bloom
+		# made bright (surf_lt_unicorn's white portal discs).
 		elif OS.get_environment("PREVIEW_NOGLOW") != "" and found.environment != null:
 			found.environment.glow_enabled = false
 
@@ -147,7 +147,7 @@ func _ready() -> void:
 		pitch = float(OS.get_environment("PREVIEW_PITCH"))
 	if from_spawn and map is G2GMap:
 		eye = (map as G2GMap).spawn_for(0) + Vector3(0.0, 1.2, 0.0)
-	# PREVIEW_EYE="x,y,z" (metres, Godot axes) stands somewhere other than the spawn --
+	# Set PREVIEW_EYE="x,y,z" (metres, Godot axes) stands somewhere other than the spawn --
 	# ON a ramp, say, because a face that draws from across the canyon and vanishes when
 	# a player is riding it is invisible from every spawn frame. PREVIEW_YAW turns the
 	# first shot (radians, 0 looks down -Z).

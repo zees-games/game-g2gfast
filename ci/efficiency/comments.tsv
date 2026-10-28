@@ -32,8 +32,8 @@ examples/jitter_probe.gd::long_block	4
 game/g2g_arsenal.gd::banner	3
 game/g2g_arsenal.gd::long_block	7
 game/g2g_avatars.gd::long_block	6
-game/g2g_awards.gd::banner	6
-game/g2g_awards.gd::long_block	2
+game/g2g_awards.gd::banner	1
+game/g2g_awards.gd::long_block	1
 game/g2g_bindings.gd::history	2
 game/g2g_bindings.gd::long_block	1
 game/g2g_bot_nav.gd::banner	3
@@ -41,10 +41,9 @@ game/g2g_bot_nav.gd::long_block	2
 game/g2g_bots.gd::long_block	2
 game/g2g_browser.gd::history	1
 game/g2g_browser.gd::long_block	7
-game/g2g_bsp_map.gd::history	2
-game/g2g_bsp_map.gd::long_block	21
+game/g2g_bsp_map.gd::history	1
+game/g2g_bsp_map.gd::long_block	18
 game/g2g_camera.gd::long_block	2
-game/g2g_client.gd::banner	9
 game/g2g_client.gd::history	1
 game/g2g_client.gd::long_block	39
 game/g2g_client_extras.gd::banner	2
@@ -120,7 +119,7 @@ game/g2g_surf_course.gd::long_block	5
 game/g2g_textures.gd::history	1
 game/g2g_textures.gd::long_block	14
 game/g2g_units.gd::long_block	5
-game/g2g_vote.gd::long_block	10
+game/g2g_vote.gd::long_block	9
 game/g2g_vote_map_source.gd::long_block	1
 game/g2g_zone_editor.gd::long_block	1
 game/g2g_zone_outlines.gd::long_block	1
@@ -154,8 +153,6 @@ props/g2g_prop_body.gd::long_block	1
 tools/audio_probe.gd::long_block	1
 tools/avatar_preview.gd::long_block	1
 tools/bhop_probe.gd::long_block	3
-tools/bsp_preview.gd::commented_code	3
-tools/bsp_preview.gd::history	1
 tools/bsp_preview.gd::long_block	5
 tools/build_avatar_parts.gd::long_block	5
 tools/camera_check.gd::long_block	1
@@ -163,7 +160,6 @@ tools/collision_probe.gd::long_block	4
 tools/export_zones.gd::long_block	3
 tools/follow_replay.gd::long_block	1
 tools/gate_shot.gd::long_block	1
-tools/load_probe.gd::commented_code	2
 tools/load_probe.gd::history	1
 tools/load_probe.gd::long_block	1
 tools/publish_maps.gd::long_block	2
