@@ -1,8 +1,6 @@
-extends Node
+extends "g2g_presentation_catalogue.gd"
 
 const G2GBindings := preload("g2g_bindings.gd")
-const G2GPaths := preload("g2g_paths.gd")
-const G2GVote := preload("g2g_vote.gd")
 const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
 const G2GUnits := preload("g2g_units.gd")
 
@@ -31,13 +29,6 @@ const CHANNEL := "g2g.presentation"
 ## off it. See [method migrations].
 const SCHEMA_VERSION := 3
 const SOUND_DIR := "res://audio"
-
-## The ping an administrator's beacon makes. See [method sound_catalogue].
-const BEACON_SOUND := &"beacon"
-
-## The flashlight's switch. See [method sound_catalogue].
-const FLASHLIGHT_SOUND := &"flashlight"
-static var FX_DIR := G2GPaths.rebase("res://scenes/fx")
 
 var settings: DotSettingsManager = null
 
@@ -105,15 +96,9 @@ static func schema() -> DotSettingsSchema:
 	var s := DotSettingsSchema.new()
 	s.version = SCHEMA_VERSION
 
-	# [b]The audio, the window, the frame rate, the sensitivity and the theme are dot-menu's
-	# stock settings[/b] (2026-10-09), declared at the end with the keys and scopes they were
-	# stored under here, so nobody's choice moved. What is declared first below wins, which is
-	# how this game keeps its own defaults where the genre wants different ones: no camera
-	# shake, no flashes, and the field of view as fov_desired.
-	#
-	# `raw_input` is gone: it was declared here and applied by nothing, and the engine has no
-	# portable switch for it to apply. A stored value is kept in the document's unknown half.
-
+	# The audio, window, frame rate, sensitivity and theme are dot-menu's stock settings, declared
+	# at the end; what is declared first wins, which keeps this game's defaults (no shake, no flash).
+	# `raw_input` is gone (nothing applied it); a stored value stays in the document's unknown half.
 
 	# The style is remembered per person, not per machine. Somebody who runs sideways
 	# runs sideways everywhere.
@@ -489,49 +474,6 @@ static func sound_catalogue() -> DotAudioCatalogue:
 	return c
 
 
-## Which synthesised voice stands in for each id until real audio is dropped into
-## [constant SOUND_DIR].
-##
-## [b]A timer game is the one here where sound is part of the input loop rather than
-## decoration.[/b] A bunny hop is a rhythm, and the jump and the landing are how a runner
-## hears whether they kept it — which is why those two are the shortest and the most
-## different-sounding things in this table. Everything else is the clock reporting.
-##
-## The same restraint as the camera shake this game turns off by default: a long tail on a
-## landing would smear the rhythm it is there to mark, so `land` is an impact and not a
-## thud with a body.
-static func sound_recipes() -> Dictionary:
-	return {
-		&"land": DotAudioSynth.Voice.IMPACT,
-		&"jump": DotAudioSynth.Voice.STEP,
-		&"timer_start": DotAudioSynth.Voice.BLIP,
-		&"timer_split": DotAudioSynth.Voice.CLICK,
-		&"timer_finish": DotAudioSynth.Voice.PICKUP,
-		&"personal_best": DotAudioSynth.Voice.SPAWN,
-		&"teleport": DotAudioSynth.Voice.DENY,
-		# The one exception to "only voices the run does not use", and it is deliberate:
-		# BLIP is the only pure tone in the bank, and a beacon is a thing you locate by
-		# ear. It shares the voice with `timer_start` an octave down, positional and on the
-		# SFX bus, where the start is flat on UI — so it comes from somewhere and the start
-		# comes from nowhere, which is the difference that matters mid-run.
-		BEACON_SOUND: DotAudioSynth.Voice.BLIP,
-		# The split's CLICK at 1.6x and 6 dB down: a switch, which is what a click is. The
-		# pitch is what keeps it from reading as a split.
-		FLASHLIGHT_SOUND: DotAudioSynth.Voice.CLICK,
-		# Only voices the run does not already use. Every one above is part of the input
-		# loop, and a ballot opening that sounded like a split — or a countdown tick that
-		# sounded like a jump — would be the vote talking over the rhythm this table exists
-		# to keep clear.
-		G2GVote.CUE_START: DotAudioSynth.Voice.SHOT_TIGHT,
-		G2GVote.CUE_END: DotAudioSynth.Voice.DIE,
-		G2GVote.CUE_WARNING: DotAudioSynth.Voice.BOOM,
-		G2GVote.CUE_COUNT: DotAudioSynth.Voice.SHOT,
-		# Stand-ins only for a build without dot-player-char's files.
-		DotPlayerDeathReactions.SOUND_THUD: DotAudioSynth.Voice.IMPACT,
-		DotPlayerDeathReactions.SOUND_FACE_PLANT: DotAudioSynth.Voice.IMPACT,
-		DotPlayerDeathReactions.SOUND_SLUMP: DotAudioSynth.Voice.STEP,
-		DotPlayerDeathReactions.SOUND_WHOOSH: DotAudioSynth.Voice.SPAWN,
-	}
 
 
 func _build_audio() -> DotResult:
@@ -581,47 +523,6 @@ func _build_audio() -> DotResult:
 	return DotResult.success(null)
 
 
-# --- Effects ----------------------------------------------------------------
-
-static func fx_catalogue() -> DotFxCatalogue:
-	var c := DotFxCatalogue.new()
-
-	var start := DotFxDef.new()
-	start.id = &"start_gate"
-	start.scene_path = "%s/start_gate.tscn" % FX_DIR
-	start.lifetime_ms = 600
-	start.cost = 2
-	start.priority = 80
-	start.max_distance = 0.0
-	c.add(start)
-
-	var finish := DotFxDef.new()
-	finish.id = &"finish_gate"
-	finish.scene_path = "%s/finish_gate.tscn" % FX_DIR
-	finish.lifetime_ms = 1200
-	finish.cost = 4
-	finish.priority = 90
-	finish.max_distance = 0.0
-	c.add(finish)
-
-	# A tint on a personal best, off by default with everything else. Somebody who wants
-	# a celebration can have one; nobody gets it in the middle of a run they did not ask
-	# for it in.
-	var best := DotFxDef.new()
-	best.id = &"personal_best"
-	best.kind = DotFxDef.Kind.SCREEN
-	best.flash_peak = 0.18
-	best.flash_colour = Color(0.45, 1.0, 0.55)
-	best.flash_decay_ms = 500
-	c.add(best)
-
-	var land := DotFxDef.new()
-	land.id = &"land_shake"
-	land.kind = DotFxDef.Kind.SHAKE
-	land.shake_trauma = 0.18
-	c.add(land)
-
-	return c
 
 
 func _build_fx() -> DotResult:
