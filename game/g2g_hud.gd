@@ -223,6 +223,9 @@ func _ready() -> void:
 	_crosshair.offset_right = 0.0
 	_crosshair.offset_bottom = 0.0
 	_crosshair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if DotAddonApi.build_level("dot_ui") >= 14:
+		# Hidden while dead (dot-ui API 14); a client with no combat layer cannot tell, so shown.
+		_crosshair.set(&"alive_source", _viewer_alive)
 	add_child(_crosshair)
 
 	# Hit feedback, from dot-ui: full rect, centred on the crosshair, and drawn only from a
@@ -986,6 +989,11 @@ func timer_rect() -> Rect2:
 	var origin: Vector2 = timer_hud.call("_plate_origin", plate)
 	var xf := timer_hud.get_global_transform_with_canvas()
 	return Rect2(xf * origin, xf.basis_xform(plate))
+
+
+func _viewer_alive() -> bool:
+	var health: DotHealth = game.combat.health_of(player_id) if game != null and game.combat != null else null
+	return health == null or health.alive
 
 
 func present_blind(delta: float) -> void:
