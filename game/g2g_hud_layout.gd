@@ -1,10 +1,8 @@
 extends "g2g_hud_state.gd"
 
 ## What the player chose to see: the four HUD switches in the menu's General page.
-##
-## The speed and the splits are `DotTimerHud`'s own fields, so turning one off removes its
-## line from the clock's block rather than leaving a gap; the key display and the
-## crosshair are this HUD's.
+## The speed and splits are `DotTimerHud`'s own fields, so off removes the line rather than
+## leaving a gap; the key display and the crosshair are this HUD's.
 func apply_visibility(show_speed: bool, show_splits: bool, show_keys: bool, show_crosshair: bool) -> void:
 	if timer_hud != null:
 		timer_hud.show_speed = show_speed
@@ -16,12 +14,9 @@ func apply_visibility(show_speed: bool, show_splits: bool, show_keys: bool, show
 		_crosshair.visible = show_crosshair
 
 
-## The timer's layout, from the `timer_*`, `show_status`, `show_spectators` and
-## `hud_positions` settings. [param layout] is those keys without their prefix; a key that
-## is missing keeps its current value, so a caller can change one thing.
-##
-## [b]Every line is a `DotTimerHud` field[/b], so a line switched off is gone from the
-## block rather than blank in it, and the block closes up around what is left.
+## The timer's layout, from the `timer_*`, `show_status`, `show_spectators` and `hud_positions`
+## settings. [param layout] is those keys without their prefix; a missing key keeps its value.
+## Every line is a `DotTimerHud` field, so a line switched off is gone, not blank.
 func apply_layout(layout: Dictionary) -> void:
 	if timer_hud != null:
 		timer_hud.show_time = bool(layout.get("show_time", timer_hud.show_time))
@@ -59,10 +54,9 @@ func apply_layout(layout: Dictionary) -> void:
 	place()
 
 
-## [member positions] as the setting stores it, and back. JSON of
-## `{"timer": [0.5, 0.82], ...}`; anything that is not a known piece with two numbers in
-## 0..1 is dropped, because the setting is a file a player can edit by hand and a piece
-## put off-screen by a typo is a piece they cannot find again to drag back.
+## [member positions] as the setting stores it, and back: JSON of `{"timer": [0.5, 0.82], ...}`.
+## Anything but a known piece with two numbers in 0..1 is dropped: a player can edit the file
+## by hand, and an off-screen piece cannot be found again to drag back.
 static func positions_from_text(text: String) -> Dictionary:
 	var out := {}
 	if text.strip_edges() == "":
@@ -130,17 +124,9 @@ func apply_theme(palette: DotMenuPalette = null) -> void:
 		_spectators_label.add_theme_font_size_override(&"font_size", 15)
 
 
-# --- Spectating -----------------------------------------------------------------
-
 ## Who this HUD's player is watching, by id and by name; an empty id is nobody.
-##
-## The line tells a spectator the two things nobody can guess: how to change who they are
-## watching, and how to stop. Both are in the words a player would type or press.
-##
-## [param roam_hint] is the free-camera key's name when the server offers a free camera ("" when
-## it does not, so no prompt for a key that would be refused). [param roaming] is a spectator
-## who is flying: the "watching X" line is replaced by the controls, because there is nobody
-## to name.
+## [param roam_hint] is the free-camera key's name when the server offers one ("" otherwise).
+## [param roaming] replaces the "watching X" line with the controls: there is nobody to name.
 func set_spectating(target: StringName, target_name: String = "", roam_hint: String = "",
 		roaming: bool = false) -> void:
 	followed_id = target
@@ -180,8 +166,6 @@ func _refresh_spectators() -> void:
 func shown_id() -> StringName:
 	return followed_id if followed_id != &"" else player_id
 
-
-# --- Placing --------------------------------------------------------------------
 
 ## Puts every movable piece where the layout says. Every frame, because two of them change
 ## size with what they show — the clock's block grows a line when a stage starts, and the
@@ -285,10 +269,8 @@ func reset_element(id: StringName) -> void:
 	place()
 
 
-## The clock's block, or the size of one when it draws nothing yet (no run, every line
-## switched off): still a place to grab, so the editor never shows a piece that cannot be
-## found — and the same size for placing it as for picking it, or a dragged clock with
-## nothing on it would sit somewhere other than where it was dropped.
+## The clock's block, or the size of one when it draws nothing yet: still a place to grab, and
+## the same size for placing as for picking, or a dragged empty clock lands elsewhere.
 func _timer_block() -> Vector2:
 	var block := timer_hud.block_size() if timer_hud != null else Vector2.ZERO
 	return block if block != Vector2.ZERO else Vector2(220.0, 64.0)
@@ -352,11 +334,8 @@ func _label(p_name: String, align: int = HORIZONTAL_ALIGNMENT_LEFT) -> Label:
 	return label
 
 
-## Re-reads what the stage line counts and compares against.
-##
-## Public because a net bridge changes the track under the HUD — a player pressing T
-## for the bonus is on a different track with a different stage count — and there is
-## no signal for that.
+## Re-reads what the stage line counts and compares against. Public because a net bridge
+## changes the track under the HUD (T for the bonus) and no signal says so.
 func refresh_stage_reference() -> void:
 	if game == null or game.timers == null:
 		return
@@ -384,13 +363,9 @@ func apply_stage_reference(reference: Dictionary) -> void:
 	refresh_stage_reference()
 
 
-## Gives the splits panel its reference. Called from [method refresh_stage_reference]'s
-## moments only — a map, a track, a filed run or section, a setting — never per frame.
-##
-## [b]Hidden while spectating.[/b] The reference is the owner's personal best and section
-## bests, and a watched player's run against them is a comparison with nobody: every row
-## would be red or green for a reason that has nothing to do with the person on screen.
-## The clock still shows the watched run; the panel waits for the owner to be back.
+## Gives the splits panel its reference, at map, track, filed-run and setting moments, never per
+## frame. Hidden while spectating: the reference is the owner's bests, and a watched run against
+## them is a comparison with nobody.
 func _feed_panel(timer: DotTimer) -> void:
 	if splits_panel == null:
 		return
@@ -416,10 +391,8 @@ func _feed_panel(timer: DotTimer) -> void:
 	)
 
 
-## The comparison data for the owner's current track and style: the game's own store when the
-## game is authoritative (offline, a listen host), else only what the server sent, and only if
-## it was for this map, track and style. A message for another one is a moment late and says
-## nothing true.
+## The comparison data for the owner's current track and style: the game's own store when
+## authoritative, else only what the server sent for this map, track and style.
 func _reference_for(timer: DotTimer) -> Dictionary:
 	# Only an authoritative game's store is the player's truth. A client has a store too (a
 	# file store under user://), holding solo or other servers' bests, and letting it win

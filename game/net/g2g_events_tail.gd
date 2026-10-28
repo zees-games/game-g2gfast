@@ -13,8 +13,6 @@ static func _w() -> DotNetWriter:
 	return DotNetWriter.new()
 
 
-# --- Requests --------------------------------------------------------------
-
 static func write_int(value: int) -> PackedByteArray:
 	var writer := _w()
 	writer.write_varint(maxi(value, 0))
@@ -41,8 +39,6 @@ static func read_avatar(reader: DotNetReader) -> DotAvatar:
 	var built := DotAvatar.from_dict(parsed)
 	return built.value if built.ok else null
 
-
-# --- NPC -------------------------------------------------------------------
 
 const NPC_ID_BYTES := 64
 
@@ -81,22 +77,14 @@ static func read_npc_gone(reader: DotNetReader) -> Dictionary:
 	return out
 
 
-# --- RULES -----------------------------------------------------------------
-
 ## A RULES body is what a hostile or broken server can make a client parse. Forty-odd
 ## public commands with their one-line help come to about 3 KB; the cap leaves room for a
 ## server with twice as many and refuses anything that is not a command list.
 const RULES_BYTES := 12288
 
-## JSON rather than fields, and that is the one place in this file it is: the command
-## list is a variable-length table of strings a client only DRAWS, so a typed encoding
-## buys nothing a reader can check, and the two flags ride along rather than costing a
-## second event kind. [code]{"flashlight": bool, "thirdperson": bool, "commands": [[name,
-## help], ...]}[/code].
-##
-## [b]Shortened from the end of the list, never cut.[/b] `write_string` truncates at the
-## cap, and a JSON document cut anywhere is one that does not parse — which would cost the
-## client the two flags along with the commands it could not fit.
+## JSON rather than fields: the command list is a variable-length table a client only draws.
+## [code]{"flashlight": bool, "thirdperson": bool, "commands": [[name, help], ...]}[/code].
+## Shortened from the end of the list, never cut: a truncated JSON document does not parse.
 static func write_rules(rules: Dictionary) -> PackedByteArray:
 	var body := rules.duplicate(true)
 	var commands: Array = body.get("commands", [])
@@ -140,8 +128,6 @@ static func read_rules(reader: DotNetReader) -> Dictionary:
 	}
 
 
-# --- MAPS ------------------------------------------------------------------
-
 ## What the map list may occupy. 42 maps are about 4 KB; a server with three hundred
 ## gets the first ones that fit rather than a list cut in half.
 const MAPS_BYTES := 32768
@@ -180,8 +166,6 @@ static func write_map_id(id: String) -> PackedByteArray:
 static func read_map_id(reader: DotNetReader) -> String:
 	return reader.read_string(NAME_BYTES)
 
-
-# --- SPECTATE / SPECTATORS -------------------------------------------------------
 
 ## Whom a client is watching. [param target] is a player key ("u12", or the ghost's), empty
 ## for nobody; [param mode] is a `DotSpectatorView.Mode`.

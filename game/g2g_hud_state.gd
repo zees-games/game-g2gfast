@@ -41,16 +41,10 @@ var _notice_until: float = 0.0
 var game: G2GGame = null
 var player_id: StringName = &"local"
 
-## Whose run the clock, the speed and the keys describe: the player this HUD belongs to, or
-## the one they are spectating. See [method set_spectating].
-##
-## [b]The watched player's, while watching.[/b] A spectator's own clock is a player standing
-## in a start zone, and what they came to see is somebody else's time and speed. The
-## standing line (the record, YOUR best, YOUR place) stays the HUD owner's: it is filed per
-## player and a client is only ever told its own.
+## Whose run the clock, the speed and the keys describe: this HUD's player, or the one they are
+## spectating ([method set_spectating]). The standing line (record, best, place) stays the
+## owner's: it is filed per player and a client is only told its own.
 var followed_id: StringName = &""
-
-# --- Layout -------------------------------------------------------------------
 
 ## The pieces a player can move, in the order the layout editor offers them.
 const ELEMENTS: Array[StringName] = [&"timer", &"keys", &"status", &"spectators"]
@@ -80,32 +74,18 @@ var _show_keys: bool = true
 var _show_status: bool = true
 var _show_spectators: bool = true
 var _spectator_names := PackedStringArray()
-## The map's time left as the server's vote last described it. Null, or never adopted,
-## when nothing has told this HUD anything — offline, where the local map session IS the
-## clock that ends the map, and the only case in which it is.
-##
-## [b]The map session's clock was what this drew, and on a client it is wrong.[/b] A
-## client's session starts its own clock when it loads the map and nothing the server
-## decides ever reaches it: an extend added ten minutes on the server and none here, and
-## under `trigger: rtv_only` it counted down a limit the server did not have.
+## The map's time left as the server's vote last described it; null when nothing has told this HUD.
+## A client's own session clock ignores what the server decides (an extend, `rtv_only`), so it is
+## wrong there and only right offline.
 var clock_view: DotVoteClockView = null
 
-## How far up from the bottom the notice line starts, in pixels.
-##
-## The clock block's own margin is 92 and it draws about 90 tall, so anything below 182
-## is inside it. This is that plus a gap, in one place, so moving the clock moves this.
+## How far up from the bottom the notice line starts, in pixels: the clock block (92 up, about
+## 90 tall) plus a gap, in one place so moving the clock moves this.
 const NOTICE_CLEARANCE := 196.0
 
-## An administrator's `blind`, over the world and under the rest of the HUD.
-##
-## [b]Under the widgets, on purpose.[/b] A blind takes the course away, not the runner's
-## bearings: the clock still counts, the keys still light and the notice line still says
-## what happened, which is what makes it read as "an admin did this" rather than as a
-## client that stopped drawing. The chat box and the console are the presentation
-## layer's, above this HUD altogether, so a blinded runner can still ask why.
-##
-## Black rather than white. A white screen at full brightness is a thing a player can be
-## hurt by in a dark room, and taking the picture away is the whole of the point.
+## An administrator's `blind`, over the world and under the rest of the HUD: it takes the course
+## away, not the runner's bearings, and chat and the console stay above it. Black, not white,
+## which can hurt in a dark room.
 var blind_overlay: ColorRect = null
 
 ## Seconds a blind takes to come down and to lift. Short, so it is unmistakably on, and
@@ -114,13 +94,8 @@ const BLIND_FADE_SEC := 0.25
 
 const BLIND_COLOUR := Color(0.01, 0.01, 0.015)
 
-## Over everything this HUD draws while the server is on a map this client has not loaded.
-##
-## [b]Over the widgets, unlike the blind.[/b] There is no run to read: the clock, the keys
-## and the speed all describe a player the client is not simulating (see
-## [method G2GNetBridge.in_transit]). What a player saw instead was the engine's clear
-## colour with a live HUD on it — a grey screen that looked like a game that had broken —
-## for as long as the map took to download and build. The chat box is the presentation
-## layer's and stays above this, so the wait can still be talked through.
+## Over everything this HUD draws while the server is on a map this client has not loaded: there
+## is no run to read ([method G2GNetBridge.in_transit]). The chat box stays above it, so the wait
+## can still be talked through.
 var loading_cover: ColorRect = null
 var _loading_label: Label = null
