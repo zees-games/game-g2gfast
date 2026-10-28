@@ -1125,6 +1125,10 @@ func apply_movement() -> void:
 	for id in players:
 		var player: G2GPlayer = players[id]
 
+		# The client restores map cvars on EXIT_TREE, after the players have left; a motor cannot be rebuilt outside the tree.
+		if not player.is_inside_tree():
+			continue
+
 		if player.timer != null:
 			player.timer.stop(DotTimer.REASON_RESET)
 

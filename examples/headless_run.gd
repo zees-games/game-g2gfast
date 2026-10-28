@@ -458,6 +458,10 @@ func _test_boot_map_owner() -> void:
 	if "maps" in pinned:
 		pinned.set("maps", PackedStringArray(["pinner/%s@0.0.0-abc123" % MISSING]))
 
+	# Every case fails its fetch on purpose; the engine's error stream would read as a broken run.
+	var mirrored := DotLog.mirror_to_engine
+	DotLog.mirror_to_engine = false
+
 	for case in ["descriptor", "none", "restore", "pinned"]:
 		var with_descriptor: bool = case != "none"
 		if case == "restore":
@@ -480,6 +484,8 @@ func _test_boot_map_owner() -> void:
 		booted.append(g)
 		for _i in range(5):
 			await get_tree().process_frame
+
+	DotLog.mirror_to_engine = mirrored
 
 	_check(cloud.asked.size() == 4 and cloud.asked[0] == "someone/%s" % MISSING,
 		"a server loaded for a descriptor naming an owner asks for <owner>/<map>", str(cloud.asked))
