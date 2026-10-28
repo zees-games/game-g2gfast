@@ -91,27 +91,7 @@ func _measure(map_id: StringName, players: int) -> void:
 		side.queue_free()
 		return
 
-	var net := DotNetManager.new()
-	net.name = "Server"
-	net.is_server = true
-	net.local_peer_id = 1
-	net.service_scope = game.service_scope
-	net.auto_tick = false
-	net.config_file = ""
-	var nc := DotNetConfig.new()
-	nc.tick_rate = game.tick_rate
-	nc.snapshot_rate = SNAPSHOT_RATE
-	nc.enable_lag_compensation = false
-	nc.enable_prediction = true
-	nc.world_extent = 512.0
-	# Set LOAD_STAGGER=1 to spread snapshots over the ticks between them (DotNetConfig.stagger_snapshots),
-	# so a row can be compared both ways.
-	nc.stagger_snapshots = OS.get_environment("LOAD_STAGGER") == "1"
-	# For DOT_NET_SNAPSHOT_WORKERS=n: the config is built here, so the layered environment is not read.
-	nc.snapshot_workers = int(OS.get_environment("DOT_NET_SNAPSHOT_WORKERS")) if OS.get_environment("DOT_NET_SNAPSHOT_WORKERS") != "" else 0
-	net.config = nc
-	side.add_child(net)
-	net.setup()
+	var net := _build_net(game, side)
 
 	var bridge := G2GNetBridge.new()
 	side.add_child(bridge)
@@ -205,6 +185,41 @@ func _measure(map_id: StringName, players: int) -> void:
 		if t % 16 == 0:
 			await get_tree().process_frame
 
+	_report_row(players, game, net, times, net_ms, game_ms)
+
+	_net = null
+	side.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+## The server-side net manager for one row, added under [param side].
+func _build_net(game: G2GGame, side: Node) -> DotNetManager:
+	var net := DotNetManager.new()
+	net.name = "Server"
+	net.is_server = true
+	net.local_peer_id = 1
+	net.service_scope = game.service_scope
+	net.auto_tick = false
+	net.config_file = ""
+	var nc := DotNetConfig.new()
+	nc.tick_rate = game.tick_rate
+	nc.snapshot_rate = SNAPSHOT_RATE
+	nc.enable_lag_compensation = false
+	nc.enable_prediction = true
+	nc.world_extent = 512.0
+	# Set LOAD_STAGGER=1 to spread snapshots over the ticks between them (DotNetConfig.stagger_snapshots),
+	# so a row can be compared both ways.
+	nc.stagger_snapshots = OS.get_environment("LOAD_STAGGER") == "1"
+	# For DOT_NET_SNAPSHOT_WORKERS=n: the config is built here, so the layered environment is not read.
+	nc.snapshot_workers = int(OS.get_environment("DOT_NET_SNAPSHOT_WORKERS")) if OS.get_environment("DOT_NET_SNAPSHOT_WORKERS") != "" else 0
+	net.config = nc
+	side.add_child(net)
+	net.setup()
+	return net
+
+
+func _report_row(players: int, game: G2GGame, net: DotNetManager, times: PackedFloat64Array, net_ms: float, game_ms: float) -> void:
 	var sorted := Array(times)
 	sorted.sort()
 	var mean := 0.0
@@ -242,11 +257,6 @@ func _measure(map_id: StringName, players: int) -> void:
 			parts.append("%s %.2f" % [k, float(phase[k]) / 1000.0 / float(MEASURED_TICKS)])
 		print("[load]           per tick, ms: ", ", ".join(parts))
 		phase = {}
-
-	_net = null
-	side.queue_free()
-	await get_tree().process_frame
-	await get_tree().process_frame
 
 
 ## DotNetManager._send_snapshots, step by step, timed. A copy on purpose and only behind

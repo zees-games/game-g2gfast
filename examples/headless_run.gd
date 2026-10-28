@@ -440,8 +440,6 @@ func _test_boot_map_owner() -> void:
 	DotRegistry.register(CLOUD, cloud)
 	DotRegistry.register(GAMES, games)
 
-	var booted: Array[G2GGame] = []
-
 	# Third: dot-server putting the previous game back after the pending one's scene was
 	# missing. pending() is the game that failed; current() is the one being restored.
 	var failed := DotGameDescriptor.new()
@@ -458,34 +456,7 @@ func _test_boot_map_owner() -> void:
 	if "maps" in pinned:
 		pinned.set("maps", PackedStringArray(["pinner/%s@0.0.0-abc123" % MISSING]))
 
-	# Every case fails its fetch on purpose; the engine's error stream would read as a broken run.
-	var mirrored := DotLog.mirror_to_engine
-	DotLog.mirror_to_engine = false
-
-	for case in ["descriptor", "none", "restore", "pinned"]:
-		var with_descriptor: bool = case != "none"
-		if case == "restore":
-			games.loading = failed
-			games.running = restored
-		if case == "pinned":
-			games.loading = pinned
-			games.running = null
-		var config := G2GConfig.new()
-		config.records_directory = ""
-		config.map_seconds = 0.0
-		config.initial_map = MISSING
-		var g := G2GGame.new()
-		g.config = config
-		g.map_content_service = CLOUD
-		g.game_manager_service = GAMES if with_descriptor else &"g2g_headless_run_nothing"
-		if case == "restore":
-			g.scene_file_path = restored.scene
-		add_child(g)
-		booted.append(g)
-		for _i in range(5):
-			await get_tree().process_frame
-
-	DotLog.mirror_to_engine = mirrored
+	var booted := await _boot_owner_cases(games, CLOUD, GAMES, MISSING, failed, restored, pinned)
 
 	_check(cloud.asked.size() == 4 and cloud.asked[0] == "someone/%s" % MISSING,
 		"a server loaded for a descriptor naming an owner asks for <owner>/<map>", str(cloud.asked))
@@ -508,6 +479,41 @@ func _test_boot_map_owner() -> void:
 	DotRegistry.unregister_instance(CLOUD, cloud)
 	DotRegistry.unregister_instance(GAMES, games)
 	_done()
+
+
+func _boot_owner_cases(games: _LoadingGames, cloud_service: StringName, games_service: StringName,
+			missing: StringName, failed: DotGameDescriptor, restored: DotGameDescriptor,
+			pinned: DotGameDescriptor) -> Array[G2GGame]:
+	# Every case fails its fetch on purpose; the engine's error stream would read as a broken run.
+	var booted: Array[G2GGame] = []
+	var mirrored := DotLog.mirror_to_engine
+	DotLog.mirror_to_engine = false
+
+	for case in ["descriptor", "none", "restore", "pinned"]:
+		var with_descriptor: bool = case != "none"
+		if case == "restore":
+			games.loading = failed
+			games.running = restored
+		if case == "pinned":
+			games.loading = pinned
+			games.running = null
+		var config := G2GConfig.new()
+		config.records_directory = ""
+		config.map_seconds = 0.0
+		config.initial_map = missing
+		var g := G2GGame.new()
+		g.config = config
+		g.map_content_service = cloud_service
+		g.game_manager_service = games_service if with_descriptor else &"g2g_headless_run_nothing"
+		if case == "restore":
+			g.scene_file_path = restored.scene
+		add_child(g)
+		booted.append(g)
+		for _i in range(5):
+			await get_tree().process_frame
+
+	DotLog.mirror_to_engine = mirrored
+	return booted
 
 
 func _test_boot() -> void:
@@ -2838,6 +2844,25 @@ func _test_ghost() -> void:
 	_check(ghost != null and G2GUnits.to_units(ghost.speed()) > 100.0, "at the replay's speed", G2GUnits.format_speed(ghost.speed()) if ghost else "")
 	_check(game.players.size() >= 2 and game.timers.player(G2GGame.GHOST_ID) == null, "without a timer to feed")
 
+	_ghost_persistence(map_id, replay, record)
+
+	var changed: DotResult = await game.change_map(&"surf_g2g_intro")
+	# The surf run above may have filed a record of its own, in which case surf has
+	# a ghost too — its own, never the bhop map's.
+	var swapped := game.ghost()
+	_check(changed.ok and (swapped == null or swapped.replay.replay.map_id == &"surf_g2g_intro"),
+		"a map change swaps the ghost for that map's own, or none",
+		str(changed.error) if not changed.ok else String(swapped.replay.replay.map_id) if swapped else "")
+	changed = await game.change_map(map_id)
+	for _i in range(4):
+		await get_tree().process_frame
+	_check(changed.ok and game.ghost() != null, "and it is back with its map")
+
+	_look_guard()
+	_done()
+
+
+func _ghost_persistence(map_id: StringName, replay: DotTimerReplay, record: DotTimerRecord) -> void:
 	# Persistence: a second keeper over the same directory finds it.
 	var dir := "user://g2gfast-test-replays-%d" % Time.get_ticks_usec()
 	var keeper := G2GReplays.new()
@@ -2856,18 +2881,8 @@ func _test_ghost() -> void:
 	DirAccess.remove_absolute(dir.path_join("replays"))
 	DirAccess.remove_absolute(dir)
 
-	var changed: DotResult = await game.change_map(&"surf_g2g_intro")
-	# The surf run above may have filed a record of its own, in which case surf has
-	# a ghost too — its own, never the bhop map's.
-	var swapped := game.ghost()
-	_check(changed.ok and (swapped == null or swapped.replay.replay.map_id == &"surf_g2g_intro"),
-		"a map change swaps the ghost for that map's own, or none",
-		str(changed.error) if not changed.ok else String(swapped.replay.replay.map_id) if swapped else "")
-	changed = await game.change_map(map_id)
-	for _i in range(4):
-		await get_tree().process_frame
-	_check(changed.ok and game.ghost() != null, "and it is back with its map")
 
+func _look_guard() -> void:
 	# [b]The look guard, on the predicate rather than through a client.[/b] Nothing in
 	# this suite stands a `G2GClient` up, so the honest thing this can check is the
 	# contract the motion handler branches on. `Input.mouse_mode` is not the thing to
@@ -2889,7 +2904,6 @@ func _test_ghost() -> void:
 	_check(look.click_may_capture(), "and again once it is released")
 	look.platform.free()
 	look.free()
-	_done()
 
 
 # --- Progression ------------------------------------------------------------

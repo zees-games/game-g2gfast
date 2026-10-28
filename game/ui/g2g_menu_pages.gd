@@ -74,6 +74,14 @@ static func install(menu: DotMenu, client: Node) -> void:
 		.add(DotMenuRow.toggle(&"show_spectators", "Who is spectating you", "When the server shares it."))
 	var _h := menu.add_page(hud, &"video")
 
+	_add_gameplay_page(menu, client, key_for)
+	_describe_stock_rows(menu)
+
+	menu.config.page_order = PackedStringArray(PAGE_ORDER)
+	fill_help(menu.help, client, key_for)
+
+
+static func _add_gameplay_page(menu: DotMenu, client: Node, key_for: Callable) -> void:
 	# --- Gameplay -------------------------------------------------------------------
 	var gameplay := DotMenuPage.make(&"gameplay", "Gameplay", "Your style, your view, and what else is drawn on the course.")
 	var run := gameplay.section("Your run")
@@ -115,7 +123,9 @@ static func install(menu: DotMenu, client: Node) -> void:
 		.add(DotMenuRow.toggle(&"reduce_motion", "Reduce motion", "The end-of-match announcement appears at once."))
 	var _g := menu.add_page(gameplay, &"video")
 
-	# --- Video, Audio, Controls: the stock pages in this game's words ---------------
+
+## The stock Video, Audio and Controls rows, in this game's words.
+static func _describe_stock_rows(menu: DotMenu) -> void:
 	var fov := menu.find_row(&"field_of_view")
 	if fov != null:
 		fov.description = "Horizontal at 4:3, the genre's own measure — 90 is what you are used to."
@@ -132,9 +142,6 @@ static func install(menu: DotMenu, client: Node) -> void:
 	var sensitivity := menu.find_row(&"sensitivity")
 	if sensitivity != null:
 		sensitivity.description = "The genre's own number: 0.022 degrees per count times this. Bring yours with you."
-
-	menu.config.page_order = PackedStringArray(PAGE_ORDER)
-	fill_help(menu.help, client, key_for)
 
 
 ## The help screen's goal, styles and the timer's rules; the keys come from [G2GBindings].

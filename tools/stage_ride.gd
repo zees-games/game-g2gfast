@@ -50,6 +50,11 @@ const LOG_EVERY := 64
 
 
 var game: G2GGame = null
+var _heading := 0.0
+var _top := 0.0
+var _lowest := 0.0
+var _surfed := 0
+var _grounded := 0
 
 
 func _ready() -> void:
@@ -63,21 +68,7 @@ func _run() -> void:
 	var number := int(args[1]) if args.size() > 1 else 1
 	var seconds := float(args[2]) if args.size() > 2 else SECONDS
 	var override := args.size() >= 7
-
-	var config := G2GConfig.new()
-	config.records_directory = ""
-	config.map_seconds = 0.0
-	config.initial_map = id
-	game = G2GGame.new()
-	game.config = config
-	add_child(game)
-	for _i in range(240):
-		await get_tree().process_frame
-		if game.maps != null and game.maps.current != null:
-			break
-	if game.maps == null or game.maps.current == null or game.maps.current.id != id:
-		print("[ride] %s did not load" % id)
-		get_tree().quit(1)
+	if not await _load_game(id):
 		return
 
 	var zones := game.timers.zones
@@ -96,9 +87,8 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 
-	# The stage zone's own destination and yaw: what `DotTimerManager.request_stage`
-	# hands to whoever moves the player. Moved here directly, because nothing in this
-	# game listens to `stage_requested` (see the report of 2026-09-27).
+	# The stage zone's own destination and yaw, as `DotTimerManager.request_stage` gives them.
+	# Moved here directly: nothing in this game listens to `stage_requested`.
 	var map := game.current_map_node()
 	var arrival: Vector3 = map.spawn_for(track) if whole else from.destination
 	var arrival_yaw: float = map.spawn_yaw_for(track) if whole else from.destination_yaw
@@ -113,7 +103,96 @@ func _run() -> void:
 		str(G2GUnits.vector_to_units(bot.global_position).round()), bot.controller.state.yaw,
 		" (a candidate, not the zone's)" if override else ""])
 
-	# What counts as getting somewhere: the next stage's line, or the finish.
+	var goals := _goals_for(zones, track, number, total, whole)
+	var events: Array[String] = []
+	var put_back: Array[bool] = [false]
+	var finish := _finish_of(goals, arrival)
+	# Off a ramp the whole-run bot heads for the finish rather than along its own track:
+	# a bhop corridor's line is the straight one, and a door moves it closer.
+	var aim_at_finish := whole and finish != arrival
+	var router: RouteBot = _route_for(id, zones, track, total, finish) if whole else null
+	var pilot: DotBotSurfPilot = null
+	if not whole and not override and not OS.has_environment("RIDE_RULE"):
+		pilot = _pilot_for(id, number, bot)
+	var finished: Array[float] = []
+	bot.timer.run_finished.connect(func(run: DotTimerRun) -> void: finished.append(run.time()))
+	# Taken on the finish rather than read after it: the manager drops `last_replay` once
+	# nothing will keep the run, which with no store is straight after `player_finished`.
+	var finished_replay: Array[DotTimerReplay] = [null]
+	var watchers := _watch_timers(bot, router, events, put_back, finished_replay)
+
+	var start := bot.global_position
+	var limit := bot.controller.tunables.max_slope_angle
+	_heading = arrival_yaw
+	_top = 0.0
+	_lowest = start.y
+	_surfed = 0
+	_grounded = 0
+	var reached := ""
+	var ticks := int(seconds * float(game.tick_rate))
+	var at_tick := 0
+	# `RIDE_LOG_EVERY=8` for a finer trace of the part that went wrong.
+	var log_every := int(OS.get_environment("RIDE_LOG_EVERY")) if OS.has_environment("RIDE_LOG_EVERY") else LOG_EVERY
+
+	for t in range(ticks):
+		at_tick = t
+		var state := bot.controller.state
+		var flat := Vector3(state.velocity.x, 0.0, state.velocity.z)
+		if flat.length() > G2GUnits.to_metres(60.0):
+			_heading = rad_to_deg(atan2(-flat.x, -flat.z))
+		var ramp := Vector3.ZERO if router != null or pilot != null else _ramp_under(bot, flat, limit)
+		var c := _command_for(bot, flat, ramp, pilot, router, aim_at_finish, finish)
+		if state.is_grounded():
+			_grounded += 1
+		bot.controller.apply_command(c)
+		await get_tree().physics_frame
+
+		var at := bot.controller.state.position
+		_top = maxf(_top, bot.speed())
+		_lowest = minf(_lowest, at.y)
+		_log_tick(bot, t, at, ramp, router, log_every)
+		reached = _reached_at(at, finished, put_back[0], goals)
+		if reached != "":
+			break
+
+	game.timers.effect_requested.disconnect(watchers[0])
+	game.timers.player_finished.disconnect(watchers[1])
+	var save_to := OS.get_environment("RIDE_SAVE_REPLAY")
+	if save_to != "" and not finished.is_empty():
+		_save_replay(id, save_to, finished_replay[0])
+	for line in events:
+		print("[ride]   %s" % line)
+	var end := bot.controller.state.position
+	print("[ride] %s after %.2f s: %s; %.0f u from the arrival, %.0f u lower at the deepest, top %.0f u/s, %d ticks surfing, %d grounded" % [
+		id, float(at_tick + 1) / float(game.tick_rate),
+		reached if reached != "" else "nowhere, time ran out at %s u" % str(G2GUnits.vector_to_units(end).round()),
+		G2GUnits.to_units(end.distance_to(start)), G2GUnits.to_units(start.y - _lowest),
+		G2GUnits.to_units(_top), _surfed, _grounded])
+	get_tree().quit(0 if reached.begins_with("REACHED") or reached.begins_with("FINISHED") else 2)
+
+
+## Builds the game on [param id] and waits for its map. False once the failure is reported.
+func _load_game(id: StringName) -> bool:
+	var config := G2GConfig.new()
+	config.records_directory = ""
+	config.map_seconds = 0.0
+	config.initial_map = id
+	game = G2GGame.new()
+	game.config = config
+	add_child(game)
+	for _i in range(240):
+		await get_tree().process_frame
+		if game.maps != null and game.maps.current != null:
+			break
+	if game.maps == null or game.maps.current == null or game.maps.current.id != id:
+		print("[ride] %s did not load" % id)
+		get_tree().quit(1)
+		return false
+	return true
+
+
+## What counts as getting somewhere: the next stage's line, or the finish.
+func _goals_for(zones: DotTimerZoneSet, track: int, number: int, total: int, whole: bool) -> Array:
 	var goals: Array = []
 	for n in range(number + 1, total + 1):
 		if not whole:
@@ -121,35 +200,35 @@ func _run() -> void:
 	for zone: DotTimerZone in zones.of_kind(DotTimerZone.Kind.END):
 		if zone.track == track:
 			goals.append(["the finish", zone])
+	return goals
 
-	var events: Array[String] = []
-	var put_back: Array[bool] = [false]
-	var finish: Vector3 = arrival
+
+func _finish_of(goals: Array, arrival: Vector3) -> Vector3:
+	var finish := arrival
 	for goal: Array in goals:
 		if goal[0] == "the finish":
 			finish = (goal[1] as DotTimerZone).centre()
-	# Off a ramp the whole-run bot heads for the finish rather than along its own track:
-	# a bhop corridor's line is the straight one, and a door moves it closer.
-	var aim_at_finish := whole and finish != arrival
-	# The whole run follows the map's route (`maps/routes/<id>.json`, see game/g2g_route_bot.gd)
-	# when it has one, and otherwise its stage lines in order and then the finish.
-	var router: RouteBot = null
-	if whole:
-		var why: Array = []
-		var route := RouteBot.load_points(id, why)
-		if route.is_empty():
-			for n in range(1, total + 1):
-				route.append({"at": zones.stage_zone(track, n).centre(),
-					"radius": G2GUnits.to_metres(RouteBot.DEFAULT_RADIUS), "max": 0.0, "walk": false, "hop": false, "land": false, "door": false})
-			print("[ride] %s: %s; following its %d stage lines" % [id, why[0], route.size()])
-		else:
-			print("[ride] %s: following its route, %d points" % [id, route.size()])
-		router = RouteBot.new(route, finish)
-	var pilot: DotBotSurfPilot = null
-	if not whole and not override and not OS.has_environment("RIDE_RULE"):
-		pilot = _pilot_for(id, number, bot)
-	var finished: Array[float] = []
-	bot.timer.run_finished.connect(func(run: DotTimerRun) -> void: finished.append(run.time()))
+	return finish
+
+
+## The whole run follows the map's route (`maps/routes/<id>.json`, see game/g2g_route_bot.gd)
+## when it has one, and otherwise its stage lines in order and then the finish.
+func _route_for(id: StringName, zones: DotTimerZoneSet, track: int, total: int, finish: Vector3) -> RouteBot:
+	var why: Array = []
+	var route := RouteBot.load_points(id, why)
+	if route.is_empty():
+		for n in range(1, total + 1):
+			route.append({"at": zones.stage_zone(track, n).centre(),
+				"radius": G2GUnits.to_metres(RouteBot.DEFAULT_RADIUS), "max": 0.0, "walk": false, "hop": false, "land": false, "door": false})
+		print("[ride] %s: %s; following its %d stage lines" % [id, why[0], route.size()])
+	else:
+		print("[ride] %s: following its route, %d points" % [id, route.size()])
+	return RouteBot.new(route, finish)
+
+
+## Connects the effect and finish watchers; returns them as [effect, finish] to disconnect.
+func _watch_timers(bot: G2GPlayer, router: RouteBot, events: Array[String], put_back: Array[bool],
+		finished_replay: Array[DotTimerReplay]) -> Array[Callable]:
 	var on_effect := func(pid: StringName, zone: DotTimerZone) -> void:
 		if pid != &"bot":
 			return
@@ -163,124 +242,88 @@ func _run() -> void:
 					str(G2GUnits.vector_to_units(bot.global_position).round()),
 					str(G2GUnits.vector_to_units(zone.destination).round())])
 	game.timers.effect_requested.connect(on_effect)
-	# Taken on the finish rather than read after it: the manager drops `last_replay` once
-	# it learns nothing will keep the run, and with no store (this tool has none) that is
-	# straight after `player_finished`. Read afterwards, RIDE_SAVE_REPLAY saved nothing.
-	var finished_replay: Array[DotTimerReplay] = [null]
 	var on_finished := func(pid: StringName, _run) -> void:
 		var p := game.timers.player(pid)
 		if pid == &"bot" and p != null and p.last_replay != null:
 			finished_replay[0] = p.last_replay
 	game.timers.player_finished.connect(on_finished)
+	return [on_effect, on_finished]
 
-	var start := bot.global_position
-	var limit := bot.controller.tunables.max_slope_angle
-	var heading := arrival_yaw
-	var reached := ""
-	var ticks := int(seconds * float(game.tick_rate))
-	var top := 0.0
-	var lowest := start.y
-	var surfed := 0
-	var grounded := 0
-	var at_tick := 0
-	# `RIDE_LOG_EVERY=8` for a finer trace of the part that went wrong.
-	var log_every := int(OS.get_environment("RIDE_LOG_EVERY")) if OS.has_environment("RIDE_LOG_EVERY") else LOG_EVERY
 
-	for t in range(ticks):
-		at_tick = t
-		var state := bot.controller.state
-		var flat := Vector3(state.velocity.x, 0.0, state.velocity.z)
-		if flat.length() > G2GUnits.to_metres(60.0):
-			heading = rad_to_deg(atan2(-flat.x, -flat.z))
+## One tick's command: the pilot's, the route's, a strafe into a face, or forward and hop.
+func _command_for(bot: G2GPlayer, flat: Vector3, ramp: Vector3, pilot: DotBotSurfPilot, router: RouteBot,
+		aim_at_finish: bool, finish: Vector3) -> DotFpsCommand:
+	var state := bot.controller.state
+	var c := DotFpsCommand.new()
+	if pilot != null:
+		c = pilot.command(state)
+		_surfed += 1 if not state.is_grounded() else 0
+	elif router != null:
+		c = router.command(state, get_world_3d().direct_space_state, bot.controller.tunables, 1.0 / float(game.tick_rate))
+	elif ramp != Vector3.ZERO:
+		# Along the face, in the direction already moving (or the heading at a
+		# standstill), and strafe INTO it.
+		var inward := Vector3(-ramp.x, 0.0, -ramp.z).normalized()
+		var along := Vector3(inward.z, 0.0, -inward.x)
+		# The way the route goes, not the way the bot happens to be moving: a
+		# landing deflects a rider sideways, and following that climbs the face.
+		var going := flat if G2GUnits.to_units(flat.length()) > 300.0 \
+			else DotFpsMotor.forward_for(_heading)
+		if along.dot(going) < 0.0:
+			along = -along
+		c.yaw = rad_to_deg(atan2(-along.x, -along.z))
+		var right := Vector3(cos(deg_to_rad(c.yaw)), 0.0, -sin(deg_to_rad(c.yaw)))
+		c.move = Vector2(signf(right.dot(inward)), 0.0)
+		_surfed += 1
+	else:
+		if aim_at_finish:
+			var to := finish - state.position
+			_heading = rad_to_deg(atan2(-to.x, -to.z))
+		c.yaw = _heading
+		c.move = Vector2(0.0, 1.0)
+		# A jump from a standstill creeps at the air cap for ever (headless_run's
+		# `_prestrafe`), so only once walking has built the speed.
+		c.set_button(DotFpsCommand.BUTTON_JUMP,
+			state.is_grounded() and G2GUnits.to_units(flat.length()) > 230.0)
+	return c
 
-		var c := DotFpsCommand.new()
-		var ramp := Vector3.ZERO if router != null or pilot != null else _ramp_under(bot, flat, limit)
-		if pilot != null:
-			c = pilot.command(state)
-			surfed += 1 if not state.is_grounded() else 0
-		elif router != null:
-			c = router.command(state, get_world_3d().direct_space_state, bot.controller.tunables, 1.0 / float(game.tick_rate))
-		elif ramp != Vector3.ZERO:
-			# Along the face, in the direction already moving (or the heading at a
-			# standstill), and strafe INTO it.
-			var inward := Vector3(-ramp.x, 0.0, -ramp.z).normalized()
-			var along := Vector3(inward.z, 0.0, -inward.x)
-			# The way the route goes, not the way the bot happens to be moving: a
-			# landing deflects a rider sideways, and following that climbs the face.
-			var going := flat if G2GUnits.to_units(flat.length()) > 300.0 \
-				else DotFpsMotor.forward_for(heading)
-			if along.dot(going) < 0.0:
-				along = -along
-			c.yaw = rad_to_deg(atan2(-along.x, -along.z))
-			var right := Vector3(cos(deg_to_rad(c.yaw)), 0.0, -sin(deg_to_rad(c.yaw)))
-			c.move = Vector2(signf(right.dot(inward)), 0.0)
-			surfed += 1
-		else:
-			if aim_at_finish:
-				var to := finish - state.position
-				heading = rad_to_deg(atan2(-to.x, -to.z))
-			c.yaw = heading
-			c.move = Vector2(0.0, 1.0)
-			# A jump from a standstill creeps at the air cap for ever (headless_run's
-			# `_prestrafe`), so only once walking has built the speed.
-			c.set_button(DotFpsCommand.BUTTON_JUMP,
-				state.is_grounded() and G2GUnits.to_units(flat.length()) > 230.0)
-		if state.is_grounded():
-			grounded += 1
-		bot.controller.apply_command(c)
-		await get_tree().physics_frame
 
-		var at := bot.controller.state.position
-		top = maxf(top, bot.speed())
-		lowest = minf(lowest, at.y)
-		if t % log_every == 0:
-			print("[ride]   t %5.2f s  at %s u  %4.0f u/s  %s" % [
-				float(t) / float(game.tick_rate), str(G2GUnits.vector_to_units(at).round()),
-				G2GUnits.to_units(bot.speed()),
-				("surfing, face %s" % str(ramp.snapped(Vector3.ONE * 0.01))) if ramp != Vector3.ZERO else ("grounded" if bot.controller.state.is_grounded() else "air")])
-		if router != null and t % log_every == 0:
-			print("[ride]            -> point %d/%d at %s u" % [router.index + 1, router.points.size(),
-				str(G2GUnits.vector_to_units(router.target()).round())])
-		if not finished.is_empty():
-			reached = "FINISHED the run in %.2f s at %s u" % [finished[0], str(G2GUnits.vector_to_units(at).round())]
-			break
-		if put_back[0]:
-			reached = "PUT BACK by a pit at %s u" % str(G2GUnits.vector_to_units(at).round())
-			break
-		for goal: Array in goals:
-			if (goal[1] as DotTimerZone).contains(at):
-				reached = "REACHED %s at %s u" % [goal[0], str(G2GUnits.vector_to_units(at).round())]
-				break
-		if reached != "":
-			break
+func _log_tick(bot: G2GPlayer, t: int, at: Vector3, ramp: Vector3, router: RouteBot, log_every: int) -> void:
+	if t % log_every != 0:
+		return
+	print("[ride]   t %5.2f s  at %s u  %4.0f u/s  %s" % [
+		float(t) / float(game.tick_rate), str(G2GUnits.vector_to_units(at).round()),
+		G2GUnits.to_units(bot.speed()),
+		("surfing, face %s" % str(ramp.snapped(Vector3.ONE * 0.01))) if ramp != Vector3.ZERO else ("grounded" if bot.controller.state.is_grounded() else "air")])
+	if router != null:
+		print("[ride]            -> point %d/%d at %s u" % [router.index + 1, router.points.size(),
+			str(G2GUnits.vector_to_units(router.target()).round())])
 
-	game.timers.effect_requested.disconnect(on_effect)
-	game.timers.player_finished.disconnect(on_finished)
-	# `RIDE_SAVE_REPLAY=maps/routes/<id>.replay` keeps the finished run's dot-timer replay:
-	# what `tools/follow_replay.tscn` and `headless_imported`'s *follows a recorded run*
-	# drive the real movement along. A person's own record is the better line to keep
-	# (G2GReplays writes it beside the records); this is the one a bot can make.
-	var save_to := OS.get_environment("RIDE_SAVE_REPLAY")
-	if save_to != "" and not finished.is_empty():
-		var replay: DotTimerReplay = finished_replay[0]
-		if replay == null:
-			print("[ride] no replay to save: the timer kept none")
-		else:
-			replay.map_id = id
-			replay.player_name = "route bot"
-			var saved := replay.save(ProjectSettings.globalize_path("res://" + save_to) if not save_to.is_absolute_path() else save_to)
-			print("[ride] saved the run's replay (%d frames, run %d..%d) to %s%s" % [
-				replay.frames.size(), replay.start_frame, replay.run_end_frame(), save_to,
-				"" if saved.ok else ": FAILED, " + saved.error.message])
-	for line in events:
-		print("[ride]   %s" % line)
-	var end := bot.controller.state.position
-	print("[ride] %s after %.2f s: %s; %.0f u from the arrival, %.0f u lower at the deepest, top %.0f u/s, %d ticks surfing, %d grounded" % [
-		id, float(at_tick + 1) / float(game.tick_rate),
-		reached if reached != "" else "nowhere, time ran out at %s u" % str(G2GUnits.vector_to_units(end).round()),
-		G2GUnits.to_units(end.distance_to(start)), G2GUnits.to_units(start.y - lowest),
-		G2GUnits.to_units(top), surfed, grounded])
-	get_tree().quit(0 if reached.begins_with("REACHED") or reached.begins_with("FINISHED") else 2)
+
+## How the ride ended at [param at], or "" while it has not.
+func _reached_at(at: Vector3, finished: Array[float], put_back: bool, goals: Array) -> String:
+	if not finished.is_empty():
+		return "FINISHED the run in %.2f s at %s u" % [finished[0], str(G2GUnits.vector_to_units(at).round())]
+	if put_back:
+		return "PUT BACK by a pit at %s u" % str(G2GUnits.vector_to_units(at).round())
+	for goal: Array in goals:
+		if (goal[1] as DotTimerZone).contains(at):
+			return "REACHED %s at %s u" % [goal[0], str(G2GUnits.vector_to_units(at).round())]
+	return ""
+
+
+## `RIDE_SAVE_REPLAY=maps/routes/<id>.replay` keeps the finished run's dot-timer replay, for
+## `tools/follow_replay.tscn` and `headless_imported`'s *follows a recorded run*.
+func _save_replay(id: StringName, save_to: String, replay: DotTimerReplay) -> void:
+	if replay == null:
+		print("[ride] no replay to save: the timer kept none")
+		return
+	replay.map_id = id
+	replay.player_name = "route bot"
+	var saved := replay.save(ProjectSettings.globalize_path("res://" + save_to) if not save_to.is_absolute_path() else save_to)
+	print("[ride] saved the run's replay (%d frames, run %d..%d) to %s%s" % [
+		replay.frames.size(), replay.start_frame, replay.run_end_frame(), save_to,
+		"" if saved.ok else ": FAILED, " + saved.error.message])
 
 
 ## The normal of a surf face under or beside the player, or ZERO. Traced straight down

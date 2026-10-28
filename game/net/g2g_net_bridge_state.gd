@@ -13,40 +13,16 @@ const G2GNpcNet := preload("g2g_npc_net.gd")
 const G2GHunters := preload("../g2g_hunters.gd")
 const G2GRequest := preload("g2g_request.gd")
 
-## Joins a [G2GGame] to a [DotNetManager]. The netcode seam, and the only file in
-## this project that names both.
-##
-## [b]The ordering is the whole file.[/b] dot-net drives simulation per entity, and
-## this game's tick is a whole-game property: everybody moves, then every timer is fed
-## the position its move produced. [method ensure_game_ticked] reconciles the two —
-## the first behaviour through on a tick runs the whole game, the rest find it done.
-##
-## [codeblock]
-## # server
-## bridge.attach(game, net, server)      # `server` is the node the link mirrors
-## bridge.add_player(peer_id, session_id, "Ada", avatar)
-## bridge.server_tick(tick)              # instead of the game's own loop
-##
-## # client
-## bridge.attach(game, net, client_link)
-## bridge.ask_ready()
-## bridge.client_tick(tick, command)
-## [/codeblock]
-##
-## Modelled on dot-2d-hungry's bridge, the one in this family proven over a real
-## socket, with two things it does not need — chunked field state and per-piece
-## entities — left out, and one it lacks: the movement configuration travels, so a
-## client derives bit-identical tunables and prediction converges.
+## Joins a [G2GGame] to a [DotNetManager]: the only file in this project that names both.
+## dot-net simulates per entity but this game ticks as a whole, so [method ensure_game_ticked]
+## lets the first behaviour through run the game and the rest find it done.
 
 const CHANNEL := "g2g.net"
 const ACK_BYTES := 4
 
-## Commands in every input packet: this tick's and the four before it, so a lost packet
-## costs the server no tick unless the next four are lost too. Over WebSocket nothing is
-## ever lost; over ENet (the desktop client, since servers went dual-stack) one command a
-## packet was a tick the server ran on the previous command for every packet dropped.
-## game-arena measured it first: 80% of ticks with the right command at 20% loss with one
-## copy, 99-100% with three, and five closed the rest (2026-10-09).
+## Commands in every input packet: this tick's and the four before it, so one lost packet costs
+## no tick. One copy ran 80% of ticks on the right command at 20% loss over ENet; three gave
+## 99-100%, five closed the rest.
 const INPUT_COPIES := 5
 
 ## The client has been told who it is. [param player_id] is the session id.
@@ -71,10 +47,9 @@ signal stage_reference_received(player_id: int, reference: Dictionary)
 ## What the server allows on this client's own screen, and the chat commands it answers:
 ## [code]{flashlight, thirdperson, commands}[/code]. Client side. See [method rules_body].
 signal rules_received(rules: Dictionary)
-## This client cannot follow the server to the map it announced: refused by dot-map's
-## trust rules, not fetchable, or not loadable. Client side. [G2GClient] leaves the server
-## on it, because a client on a world the server is not simulating is a player being
-## corrected into the air every tick.
+## This client cannot follow the server to the map it announced: refused by dot-map's trust
+## rules, not fetchable, or not loadable. Client side. [G2GClient] leaves the server on it,
+## because a client on a world the server is not simulating is corrected into the air every tick.
 signal map_refused(map_id: StringName, reason: String)
 ## The map-change protocol put this client on a map. Client side.
 signal map_loaded(map: DotMapDef)
@@ -83,12 +58,9 @@ var game: G2GGame = null
 var net: DotNetManager = null
 var link: G2GNetLink = null
 
-## [code]func(bytes: PackedByteArray) -> void[/code]. Where a received voice frame goes
-## on a client. The client points it at `DotVoiceManager.receive`.
-##
-## A callable rather than a typed reference, because this file must not name dot-voice:
-## a build with no voice addon installed would otherwise fail to parse, and the whole
-## point of a bridge is that it is the only file naming two things at once.
+## [code]func(bytes: PackedByteArray) -> void[/code]. Where a received voice frame goes on a client.
+## A callable, not a typed reference: this file must not name dot-voice, or a build without
+## the addon fails to parse.
 var voice_in_fn: Callable = Callable()
 
 ## [code]func(speaker_peer: int, bytes: PackedByteArray) -> void[/code]. Where a
@@ -96,23 +68,19 @@ var voice_in_fn: Callable = Callable()
 ## `DotVoiceRouter.relay`.
 var voice_relay_fn: Callable = Callable()
 
-## [code]func(player_id: StringName) -> void[/code]. What a client's RTV request does on
-## the server. Empty falls back to [method G2GGame.rock_the_vote], which is the map
-## session's own time limit — right on a server with no vote and wrong on one with a
-## ballot, where the module points this at the vote so a request off the wire and a
-## `!rtv` typed in chat are one vote rather than two.
+## [code]func(player_id: StringName) -> void[/code]. What a client's RTV request does on the server.
+## Empty falls back to [method G2GGame.rock_the_vote], wrong on a server with a ballot: the
+## module points this at the vote so `!rtv` and the wire request are one vote.
 var rtv_fn: Callable = Callable()
 
-## [code]func() -> Dictionary[/code], in [method DotVoteClockView.state_of]'s shape. What a
-## joining peer is told about the map's time left. Server side; empty sends nothing, and
-## the client then shows its own map session's clock — which on a server with no vote is
-## the one that ends the map.
+## [code]func() -> Dictionary[/code], in [method DotVoteClockView.state_of]'s shape: the map's time
+## left, told to a joining peer. Server side; empty sends nothing and the client shows its own
+## session's clock.
 var clock_fn: Callable = Callable()
 
-## [code]func() -> Array[/code] of [code][name, help][/code]: the commands a player may type
-## in chat on this server. Server side, pointed at the console by the module, because the
-## bridge never names dot-server's console; empty sends no list and the client's help
-## screen says it has none rather than inventing one.
+## [code]func() -> Array[/code] of [code][name, help][/code]: the commands a player may type in chat.
+## Server side, pointed at the console by the module (the bridge never names it); empty
+## sends no list.
 var commands_fn: Callable = Callable()
 
 ## `(session_id: int) -> bool`: whether that player may change the map. Set by the module
@@ -165,10 +133,8 @@ var map_host: DotMapSyncHost = null
 ## The peer half. Client side; built by [method attach].
 var map_client: DotMapSyncClient = null
 
-## Where the clock learns how long the link is, in milliseconds. dot-net never
-## touches a transport and cannot measure it; dot-server's heartbeat already does
-## (`DotClientLink.ping_ms()`), and a client that feeds nothing has a clock that
-## assumes an instant connection and stamps every command for a tick the server has
+## Where the clock learns the link's length in milliseconds (`DotClientLink.ping_ms()`); dot-net
+## cannot measure it. Unfed, the clock assumes an instant link and stamps commands for ticks
 ## already simulated. Read on every snapshot.
 var rtt_source: Callable = Callable()
 
@@ -178,10 +144,9 @@ var _behaviours: Dictionary = {}
 var _player_of_peer: Dictionary = {}
 var _peer_of_player: Dictionary = {}
 var _ready_peers: Dictionary = {}
-## Server: peers whose READY came before their seat ([method add_player]). A client sends READY
-## when its link says PLAYING, which the link decides itself after sending `loaded` on another
-## channel; over ENet with loss the READY can overtake `loaded`, and a READY dropped here left
-## that client waiting for a world for ever. Admitted when seated.
+## Server: peers whose READY came before their seat ([method add_player]); over ENet with loss
+## READY can overtake `loaded`, and a READY dropped here left the client waiting for a world
+## for ever. Admitted when seated.
 var _ready_unseated: Dictionary = {}
 
 ## Client: the longest frame whose every tick the engine still simulates. See

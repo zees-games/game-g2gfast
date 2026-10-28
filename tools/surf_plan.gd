@@ -60,23 +60,8 @@ func _run() -> void:
 	var rounds := _opt(args, "--rounds", 4)
 	var plan := not args.has("--no-plan")
 
-	var config := G2GConfig.new()
-	config.records_directory = ""
-	config.map_seconds = 0.0
-	config.initial_map = id
-	game = G2GGame.new()
-	game.config = config
-	add_child(game)
-	for _i in range(240):
-		await get_tree().process_frame
-		if game.maps != null and game.maps.current != null:
-			break
-	if game.maps == null or game.maps.current == null or game.maps.current.id != id:
-		print("[surf] %s did not load" % id)
-		get_tree().quit(1)
+	if not await _load_game(id):
 		return
-	if game.mechanics != null:
-		game.mechanics.blocks.clear()
 
 	var why: Array = []
 	var course: DotBotSurfCourse = G2GSurfCourse.for_stage(game, number, why)
@@ -84,18 +69,8 @@ func _run() -> void:
 		print("[surf] %s: %s" % [id, why[0]])
 		get_tree().quit(1)
 		return
-	# `--guide "x,y,z;x,y,z"`: a polyline in genre units (Godot axes) after the start that
-	# progress is measured along, for a stage that bends far from the straight line. Saved
-	# with the stage so the pilot's veto scores futures along the same line.
-	var guide_units: Array = []
 	var guide_at := args.find("--guide")
-	if guide_at >= 0 and guide_at + 1 < args.size():
-		for part in args[guide_at + 1].split(";"):
-			var xyz := part.split(",")
-			guide_units.append([float(xyz[0]), float(xyz[1]), float(xyz[2])])
-		course.guide = PackedVector3Array([course.start])
-		for g: Array in guide_units:
-			course.guide.append(G2GUnits.vector_to_metres(Vector3(g[0], g[1], g[2])))
+	var guide_units := _apply_guide(args, guide_at, course)
 	course.height_weight = float(_opt(args, "--height", 0))
 	var bot := game.add_player(&"bot", "Bot", true)
 	bot.sampler = null
@@ -116,29 +91,8 @@ func _run() -> void:
 			failed += 1
 
 	var path := ProjectSettings.globalize_path(G2GSurfCourse.cache_path(id))
-	# `--trace`: one search from the stage's own arrival, the beam's best line printed every
-	# half second, and nothing saved. How a stage that finds no ride is diagnosed: where the
-	# best line dies says which guide (or which mechanic) it wants.
 	if args.has("--trace"):
-		# `--from "x,y,z,vx,vy,vz"` (units, Godot axes): search from a state already in flight,
-		# to ask whether a line exists from, say, a flank at 1500 u/s.
-		var from_at := args.find("--from")
-		if from_at >= 0 and from_at + 1 < args.size():
-			var f := args[from_at + 1].split(",")
-			base.position = G2GUnits.vector_to_metres(Vector3(float(f[0]), float(f[1]), float(f[2])))
-			base.velocity = G2GUnits.vector_to_metres(Vector3(float(f[3]), float(f[4]), float(f[5])))
-			base.mode = DotFpsState.Mode.AIR
-			base.yaw = rad_to_deg(atan2(-base.velocity.x, -base.velocity.z))
-		var tracer := DotBotSurfPlanner.new()
-		tracer.seconds = RIDE_SECONDS
-		tracer.width = _opt(args, "--width", tracer.width)
-		tracer.trace = func(depth: int, best: Dictionary) -> void:
-			if depth % 4 == 0:
-				var st: DotFpsState = best["state"]
-				print("[surf]   %.1f s best %s u, velocity %s u/s, score %.1f" % [(depth + 1) * tracer.hold / 128.0,
-					str(G2GUnits.vector_to_units(st.position).round()), str(G2GUnits.vector_to_units(st.velocity).round()), float(best["score"])])
-		var found: Dictionary = tracer.search(base, course, sim)
-		print("[surf] traced search: %s %s" % [found["found"], found["why"]])
+		_trace(args, base, course, sim)
 		get_tree().quit(0)
 		return
 	# `--chain "x,y,z,hx,hy,hz,speed"`: a first leg to a goal box (centre, half extents in units,
@@ -149,45 +103,9 @@ func _run() -> void:
 		var code := _chain(args, args[chain_at + 1], course, sim, base, path, id, number, guide_units)
 		get_tree().quit(code)
 		return
-	if plan:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = 1000 + number
-		var from_starts: Array = [base.duplicate_state()]
-		for i in range(starts - 1):
-			from_starts.append(perturbed(base, course, rng))
-		var repair_rng := RandomNumberGenerator.new()
-		repair_rng.seed = 3000 + number
-		var repair_starts: Array = []
-		for i in range(repairs):
-			repair_starts.append(perturbed(base, course, repair_rng))
-		var started := Time.get_ticks_msec()
-		var steps_before: int = sim.steps
-		var planner := DotBotSurfPlanner.new()
-		planner.seconds = RIDE_SECONDS
-		planner.width = _opt(args, "--width", planner.width)
-		var repair_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
-		var repair_pilot := DotBotSurfPilot.new()
-		repair_pilot.rolling = not args.has("--no-rolling")
-		var resume := args.has("--resume")
-		var keep: Dictionary = _read(path).get("stages", {}).get(str(number), {}) if resume else {}
-		var built: Dictionary = _build_saving(planner, from_starts, repair_starts, rounds, course, sim, repair_sim,
-			func(line: String) -> void: print("[surf]   " + line), repair_pilot, keep,
-			func(snapshot: Dictionary) -> void:
-				_save_stage(path, id, number, course, snapshot, guide_units if guide_at >= 0 else
-					_read(path).get("stages", {}).get(str(number), {}).get("guide", []),
-					{"starts": starts, "repairs": repairs, "rounds": snapshot["rounds"], "searches": snapshot["searches"],
-					"seconds": snappedf((Time.get_ticks_msec() - started) / 1000.0, 0.1)}))
-		var rides: PackedFloat32Array = built["rides"]
-		var seconds: Array = built["seconds"]
-		var spent := (Time.get_ticks_msec() - started) / 1000.0
-		var motor_ticks: int = sim.steps - steps_before + repair_sim.steps
-		print("[surf]   planning: %d searches found %d rides, failures per repair round %s; %.1f s wall, %d motor ticks (%.1f us each), %d branches" % [
-			built["searches"], built["found"], str(built["rounds"]), spent, motor_ticks,
-			float(sim.usec + repair_sim.usec) / maxf(1.0, float(sim.steps + repair_sim.steps)), planner.expanded])
-		if seconds.is_empty():
-			get_tree().quit(1)
-			return
-		print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
+	if plan and not _plan_stage(args, id, number, starts, repairs, rounds, course, sim, bot, base, path, guide_units, guide_at):
+		get_tree().quit(1)
+		return
 
 	var data: Dictionary = _read(path).get("stages", {}).get(str(number), {})
 	if data.is_empty():
@@ -206,33 +124,7 @@ func _run() -> void:
 	if args.has("--no-veto"):
 		pilot.horizon = 0
 
-	if runs > 0:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = 5000 + number
-		var ok := 0
-		var times: Array[float] = []
-		var steps_before: int = sim.steps
-		var usec_before: int = sim.usec
-		var ridden := 0
-		var misses: Array[String] = []
-		var ride_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
-		for i in range(runs):
-			var r: Dictionary = pilot.ride(perturbed(base, course, rng), ride_sim, int(RIDE_SECONDS / sim.delta))
-			ridden += int(r["ticks"])
-			if int(r["event"]) == DotBotSurfCourse.EVENT_GOAL:
-				ok += 1
-				times.append(float(r["ticks"]) * sim.delta)
-			elif misses.size() < 12:
-				var last: DotFpsState = (r["trail"] as Array).back()
-				misses.append("%s %.2f s near %s u" % ["fell" if int(r["event"]) != DotBotSurfCourse.EVENT_NONE else "stalled",
-					float(r["ticks"]) * sim.delta, str(G2GUnits.vector_to_units(last.position).round())])
-		var lookahead: int = sim.steps - steps_before
-		print("[surf]   simulated rides: %d of %d reached the goal (%.0f%%), %s; lookahead %.2f motor ticks per ridden tick (%.0f us of motor per ridden tick); %d futures, %d vetoes, %d hopeless, %d resyncs" % [
-			ok, runs, 100.0 * ok / maxf(1.0, runs), _spread(times),
-			float(lookahead) / maxf(1.0, ridden), float(sim.usec - usec_before) / maxf(1.0, ridden),
-			pilot.checks, pilot.vetoes, pilot.hopeless, pilot.resyncs])
-		if not misses.is_empty():
-			print("[surf]     misses: %s" % "; ".join(misses))
+	_simulated_rides(runs, number, base, course, bot, sim, pilot)
 
 	if live > 0:
 		var result: Dictionary = await ride_live(game, bot, course, pilot, base, live, 9000 + number)
@@ -243,6 +135,142 @@ func _run() -> void:
 			failed += 1
 
 	get_tree().quit(1 if failed > 0 else 0)
+
+
+## Builds the game on [param id], with no mechanic blocks. False once the failure is reported.
+func _load_game(id: StringName) -> bool:
+	var config := G2GConfig.new()
+	config.records_directory = ""
+	config.map_seconds = 0.0
+	config.initial_map = id
+	game = G2GGame.new()
+	game.config = config
+	add_child(game)
+	for _i in range(240):
+		await get_tree().process_frame
+		if game.maps != null and game.maps.current != null:
+			break
+	if game.maps == null or game.maps.current == null or game.maps.current.id != id:
+		print("[surf] %s did not load" % id)
+		get_tree().quit(1)
+		return false
+	if game.mechanics != null:
+		game.mechanics.blocks.clear()
+	return true
+
+
+## `--guide`: a polyline in genre units after the start that progress is measured along. Returns it.
+func _apply_guide(args: PackedStringArray, guide_at: int, course: DotBotSurfCourse) -> Array:
+	var guide_units: Array = []
+	if guide_at >= 0 and guide_at + 1 < args.size():
+		for part in args[guide_at + 1].split(";"):
+			var xyz := part.split(",")
+			guide_units.append([float(xyz[0]), float(xyz[1]), float(xyz[2])])
+		course.guide = PackedVector3Array([course.start])
+		for g: Array in guide_units:
+			course.guide.append(G2GUnits.vector_to_metres(Vector3(g[0], g[1], g[2])))
+	return guide_units
+
+
+## `--trace`: one search from the stage's own arrival, the beam's best line printed every half second,
+## and nothing saved. `--from "x,y,z,vx,vy,vz"` (units) starts it already in flight.
+func _trace(args: PackedStringArray, base: DotFpsState, course: DotBotSurfCourse, sim: DotFpsSimulator) -> void:
+	# `--from "x,y,z,vx,vy,vz"` (units, Godot axes): search from a state already in flight,
+	# to ask whether a line exists from, say, a flank at 1500 u/s.
+	var from_at := args.find("--from")
+	if from_at >= 0 and from_at + 1 < args.size():
+		var f := args[from_at + 1].split(",")
+		base.position = G2GUnits.vector_to_metres(Vector3(float(f[0]), float(f[1]), float(f[2])))
+		base.velocity = G2GUnits.vector_to_metres(Vector3(float(f[3]), float(f[4]), float(f[5])))
+		base.mode = DotFpsState.Mode.AIR
+		base.yaw = rad_to_deg(atan2(-base.velocity.x, -base.velocity.z))
+	var tracer := DotBotSurfPlanner.new()
+	tracer.seconds = RIDE_SECONDS
+	tracer.width = _opt(args, "--width", tracer.width)
+	tracer.trace = func(depth: int, best: Dictionary) -> void:
+		if depth % 4 == 0:
+			var st: DotFpsState = best["state"]
+			print("[surf]   %.1f s best %s u, velocity %s u/s, score %.1f" % [(depth + 1) * tracer.hold / 128.0,
+				str(G2GUnits.vector_to_units(st.position).round()), str(G2GUnits.vector_to_units(st.velocity).round()), float(best["score"])])
+	var found: Dictionary = tracer.search(base, course, sim)
+	print("[surf] traced search: %s %s" % [found["found"], found["why"]])
+
+
+## The planning pass and its save. False when no search found a ride.
+func _plan_stage(args: PackedStringArray, id: StringName, number: int, starts: int, repairs: int, rounds: int,
+		course: DotBotSurfCourse, sim: DotFpsSimulator, bot: G2GPlayer, base: DotFpsState, path: String,
+		guide_units: Array, guide_at: int) -> bool:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1000 + number
+	var from_starts: Array = [base.duplicate_state()]
+	for i in range(starts - 1):
+		from_starts.append(perturbed(base, course, rng))
+	var repair_rng := RandomNumberGenerator.new()
+	repair_rng.seed = 3000 + number
+	var repair_starts: Array = []
+	for i in range(repairs):
+		repair_starts.append(perturbed(base, course, repair_rng))
+	var started := Time.get_ticks_msec()
+	var steps_before: int = sim.steps
+	var planner := DotBotSurfPlanner.new()
+	planner.seconds = RIDE_SECONDS
+	planner.width = _opt(args, "--width", planner.width)
+	var repair_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
+	var repair_pilot := DotBotSurfPilot.new()
+	repair_pilot.rolling = not args.has("--no-rolling")
+	var resume := args.has("--resume")
+	var keep: Dictionary = _read(path).get("stages", {}).get(str(number), {}) if resume else {}
+	var built: Dictionary = _build_saving(planner, from_starts, repair_starts, rounds, course, sim, repair_sim,
+		func(line: String) -> void: print("[surf]   " + line), repair_pilot, keep,
+		func(snapshot: Dictionary) -> void:
+			_save_stage(path, id, number, course, snapshot, guide_units if guide_at >= 0 else
+				_read(path).get("stages", {}).get(str(number), {}).get("guide", []),
+				{"starts": starts, "repairs": repairs, "rounds": snapshot["rounds"], "searches": snapshot["searches"],
+				"seconds": snappedf((Time.get_ticks_msec() - started) / 1000.0, 0.1)}))
+	var rides: PackedFloat32Array = built["rides"]
+	var seconds: Array = built["seconds"]
+	var spent := (Time.get_ticks_msec() - started) / 1000.0
+	var motor_ticks: int = sim.steps - steps_before + repair_sim.steps
+	print("[surf]   planning: %d searches found %d rides, failures per repair round %s; %.1f s wall, %d motor ticks (%.1f us each), %d branches" % [
+		built["searches"], built["found"], str(built["rounds"]), spent, motor_ticks,
+		float(sim.usec + repair_sim.usec) / maxf(1.0, float(sim.steps + repair_sim.steps)), planner.expanded])
+	if seconds.is_empty():
+		return false
+	print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
+	return true
+
+
+## Rides the cached line `runs` times from perturbed starts, in simulation.
+func _simulated_rides(runs: int, number: int, base: DotFpsState, course: DotBotSurfCourse, bot: G2GPlayer,
+		sim: DotFpsSimulator, pilot: DotBotSurfPilot) -> void:
+	if runs <= 0:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5000 + number
+	var ok := 0
+	var times: Array[float] = []
+	var steps_before: int = sim.steps
+	var usec_before: int = sim.usec
+	var ridden := 0
+	var misses: Array[String] = []
+	var ride_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
+	for i in range(runs):
+		var r: Dictionary = pilot.ride(perturbed(base, course, rng), ride_sim, int(RIDE_SECONDS / sim.delta))
+		ridden += int(r["ticks"])
+		if int(r["event"]) == DotBotSurfCourse.EVENT_GOAL:
+			ok += 1
+			times.append(float(r["ticks"]) * sim.delta)
+		elif misses.size() < 12:
+			var last: DotFpsState = (r["trail"] as Array).back()
+			misses.append("%s %.2f s near %s u" % ["fell" if int(r["event"]) != DotBotSurfCourse.EVENT_NONE else "stalled",
+				float(r["ticks"]) * sim.delta, str(G2GUnits.vector_to_units(last.position).round())])
+	var lookahead: int = sim.steps - steps_before
+	print("[surf]   simulated rides: %d of %d reached the goal (%.0f%%), %s; lookahead %.2f motor ticks per ridden tick (%.0f us of motor per ridden tick); %d futures, %d vetoes, %d hopeless, %d resyncs" % [
+		ok, runs, 100.0 * ok / maxf(1.0, runs), _spread(times),
+		float(lookahead) / maxf(1.0, ridden), float(sim.usec - usec_before) / maxf(1.0, ridden),
+		pilot.checks, pilot.vetoes, pilot.hopeless, pilot.resyncs])
+	if not misses.is_empty():
+		print("[surf]     misses: %s" % "; ".join(misses))
 
 
 ## `--chain`: see [method _run]. Returns the exit code.

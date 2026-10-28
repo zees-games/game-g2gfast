@@ -44,40 +44,8 @@ func _run() -> void:
 	cfg.minutes = float(_arg("minutes", str(cfg.minutes)))
 	cfg.bots = int(_arg("bots", str(cfg.bots)))
 
-	var g2g_config := G2GConfig.new()
-	g2g_config.records_directory = ""
-	g2g_config.map_seconds = 0.0
-	g2g_config.initial_map = &"bhop_g2g_intro"
-	_game = G2GGame.new()
-	_game.config = g2g_config
-	_game.external_tick = true
-	add_child(_game)
-	for _i in range(120):
-		await get_tree().process_frame
-		if _game.maps != null and _game.maps.current != null:
-			break
-	if _game.maps == null or _game.maps.current == null:
-		_fail("the game never loaded a map")
+	if not await _boot(map_id) or not await _spawn_bots(cfg):
 		return
-	if map_id != _game.maps.current.id:
-		var changed: DotResult = await _game.change_map(map_id)
-		if not changed.ok:
-			_fail("map %s: %s" % [map_id, changed.error.message])
-			return
-	for i in range(cfg.bots):
-		if _game.bots.call("add_bot", "bot%d" % (i + 1)) == null:
-			_fail("bot %d refused" % (i + 1))
-			return
-	# The route plan is stepped by the game's own ticks (2 ms each), not by frames, so tick until it
-	# is done: a bot aimed straight at the finish meanwhile is the plan's wait, not a stuck bot.
-	for _i in range(40):
-		await get_tree().process_frame
-	var planned := 0
-	while _game.bots.get("_planning") and planned < MAX_PLAN_TICKS:
-		_step(0.0)
-		planned += 1
-		if planned % 32 == 0:
-			await get_tree().physics_frame
 
 	var watch := DotSpawnWatch.new()
 	watch.rules.enabled = true
@@ -114,6 +82,50 @@ func _run() -> void:
 		push_error("could not write %s" % path)
 	await _release_game()
 	get_tree().quit(0 if report["ok"] else 1)
+
+
+## Builds the game on its first map, then switches to [param map_id]. False once a failure is reported.
+func _boot(map_id: StringName) -> bool:
+	var g2g_config := G2GConfig.new()
+	g2g_config.records_directory = ""
+	g2g_config.map_seconds = 0.0
+	g2g_config.initial_map = &"bhop_g2g_intro"
+	_game = G2GGame.new()
+	_game.config = g2g_config
+	_game.external_tick = true
+	add_child(_game)
+	for _i in range(120):
+		await get_tree().process_frame
+		if _game.maps != null and _game.maps.current != null:
+			break
+	if _game.maps == null or _game.maps.current == null:
+		_fail("the game never loaded a map")
+		return false
+	if map_id != _game.maps.current.id:
+		var changed: DotResult = await _game.change_map(map_id)
+		if not changed.ok:
+			_fail("map %s: %s" % [map_id, changed.error.message])
+			return false
+	return true
+
+
+## Adds the bots and ticks until the route plan is done. False once a failure is reported.
+func _spawn_bots(cfg: DotBotSoakConfig) -> bool:
+	for i in range(cfg.bots):
+		if _game.bots.call("add_bot", "bot%d" % (i + 1)) == null:
+			_fail("bot %d refused" % (i + 1))
+			return false
+	# The route plan is stepped by the game's own ticks (2 ms each), not by frames, so tick until it
+	# is done: a bot aimed straight at the finish meanwhile is the plan's wait, not a stuck bot.
+	for _i in range(40):
+		await get_tree().process_frame
+	var planned := 0
+	while _game.bots.get("_planning") and planned < MAX_PLAN_TICKS:
+		_step(0.0)
+		planned += 1
+		if planned % 32 == 0:
+			await get_tree().physics_frame
+	return true
 
 
 ## Frees the game before quitting: a map still loaded at quit aborted the process on surf_greensway.
