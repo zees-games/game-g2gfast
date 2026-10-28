@@ -1,15 +1,13 @@
-extends Node3D
+extends "g2g_game_content.gd"
 
 const G2GAvatars := preload("g2g_avatars.gd")
 const G2GBspMap := preload("g2g_bsp_map.gd")
 const G2GCamera := preload("g2g_camera.gd")
 const G2GCombat := preload("g2g_combat.gd")
-const G2GConfig := preload("g2g_config.gd")
 const G2GEffects := preload("g2g_effects.gd")
 const G2GEvents := preload("net/g2g_events.gd")
 const G2GHunters := preload("g2g_hunters.gd")
 const G2GMap := preload("g2g_map.gd")
-const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GMapMechanics := preload("g2g_map_mechanics.gd")
 const G2GMovement := preload("g2g_movement.gd")
 const G2GPaths := preload("g2g_paths.gd")
@@ -39,7 +37,6 @@ const G2GUnits := preload("g2g_units.gd")
 ## unit boundary, the moment a cvar change reaches thirty players — and the joins are
 ## where every bug in this family has been.
 
-const CHANNEL := "g2g"
 
 ## The registry name a dot-server module finds this under.
 const CONFIG_GAME_ID := "game-g2gfast"
@@ -52,8 +49,6 @@ const GHOST_SESSION := 900000001
 
 signal map_ready(map: DotMapDef)
 
-## The map catalogue was re-read from the disk. Carries `added`, `removed`, `total`.
-signal maps_rescanned(change: Dictionary)
 signal run_filed(player_id: StringName, run: DotTimerRun, rank: int, reason: String)
 
 ## Where a player stands on the board they are on: [code]{pb, wr, rank, total}[/code],
@@ -83,7 +78,6 @@ signal movement_changed(config: G2GConfig)
 signal player_added(player: G2GPlayer)
 signal player_removed(player_id: StringName)
 
-@export var config: G2GConfig = null
 
 ## A JSON file layered over [member config]'s defaults, or empty.
 @export var config_file: String = ""
@@ -128,38 +122,18 @@ func block_side(id: Variant) -> Variant:
 ## shape every headless netcode test in this family takes.
 @export var service_scope: StringName = &""
 
-## The dot-cloud client to fetch a missing map through, by registry name.
-##
-## [b]Looked up rather than exported as a node, and optional.[/b] A map is content and
-## the browser build no longer carries any: `maps/imported/` is excluded from the web
-## export, because shipping sixty-six megabytes of maps to every player so that most of
-## them can play one is the opposite of a delivery network. A build that DOES carry its
-## maps -- a dedicated server run from source, every headless suite -- finds them in
-## [constant G2GMapCatalogue.IMPORTED_ROOTS] and never reaches this.
-##
-## Empty, or a registry with nothing under it, is not an error. It means this build can
-## only play maps it already has, which is exactly what a server run from source is.
-@export var map_content_service: StringName = &"dot_cloud_client"
 
 ## The dot-server game manager to read a loading game's descriptor from, by registry name.
 ## See [method _adopt_descriptor_owner]. Nothing under it is normal: a suite, a client.
 @export var game_manager_service: StringName = DotGameManager.SERVICE
 
-## Content ids already fetched and registered, so a rotation that comes back round does
-## not ask dot-cloud again. dot-cloud is itself idempotent; this saves the await.
-var _map_content_seen: Dictionary = {}
 
-## Maps the game's descriptor names in `maps:`, pinned by the server's installer:
-## map id -> [content id, version]. See [method _adopt_descriptor_maps].
-var _pinned_maps: Dictionary = {}
 
 ## Map ids offered on M although this build has not fetched them: choosing one downloads it
 ## (see [method ensure_map_content]). A solo game in the browser sets it ([G2GSoloMaps]);
 ## empty everywhere else, so desktop and servers list what they hold.
 var offered_maps: PackedStringArray = PackedStringArray()
 
-## Whether [method fetch_content_maps] is already sweeping the configured set.
-var _fetching_content_maps: bool = false
 
 var authoritative: bool = true
 
@@ -173,7 +147,6 @@ var rotation_file: DotMapRotationFile = null
 ## Where [member rotation_file] was read from, or "" when there was no file.
 var rotation_source: String = ""
 
-var maps: DotMapSession = null
 
 ## The map-change protocol's host half, when this game has clients to take with it.
 ##
@@ -841,25 +814,18 @@ func _build_spectate() -> void:
 ## Built and off costs a node and three signal connections.
 func _build_layers() -> void:
 	if not authoritative:
-		# Spectating is the one layer a client needs a copy of: the camera is drawn
-		# here, from the poses this client has. Until 2026-10-08 this return came first
-		# and a client had no spectator manager at all, so `_drive_spectator_camera`
-		# returned on its first line every frame and `!spec` moved no client's camera.
+		# Spectating is the one layer a client needs: its camera is drawn from this client's poses.
 		_build_spectate()
 		return
 
-	# Loaded, not preloaded (g2g_bots.gd preloads this file), and rebased: a bare res:// path
-	# names the host project's root in a delivered pack, so a delivered server had no bots and
-	# stopped building its layers here.
+	# Loaded (g2g_bots.gd preloads this file) and rebased: a bare res:// path misses in a pack.
 	bots = (load(G2GPaths.rebase("res://game/g2g_bots.gd")) as GDScript).new()
 	bots.name = "Bots"
 	bots.set("game", self)
 	add_child(bots)
 
 	if config.deathmatch or config.hunters:
-		# The hunters need somewhere to put damage, so combat is built for either.
-		# A hunter that could hurt a player the server is not tracking would be doing
-		# damage nothing could heal, display or respawn away.
+		# The hunters need combat to put damage somewhere, so it is built for either.
 		combat = G2GCombat.new()
 		combat.name = "Combat"
 		combat.game = self
@@ -890,9 +856,7 @@ func _build_layers() -> void:
 			hunters.queue_free()
 			hunters = null
 
-	# Built whatever else is on. A player watching a runner needs no combat, no hunters
-	# and no props, and refusing them the camera because the server is a plain timer
-	# server would be refusing it on every server this game was written for.
+	# Built whatever else is on: a plain timer server still lets a player watch a runner.
 	_build_spectate()
 
 	if config.deathmatch or config.hunters:
@@ -1570,220 +1534,6 @@ func change_map(id: StringName) -> DotResult:
 		return await map_sync.change_to(id)
 
 	return await maps.change_to(id)
-
-
-## Make sure the map [param id] is something the catalogue can load, fetching it if not.
-##
-## [b]The map id IS the content id.[/b] That is a convention rather than a mechanism, and
-## it is the one the publisher already follows: `dist/surf_mesa/` holds `surf_mesa.json`
-## and `surf_mesa.bin`, and the manifest names `surf_mesa` as its content id. Anything
-## else would need a second registry mapping one to the other, maintained in a third
-## place, to express a relationship that is already true.
-##
-## Succeeds and does nothing in three cases that are all normal: the catalogue already
-## has the map (a build that ships it, or a pack fetched earlier), there is no dot-cloud
-## client (a server run from source), or the map is one of the built-in scenes.
-func ensure_map_content(id: StringName) -> DotResult:
-	if id == &"":
-		return DotResult.fail(DotError.CODE_INVALID, "No map id.")
-
-	if maps != null and maps.catalogue != null and maps.catalogue.has(id):
-		return DotResult.success(null)
-
-	if _map_content_seen.has(id):
-		return DotResult.success(null)
-
-	var cloud: Object = DotRegistry.get_service(map_content_service)
-
-	if cloud == null or not cloud.has_method("ensure"):
-		# Not an error, and deliberately not a warning either. `change_to` is about to
-		# refuse the id with a message naming the map, which is the better one to read.
-		return DotResult.success(null)
-
-	DotLog.info(CHANNEL, "fetching a map this build does not have", {"map": String(id)})
-
-	# At the version the installer pinned when the descriptor names the map; otherwise by
-	# the owner cvar, at whatever the origin calls latest (a map typed at the console).
-	var pinned: Array = _pinned_maps.get(id, [])
-	var got: Variant
-
-	if not pinned.is_empty():
-		got = await cloud.call("ensure", StringName(pinned[0]), pinned[1])
-	else:
-		# Unpinned (solo, or a map typed at the console): ask the origin which version is
-		# newest. `ensure` with no version means `0.0.0`, and the shell's fallback layout
-		# answers that with an unversioned manifest a publish never updates -- a solo game
-		# was handed a surf_mesa from weeks earlier while latest.json named today's.
-		var content_id := config.map_content_id(id)
-		var newest := await _latest_map_version(cloud, content_id)
-		got = await cloud.call("ensure", StringName(content_id), newest)
-
-	if not (got is DotResult):
-		return DotResult.fail(
-			DotError.CODE_INTERNAL,
-			"The content client answered with something else."
-		)
-
-	var res: DotResult = got
-
-	if not res.ok:
-		return res.wrap("could not fetch the map %s" % id)
-
-	# `ensure` returns the entry scene path when the manifest names one and the mount
-	# prefix when it does not. A map pack names `<id>.json`, so this is normally the
-	# first -- and the directory is what the catalogue wants either way.
-	var where := str(res.value)
-	var dir := where.get_base_dir() if where.ends_with(".json") else where
-	var map := G2GMapCatalogue.at_directory(id, dir)
-
-	if map == null:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
-			"%s was fetched but does not look like a map." % id
-		)
-
-	_mark_delivered(map, dir)
-
-	var added := maps.catalogue.add(map)
-
-	if not added.ok:
-		return added
-
-	_map_content_seen[id] = true
-	DotLog.info(CHANNEL, "a map was added from delivered content", {
-		"map": String(id), "version": map.content_version, "dir": dir
-	})
-	return DotResult.success(null)
-
-
-## The version the origin's `latest.json` names for [param content_id], or "" when no base
-## answers (an origin without the pointer, or a client with no HTTP bases) -- "" is the
-## old unversioned lookup, so a failure here costs nothing that worked before.
-func _latest_map_version(cloud: Object, content_id: String) -> String:
-	if not cloud.has_method("resolved_http_base_urls"):
-		return ""
-
-	var http := DotHttp.new()
-	http.name = "MapLatest"
-	add_child(http)
-
-	var version := ""
-
-	for base in cloud.call("resolved_http_base_urls"):
-		var url := "%s/%s/latest.json" % [str(base).rstrip("/"), content_id]
-		var res: DotResult = await http.get_json(url)
-
-		if res.ok and res.value is Dictionary:
-			version = str((res.value as Dictionary).get("version", ""))
-			if version != "" and not version.contains("/") and not version.contains(".."):
-				break
-			version = ""
-
-	http.queue_free()
-	DotLog.debug(CHANNEL, "newest published map version", {"content": content_id, "version": version})
-	return version
-
-
-## Says, on a map that came out of a dot-cloud mount, which content and version it is.
-##
-## [b]So that a client can be sent it.[/b] Without a content id a map is, to dot-map, a map
-## in this build, and a client that does not have it refuses it — correctly: a host that
-## could name a local map could name anything in the client's build. With one, the client
-## fetches that content from its own origin and accepts the announce because the scene is
-## [constant G2GMapCatalogue.IMPORTED_SCENE], which it lists as a trusted template, and the
-## manifest is inside the pack (see the bridge's "Map changes"). The mount is
-## [code]res://dot_cloud/<content_id>/<version>[/code], so both come off the directory
-## rather than out of a second record that could disagree with it.
-func _mark_delivered(map: DotMapDef, dir: String) -> void:
-	# `res://dot_cloud/<content id>/<version>`, where the content id is the map id or,
-	# with an owner, `<owner>/<map id>` -- read off the path rather than rebuilt from the
-	# config, so a map fetched under one owner is not re-announced under another if an
-	# operator changes the cvar mid-session.
-	var root := "res://dot_cloud/"
-	var base := dir.rstrip("/")
-	if not base.begins_with(root):
-		return                            # a directory on disk, not a mount
-	var rest := base.substr(root.length())
-	var cut := rest.rfind("/")
-	if cut <= 0:
-		return
-	var content := rest.substr(0, cut)
-	var version := rest.substr(cut + 1)
-	if version.is_empty() or (content != String(map.id) and not content.ends_with("/" + String(map.id))):
-		return
-	map.content_id = StringName(content)
-	map.content_version = version
-
-
-## Fetch every id in [member G2GConfig.content_maps] into the catalogue, in the background.
-##
-## [b]Deliberately not awaited by the caller, and that is the one thing to know about
-## it.[/b] Calling a coroutine without `await` is normally this family's own mistake —
-## it returns a [GDScriptFunctionState] and the work silently does not happen where the
-## caller thought it did. Here the work DOES happen, on its own, and being made to wait
-## for it is the bug: this is up to 66 MB over the network, and a server that blocked
-## its boot on it would sit unreachable for a minute on a slow link with nothing in the
-## log to say why. So it is started and left, and the catalogue grows under a running
-## server exactly the way [method rescan_maps] already lets it.
-##
-## One at a time rather than eight at once. They share a link and a content client, and
-## eight concurrent transfers finish no sooner while making the progress lines — the
-## operator's only view of a long download — interleave into nonsense.
-##
-## Re-entrant calls are dropped rather than queued: the cvar that sets this is settable
-## live, and an operator pasting a list twice should not start a second sweep of the
-## same eight maps.
-func fetch_content_maps() -> void:
-	if _fetching_content_maps or config == null or config.content_maps.is_empty():
-		return
-
-	_fetching_content_maps = true
-
-	# One frame before the first request, because a descriptor's cvars are applied in one
-	# pass in FILE order: `sv_content_maps` listed above `sv_map_content_owner` would
-	# start this sweep before the owner arrived and fetch every map from the unowned
-	# path. Waiting a frame lets the whole pass land, whatever order it was written in.
-	if is_inside_tree():
-		await get_tree().process_frame
-
-	var wanted := config.content_maps
-	var added: Array[StringName] = []
-	var failed := 0
-
-	DotLog.info(CHANNEL, "fetching the configured map set", {"maps": wanted.size()})
-
-	for raw in wanted:
-		var id := StringName(raw.strip_edges())
-		if id == &"":
-			continue
-		if maps != null and maps.catalogue != null and maps.catalogue.has(id):
-			continue
-
-		var res: DotResult = await ensure_map_content(id)
-
-		# `ensure_map_content` succeeds and does nothing when there is no content client,
-		# so "ok" is not "arrived" -- the catalogue is what says whether it arrived, and
-		# a server with no content origin should say so once rather than eight times.
-		if not res.ok:
-			failed += 1
-			DotLog.warn(CHANNEL, "a configured map could not be fetched",
-				{"map": String(id), "why": res.error.message})
-		elif maps != null and maps.catalogue != null and maps.catalogue.has(id):
-			added.append(id)
-
-	_fetching_content_maps = false
-
-	var total := maps.catalogue.size() if maps != null and maps.catalogue != null else 0
-	DotLog.info(CHANNEL, "the configured map set is in", {
-		"added": added.size(), "failed": failed, "catalogue": total,
-	})
-
-	# The same signal a disk rescan emits, because to everything downstream -- the
-	# rotation's pool, a vote's ballot, a client's map list -- this IS a rescan: the set
-	# of maps this server can load just changed, and nothing cares which side of the
-	# network they came from.
-	var removed: Array[StringName] = []
-	maps_rescanned.emit({"added": added, "removed": removed, "total": total})
 
 
 func _on_map_changing(_from: DotMapDef, _to: DotMapDef) -> void:
