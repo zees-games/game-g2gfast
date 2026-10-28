@@ -28,7 +28,7 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 220
+const CHECKS := 224
 
 ## Checks a section declined to run, counted so the total still adds up to [constant CHECKS].
 var _skipped := 0
