@@ -2919,6 +2919,30 @@ def dead_teleports(z):
     return dropped + noclient
 
 
+def sealed_teleports(z, rule):
+    """Drop the teleports aimed at a destination that is a room with no way out.
+
+    A fall into a sealed destination is a trap this game cannot undo: the map's player
+    leaves such a room with `kill`, an exit nobody here has. surf_ski_2's weapon room is
+    walled and roofed with no door at all, and a floor pad aimed at it left every faller
+    stuck. Opt-in and by destination name (a sealed room can be a puzzle), and a name that
+    no teleport aims at stops the import.
+    """
+    names = [str(n).strip().lower() for n in rule.get("targets", [])]
+    used = collections.Counter()
+    for i, e in list(z.entities("trigger_teleport")):
+        target = e.get("target", "").strip().lower()
+        if target in names:
+            z.claimed.add(i)
+            used[target] += 1
+    stale = [n for n in names if not used[n]]
+    if stale:
+        raise ValueError("sealed_teleports names destinations no teleport aims at: %s" % ", ".join(stale))
+    z.notes.append("%d sealed-room teleports dropped (%s)"
+                   % (sum(used.values()), ", ".join("%s x%d" % kv for kv in sorted(used.items()))))
+    return sum(used.values())
+
+
 def round_teleports(z, rule):
     """Drop the teleports a round's logic switches on, by name.
 
@@ -3014,6 +3038,8 @@ def classify_zones(bsp, min_thickness=MIN_ZONE_THICKNESS, doc=None, solids=None,
         conditional_teleports(z, doc["conditional_teleports"])
     if "round_teleports" in doc:
         round_teleports(z, doc["round_teleports"])
+    if "sealed_teleports" in doc:
+        sealed_teleports(z, doc["sealed_teleports"])
     if "doorways" in doc:
         doorway_teleports(z, doc["doorways"])
     implied_zones(z)

@@ -8,6 +8,10 @@
    "note": "The jail's door. The catch-all floor teleport (trigger_teleport aimed at `jailed`) puts every fallen player in a roofed cell whose only way out is this door, which the map's `jbutton` opens; the importer runs no outputs, so the door stayed shut and a player or bot that fell was stuck for good. Opened, a fall is a drop back into the fight. The keypad's secret_door is left shut: it is a puzzle, and its room has its own exits."
   }
  ],
+ "sealed_teleports": {
+  "targets": ["weapon_room"],
+  "note": "The weapon room is walled and roofed with no door or output (checked in the BSP: floor, four concrete walls, roof brush); the floor pad at the lobby aims at it, so a faller was stuck for good. Dropped, the catch-all jail teleport takes that fall."
+ },
  "author": "Massive Boredom and Mario",
  "attribution": {
   "author": "Massive Boredom and Mario",
