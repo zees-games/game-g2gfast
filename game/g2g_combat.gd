@@ -1,6 +1,5 @@
-extends Node
+extends "g2g_combat_kit.gd"
 
-const G2GArsenal := preload("g2g_arsenal.gd")
 const G2GGame := preload("g2g_game.gd")
 const G2GPlayer := preload("g2g_player.gd")
 const G2GStats := preload("g2g_stats.gd")
@@ -246,26 +245,6 @@ func podium_rows() -> Array:
 	return rows
 
 
-## The two weapons everybody starts with.
-static func _give_default(arsenal: DotWeaponArsenal) -> void:
-	arsenal.clear()
-	arsenal.give(G2GArsenal.ITEM_KNIFE)
-	arsenal.give(G2GArsenal.ITEM_DEAGLE)
-
-
-## The shared weapon table, built and validated once for the whole process.
-static var _shared_catalogue: DotWeaponCatalogue = null
-
-
-static func catalogue() -> DotWeaponCatalogue:
-	if _shared_catalogue == null:
-		_shared_catalogue = G2GArsenal.weapon_catalogue()
-		var res := _shared_catalogue.validate()
-		if not res.ok:
-			push_error(res.error.message)
-	return _shared_catalogue
-
-
 ## Gives a player the weapons their saved loadout names.
 ##
 ## [b]This is the entire dot-loadout seam, and without it the manager was a manager of
@@ -426,9 +405,7 @@ func _arm(player: G2GPlayer) -> void:
 	)
 
 	if not opened.ok:
-		# Every refusal here is a bug rather than a condition: this player is already
-		# armed (guarded above), or their node is already an entity. Arming anyway
-		# would register a second health record against a body that has one.
+		# Always a bug (already armed, or already an entity); arming anyway doubles the health.
 		DotLog.error(CHANNEL, "could not open an entity for a player", {
 			"player": String(player.player_id),
 			"why": opened.error.message,
@@ -437,13 +414,7 @@ func _arm(player: G2GPlayer) -> void:
 
 	var entity: int = (opened.value as DotEntityHandle).id
 
-	var health := DotHealth.new()
-	health.name = "Health"
-	health.max_health = 100.0
-	health.max_armour = 100.0
-	health.regen_per_second = 0.0
-	health.set_tick_rate(game.tick_rate)
-	player.add_child(health)
+	var health := _make_health(player)
 
 	var hitboxes := DotHitboxSet.new()
 	hitboxes.name = "Hitboxes"
@@ -484,12 +455,7 @@ func _arm(player: G2GPlayer) -> void:
 		"arsenal": arsenal,
 	}
 
-	# The default, immediately, and their saved loadout a frame later.
-	#
-	# [b]A loadout comes from a store and arming may not wait on one.[/b] The same
-	# call game-arena makes about a respawn: the player is in the world with something
-	# to shoot, and what they chose arrives when it arrives. An unreachable store is a
-	# reason to hand somebody a knife, not a reason to leave them unarmed.
+	# The default now, the saved loadout a frame later: arming never waits on a store.
 	_give_default(arsenal)
 	_apply_loadout(player.player_id)
 
@@ -499,39 +465,19 @@ func _arm(player: G2GPlayer) -> void:
 		match_node.start(game.current_tick())
 
 
-static func _add_hitboxes(set_node: DotHitboxSet) -> void:
-	var head := DotHitbox.new()
-	head.name = "Head"
-	head.group = DotHitGroup.HEAD
-	head.shape = DotHitbox.Shape.SPHERE
-	head.radius = 0.15
-	head.position = Vector3(0.0, 1.62, 0.0)
-	# Higher than the chest's, so the surface the two share resolves to the head every
-	# time rather than about half the time.
-	head.precedence = 10
-	set_node.add_child(head)
-
-	var chest := DotHitbox.new()
-	chest.name = "Chest"
-	chest.group = DotHitGroup.CHEST
-	chest.shape = DotHitbox.Shape.CAPSULE
-	chest.radius = 0.30
-	chest.height = 1.05
-	chest.position = Vector3(0.0, 0.98, 0.0)
-	set_node.add_child(chest)
-
-	var legs := DotHitbox.new()
-	legs.name = "Legs"
-	legs.group = DotHitGroup.LEG
-	legs.shape = DotHitbox.Shape.CAPSULE
-	legs.radius = 0.24
-	legs.height = 0.9
-	legs.position = Vector3(0.0, 0.45, 0.0)
-	set_node.add_child(legs)
-
-
 ## A player's arsenal, or null when they are not armed. For the admin tools' give and
 ## strip; [method health_of] and [method entity_for] already answer the rest.
+func _make_health(player: G2GPlayer) -> DotHealth:
+	var health := DotHealth.new()
+	health.name = "Health"
+	health.max_health = 100.0
+	health.max_armour = 100.0
+	health.regen_per_second = 0.0
+	health.set_tick_rate(game.tick_rate)
+	player.add_child(health)
+	return health
+
+
 func arsenal_of(player_id: StringName) -> DotWeaponArsenal:
 	return (_kit.get(player_id, {}) as Dictionary).get("arsenal") as DotWeaponArsenal
 
@@ -594,17 +540,8 @@ func tick(delta: float) -> void:
 		health.tick(game.current_tick(), delta)
 		manager.set_authoritative_origin(int(kit["entity"]), player.eye_position())
 
-		# [b]`has_meta` first, never `get_meta(key, null)`.[/b] A null default is the
-		# engine's "no default", so a missing key is an ERROR with a backtrace rather
-		# than a null — once a tick for every armed player who has not sent a command
-		# yet, which was 1,146 of them in one `dedicated` run.
-		#
-		# [b]And consumed, so a tick with no fresh input does not fire.[/b] dot-net
-		# skips `_net_apply_input` for a tick whose packet never arrived, so a command
-		# left in place is the last trigger replayed until the next packet — which is
-		# exactly the held trigger surviving a dropped packet that `G2GPlayerNet`
-		# promises it does not. `previous` is left alone on such a tick, so a trigger
-		# that really was held across the gap is not read as a fresh press either.
+			# has_meta first: a null default is an ERROR with a backtrace, once a tick per armed player.
+		# Consumed so a dropped packet does not replay the last trigger; `previous` stays put.
 		if not player.has_meta("g2g_fire"):
 			continue
 
@@ -617,9 +554,7 @@ func tick(delta: float) -> void:
 		command.yaw = state.yaw
 		command.pitch = state.pitch
 
-		# Pushed in from the simulated state, never read out of a rendered one: an
-		# interpolated position differs between client and server by design, and
-		# feeding it to the spread makes the spread differ too.
+		# From the simulated state, never a rendered one: interpolation differs per end.
 		var ctx := DotWeaponContext.make(
 			int(kit["entity"]),
 			game.current_tick(),
@@ -804,20 +739,6 @@ func decide_death(player: G2GPlayer, damage: DotDamage) -> DotPlayerDeath:
 		DotPlayerDeath.seed_of(entity_for(player.player_id), game.current_tick()),
 		_weapon_defs.get(damage.weapon_id)
 	)
-
-
-# --- Ids -------------------------------------------------------------------
-
-## The account number inside a player id. `u123` becomes 123.
-##
-## [b]Not an entity id, and the rename is the point.[/b] This function used to be called
-## `entity_id_for` and had three callers doing two different jobs: two wanted the
-## account number — a loadout's filename and `DotServer.session_by_userid` — and one
-## wanted the combat handle. They were the same number, so nothing was wrong, and
-## nothing would have told anybody the day they stopped being.
-static func userid_of(player_id: StringName) -> int:
-	var text := String(player_id)
-	return text.substr(1).to_int() if text.begins_with("u") else text.to_int()
 
 
 ## The combat entity id for a player, or 0 when they have no kit.
