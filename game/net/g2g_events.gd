@@ -90,6 +90,9 @@ enum Kind {
 	## The deathmatch ended: the killcam's length and the top of the board, to everybody.
 	## Appended.
 	MATCH_END,
+	## A weapon went off, to everybody: the shooter's session id, the weapon and where. The
+	## other clients play its report (and the room tail, by their own roof). Appended.
+	SHOT,
 }
 
 enum Ask {
@@ -731,6 +734,24 @@ static func read_death(reader: DotNetReader) -> Dictionary:
 		out["death"] = DotPlayerDeath.read_from(reader)
 	out["ok"] = reader.ok()
 	return out
+
+
+## [constant Kind.SHOT]'s body.
+static func write_shot(shooter: int, weapon: String, at: Vector3) -> PackedByteArray:
+	var writer := _w()
+	writer.write_varint(maxi(shooter, 0))
+	writer.write_string(weapon, 32)
+	writer.write_float32(at.x)
+	writer.write_float32(at.y)
+	writer.write_float32(at.z)
+	return writer.to_bytes()
+
+
+static func read_shot(reader: DotNetReader) -> Dictionary:
+	var shooter := reader.read_varint()
+	var weapon := reader.read_string(32)
+	var at := Vector3(reader.read_float32(), reader.read_float32(), reader.read_float32())
+	return {"ok": reader.ok(), "shooter": shooter, "weapon": weapon, "at": at}
 
 
 ## [constant Kind.HIT]'s body. The point is three float32s, not a range: imported maps run

@@ -848,6 +848,13 @@ func _build_netcode() -> DotResult:
 			killcam.note_kill(killer, victim, weapon, head)
 	)
 	bridge.match_end_received.connect(_match_over)
+	# Everybody else's shots: the local player's own is predicted by the combat layer here.
+	bridge.shot_received.connect(func(who: StringName, weapon: StringName, at: Vector3) -> void:
+		if player != null and who == player.player_id:
+			return
+		var cam: Camera3D = player.camera.active() if player != null and player.camera != null else null
+		presentation.on_weapon_used(weapon, at, cam.global_position if cam != null else at)
+	)
 	# The server's sv_ragdoll* set: this end draws the bodies. An older shell's link cannot
 	# say, and the rules keep their defaults.
 	if link != null:
@@ -1040,6 +1047,10 @@ func _process(delta: float) -> void:
 		var eye := camera.global_position if camera != null else Vector3.ZERO
 		var forward := -camera.global_transform.basis.z if camera != null else Vector3.FORWARD
 		presentation.present(delta, eye, forward)
+		var stack_now := game.player_stack
+		if stack_now != null and stack_now.physics != null and stack_now.physics.layout != null and player != null:
+			presentation.follow_roof(delta, eye, player.get_world_3d().direct_space_state,
+				stack_now.physics.layout.mask_of([&"world"]))
 
 		if hud != null:
 			presentation.fit_chat_beside(hud.timer_rect())

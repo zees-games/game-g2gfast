@@ -37,7 +37,7 @@ const SNAPSHOT_RATE := 32
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 247
+const CHECKS := 248
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -1975,6 +1975,10 @@ func _test_end_of_match_wire() -> void:
 	_check(bool(shot["ok"]) and int(shot["killer"]) == 4097 and int(shot["victim"]) == 12
 			and shot["weapon"] == "deagle" and bool(shot["headshot"]),
 		"a KILL round-trips: killer, victim, weapon and the head", str(shot))
+	var fired := G2GEvents.read_shot(DotNetReader.new(G2GEvents.write_shot(7, "deagle", Vector3(1.5, -2.0, 3000.0))))
+	_check(bool(fired["ok"]) and int(fired["shooter"]) == 7 and fired["weapon"] == "deagle"
+			and (fired["at"] as Vector3).is_equal_approx(Vector3(1.5, -2.0, 3000.0)),
+		"a SHOT round-trips: shooter, weapon and where", str(fired))
 	var rows := [{"name": "Ana", "kills": 40, "deaths": 3}, {"name": "Bo", "kills": 12, "deaths": 20},
 		{"name": "Cy", "kills": 0, "deaths": 9}, {"name": "Dee", "kills": 0, "deaths": 0}]
 	var over := G2GEvents.read_match_end(DotNetReader.new(G2GEvents.write_match_end(7.0, rows)))

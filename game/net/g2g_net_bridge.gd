@@ -133,6 +133,9 @@ signal spectate_received(target: StringName, target_name: String)
 ## The server said who is watching [param target]. Client side.
 signal spectators_received(target: StringName, names: PackedStringArray)
 
+## Somebody's weapon went off (any player, the local one included); the server's word.
+signal shot_received(player: StringName, weapon: StringName, at: Vector3)
+
 ## A hit of this client's player that the server applied (see [signal G2GCombat.hit_landed]).
 signal hit_received(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool)
 
@@ -273,6 +276,7 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 		# hunters), so connecting once here sees every combat layer this game will have.
 		if game.combat != null:
 			game.combat.hit_landed.connect(_on_hit_landed)
+			game.combat.weapon_used.connect(broadcast_shot)
 			# Every death, a hunter's included, and every return: before this nothing
 			# connected player_killed, and a dead runner stood upright on every screen.
 			game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
@@ -301,6 +305,11 @@ func broadcast_death(id: StringName) -> void:
 	var victim: G2GPlayer = game.players.get(id)
 	if victim != null:
 		_broadcast(G2GEvents.Kind.DEATH, G2GEvents.write_death(session_of(id), victim.death))
+
+
+## To everybody: [param id]'s weapon went off at [param at]. Server side.
+func broadcast_shot(id: StringName, weapon: StringName, at: Vector3) -> void:
+	_broadcast(G2GEvents.Kind.SHOT, G2GEvents.write_shot(session_of(id), String(weapon), at))
 
 
 ## To everybody: a kill, for the final killcam. Server side.
@@ -1747,6 +1756,10 @@ func _on_event(message: DotNetMessage) -> void:
 				var killer := _player_key(int(shot["killer"])) if int(shot["killer"]) > 0 else &""
 				kill_received.emit(killer, _player_key(int(shot["victim"])), String(shot["weapon"]),
 					bool(shot["headshot"]))
+		G2GEvents.Kind.SHOT:
+			var fired := G2GEvents.read_shot(reader)
+			if bool(fired["ok"]):
+				shot_received.emit(_player_key(int(fired["shooter"])), StringName(str(fired["weapon"])), fired["at"])
 		G2GEvents.Kind.MATCH_END:
 			var over := G2GEvents.read_match_end(reader)
 			if bool(over["ok"]):

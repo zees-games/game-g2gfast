@@ -448,6 +448,20 @@ func _test_the_weapons_are_heard() -> void:
 	p.on_weapon_used(&"nothing", Vector3.ZERO, Vector3.ZERO)
 	_check(sink.played().size() == 5, "and an unknown weapon plays nothing")
 
+	sink.forget()
+	p.on_weapon_used(&"deagle", Vector3.ZERO, Vector3.ZERO)
+	p.present(0.2, Vector3.ZERO, Vector3.FORWARD)
+	_check(sink.count_of(&"weapon_magnum_far") == 0, "outdoors a deagle shot has no room tail")
+	p.shot_roof.feed(true)
+	p.shot_roof.feed(true)
+	_check(p.shot_roof.roofed, "two rays under a ceiling roof the listener")
+	sink.forget()
+	p.on_weapon_used(&"deagle", Vector3.ZERO, Vector3.ZERO)
+	p.present(0.01, Vector3.ZERO, Vector3.FORWARD)
+	_check(sink.count_of(&"weapon_magnum_far") == 0, "indoors the tail waits out its delay")
+	p.present(0.2, Vector3.ZERO, Vector3.FORWARD)
+	_check(sink.count_of(&"weapon_magnum_far") == 1, "and then the deagle's distant recording follows the report")
+
 	p.queue_free()
 	_done()
 

@@ -853,6 +853,7 @@ func present(delta: float, eye: Vector3, forward: Vector3) -> void:
 	fx.viewer_position = eye
 	fx.viewer_forward = forward
 	fx.advance(delta)
+	_advance_tails(delta)
 
 
 func camera_shake() -> Vector3:
@@ -908,6 +909,27 @@ const WEAPON_SOUNDS := {&"deagle": &"weapon_magnum_fire", &"knife": &"weapon_swi
 const FAR_METRES := 60.0
 
 
+## Whether the listener stands under a roof, stepped by the client each frame: roofed, a deagle shot is followed by its room tail.
+var shot_roof := DotAmbienceRoof.new()
+
+## Tails waiting out [constant DotWeaponSound.TAIL_DELAY]: `{id, at, left}`.
+var _tails: Array[Dictionary] = []
+
+
+## The listener's roof, once a frame.
+func follow_roof(delta: float, eye: Vector3, space: PhysicsDirectSpaceState3D, world_mask: int) -> void:
+	shot_roof.mask = world_mask
+	var _changed := shot_roof.step(delta, eye, space)
+
+
+func _advance_tails(delta: float) -> void:
+	for tail in _tails.duplicate():
+		tail.left -= delta
+		if tail.left <= 0.0:
+			_tails.erase(tail)
+			var _voice := audio.play_at(tail.id, tail.at, db_to_linear(DotWeaponSound.TAIL_GAIN_DB))
+
+
 ## A weapon went off at [param at]. Positional, so a shot across a course has a direction.
 func on_weapon_used(weapon: StringName, at: Vector3, listener: Vector3) -> void:
 	var id: StringName = WEAPON_SOUNDS.get(weapon, &"")
@@ -916,6 +938,8 @@ func on_weapon_used(weapon: StringName, at: Vector3, listener: Vector3) -> void:
 	if weapon == &"deagle" and listener.distance_to(at) > FAR_METRES:
 		id = &"weapon_magnum_far"
 	var _voice := audio.play_at(id, at)
+	if weapon == &"deagle" and shot_roof.roofed and DotWeaponSound.pick_tail(&"magnum", true) != null:
+		_tails.append({"id": &"weapon_magnum_far", "at": at, "left": DotWeaponSound.TAIL_DELAY})
 
 
 ## The trigger fell on nothing.
