@@ -1,11 +1,11 @@
 # size
 # Baselines only shrink: scripts/<gate> --update lowers or drops entries and refuses to add.
-examples/dedicated.gd	2000
+examples/dedicated.gd	1962
 examples/dedicated.gd::_boot	109
 examples/dedicated.gd::_test_browser	107
 examples/dedicated.gd::_test_live_tools	89
 examples/dedicated.gd::_test_map_menu_permissions	100
-examples/dedicated.gd::_test_modes	315
+examples/dedicated.gd::_test_modes	282
 examples/dedicated.gd::_test_query_and_chat	91
 examples/dedicated.gd::_test_records_follow_the_account	119
 examples/dedicated.gd::_test_services	120
@@ -68,7 +68,7 @@ game/g2g_presentation.gd	1049
 game/g2g_presentation.gd::schema	174
 game/g2g_presentation.gd::sound_catalogue	119
 game/g2g_services.gd::_build_chat	88
-game/net/g2g_net_bridge.gd	1775
+game/net/g2g_net_bridge.gd	1771
 maps/bhop_g2g_intro.gd::_build	83
 maps/bhop_g2g_intro.gd::build_zones	181
 maps/bhop_g2g_stages.gd	803
