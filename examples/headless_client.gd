@@ -408,6 +408,9 @@ class KillBridge extends Node:
 func _test_an_online_kill_view_poses_the_bodies() -> void:
 	_section("An online kill view poses the bodies the client drew")
 	var game := _client.game
+	var minted: int = _client.killcam_bodies._local_ids.size()
+	_check(_client.killcam_bodies.id_for(game, &"") == 0 and _client.killcam_bodies._local_ids.size() == minted,
+		"a world killer's empty key mints no local id")
 	var rival: G2GPlayer = game.add_player(&"u93", "Rival", false)
 	var kc := _client.killcam
 	var clock := [100.0]

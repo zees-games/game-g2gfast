@@ -1140,6 +1140,28 @@ func _test_modes() -> void:
 			if target != null:
 				game.remove_player(&"u4343")
 
+			# The server's own kill view clip names its killer by key, for a client that numbers no entity.
+			var kv_bridge: Object = server.modules.get_module("g2gfast").get("bridge")
+			var kv: Object = kv_bridge.get("killview") if kv_bridge != null else null
+			var prey := game.add_player(&"u4444", "Prey")
+			game.killview_rules.enabled = true
+			var kv_base: int = game.current_tick()
+			var kv_clips: Array = []
+			for kv_tick in range(kv_base - 60, kv_base + 60):
+				if kv_tick == kv_base:
+					game.combat.manager.apply_damage(DotDamage.make(entity, game.combat.entity_for(&"u4444"), 500.0, bullet))
+				if kv != null:
+					kv_clips.append_array(kv.tick(kv_tick))
+			var kv_info := {}
+			for clip: Dictionary in kv_clips:
+				var kv_read := DotKillViewClip.unpack(clip["body"])
+				if bool(kv_read["ok"]):
+					kv_info = kv_read["info"]
+			_check(prey != null and kv_clips.size() == 1 and kv_info.get("killer_key", "") == "u4242",
+				"a real kill's clip carries the killer's key, emitted by the server", str(kv_info))
+			game.killview_rules.enabled = false
+			game.remove_player(&"u4444")
+
 			# The ghost is deliberately not armed: it is a replay, it cannot be hurt,
 			# and registering it would put a name on the scoreboard that never dies
 			# and never leaves.

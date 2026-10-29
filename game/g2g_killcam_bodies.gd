@@ -40,7 +40,10 @@ func configure(host: DotKillcamHost, game: Node) -> void:
 
 
 ## A client's entity table is empty, so a player the server never numbered gets a local id.
+## An empty key (a world or environment killer) is nobody: 0.
 func id_for(game: Node, key: StringName) -> int:
+	if key == &"":
+		return 0
 	var id: int = game.entities.id_for_key(key)
 	if id == 0:
 		if not _local_ids.has(key):
