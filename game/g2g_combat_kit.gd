@@ -11,6 +11,15 @@ static func _give_default(arsenal: DotWeaponArsenal) -> void:
 	arsenal.clear()
 	arsenal.give(G2GArsenal.ITEM_KNIFE)
 	arsenal.give(G2GArsenal.ITEM_DEAGLE)
+	hold(arsenal, 2)
+
+
+## Holds [param slot] at once. `select` refuses while the arsenal is disabled, which would leave a
+## player (a bot presses no slot key) on the first weapon given, the knife.
+static func hold(arsenal: DotWeaponArsenal, slot: int, tick: int = 0) -> void:
+	if arsenal.has_method("equip") and arsenal.equip(slot):
+		return
+	var _selected := arsenal.select(slot, tick)
 
 
 ## The shared weapon table, built and validated once for the whole process.

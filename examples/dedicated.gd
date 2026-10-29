@@ -27,7 +27,7 @@ const G2GVote := preload("../game/g2g_vote.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 21
-const CHECKS := 244
+const CHECKS := 245
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -1164,6 +1164,12 @@ func _test_modes() -> void:
 				"an armed player has something to shoot with",
 				"%d slots" % arsenal_before.slots().size()
 			)
+
+			# A hand-out into a disabled arsenal (a freeze) still holds the sidearm, as a bot never presses a slot key.
+			arsenal_before.disabled = true
+			game.combat._give_default(arsenal_before)
+			_check(arsenal_before.current_slot() == 2, "a default kit given while disabled holds the sidearm, not the knife", str(arsenal_before.current_slot()))
+			arsenal_before.disabled = false
 
 			# [b]The trigger has to be released first, and that is not a workaround.[/b]
 			# The player spawns mid-switch — knife in hand, deagle coming up — and the

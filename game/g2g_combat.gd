@@ -299,7 +299,7 @@ func _apply_loadout(player_id: StringName) -> void:
 		_give_default(arsenal)
 		lowest = 2
 
-	arsenal.select(maxi(lowest, 1), game.current_tick())
+	hold(arsenal, maxi(lowest, 1), game.current_tick())
 
 
 ## A storage key that is usable as a filename.
