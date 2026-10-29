@@ -3879,7 +3879,7 @@ def main(argv=None):
         "push_volumes": mech["push"],
         "trigger_volumes": other,
     }
-    for key in ("display_name", "author", "kind", "notes"):
+    for key in ("display_name", "author", "kind", "notes", "movement"):
         if key in doc:
             manifest[key] = doc[key]
     # The main track's spawn is what the game puts a player at, and it is not the
