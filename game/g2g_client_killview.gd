@@ -30,7 +30,7 @@ func attach(client: Node, bridge: Node, game: Node) -> void:
 	add_child(view)
 	view.setup(game.killview_rules)
 	view.hide_fn = func() -> Array: return [client.hud]
-	view.stage = client.killcam
+	view.stage = client.get("killcam")
 	if bridge == null:
 		_attach_solo()
 		return
@@ -68,8 +68,15 @@ func _on_clip(clip: Dictionary, info: Dictionary) -> void:
 		return
 	var player: Variant = _client.player
 	var shown := info.duplicate()
-	shown["victim_id"] = _game.entities.id_for_key(player.player_id) if player != null else 0
+	var bodies: Variant = _client.killcam_bodies
+	shown["victim_id"] = bodies.id_for(_game, player.player_id) if player != null else 0
+	# The clip names the killer by the server's entity id; the stage records local ids.
+	var key := StringName(String(info.get("killer_key", "")))
+	var staged := clip
+	if key != &"":
+		staged = clip.duplicate()
+		staged["killer"] = bodies.id_for(_game, key)
 	var weapon := String(info.get("weapon", ""))
 	var def: DotWeaponDef = G2GArsenal.weapon_catalogue().get_def(StringName(weapon)) if weapon != "" else null
 	shown["weapon"] = def.display_name if def != null and def.display_name != "" else weapon.capitalize()
-	var _started := view.play(clip, shown)
+	var _started := view.play(staged, shown)

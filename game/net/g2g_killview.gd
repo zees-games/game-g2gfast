@@ -36,9 +36,12 @@ func tick(tick_number: int) -> Array:
 func note_kill(entry: DotKillFeed.Entry) -> void:
 	if not entry.killer_key.is_valid_int() or not entry.victim_key.is_valid_int():
 		return
-	var killer: Variant = _game.players.get(_game.combat.player_id_for(int(entry.killer_key)))
+	var killer_id: StringName = _game.combat.player_id_for(int(entry.killer_key))
+	var killer: Variant = _game.players.get(killer_id)
 	var res := server.note_kill(int(entry.killer_key), int(entry.victim_key), float(_game.current_tick()) / float(_game.tick_rate), {
-		"killer": String(killer.display_name) if killer != null else "", "weapon": String(entry.cause)})
+		"killer": String(killer.display_name) if killer != null else "", "weapon": String(entry.cause),
+		# A client numbers no entity: it finds the bodies by this key, not by the clip's server id.
+		"killer_key": String(killer_id)})
 	if not res.ok:
 		DotLog.trace(CHANNEL, "no kill view", {"why": res.error.message})
 

@@ -6,6 +6,7 @@ const G2GEvents := preload("../game/net/g2g_events.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GHud := preload("../game/g2g_hud.gd")
 const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
+const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 
 ## The real client, offline: what a player's keys do, rather than what the pieces do.
 ##
@@ -22,8 +23,8 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 85
-const SECTIONS := 15
+const CHECKS := 88
+const SECTIONS := 16
 
 var _entered := 0
 var _completed := 0
@@ -76,6 +77,7 @@ func _run() -> void:
 	_test_solo_in_the_shell()
 	await _test_the_stage_splits_panel()
 	await _test_the_end_of_a_deathmatch()
+	await _test_an_online_kill_view_poses_the_bodies()
 
 	print("")
 	_report_sections(_entered, _completed, SECTIONS, CHECKS)
@@ -389,6 +391,63 @@ func _test_the_end_of_a_deathmatch() -> void:
 	_client._leave_match_end()
 	_client.presentation.settings.set_value(&"reduce_motion", false)
 	game.remove_player(&"u92")
+	await get_tree().process_frame
+	_done()
+
+
+## Stands in for the net bridge: only the kill view's two touch points.
+class KillBridge extends Node:
+	signal killview_received(clip: Dictionary, info: Dictionary)
+
+	func ask_respawn() -> void:
+		pass
+
+
+## A server clip names the killer by the server's entity id, which this client cannot number:
+## the stage must still find and pose the bodies the client drew.
+func _test_an_online_kill_view_poses_the_bodies() -> void:
+	_section("An online kill view poses the bodies the client drew")
+	var game := _client.game
+	var rival: G2GPlayer = game.add_player(&"u93", "Rival", false)
+	var kc := _client.killcam
+	var clock := [100.0]
+	kc.now_fn = func() -> float: return clock[0]
+	var start := _client.player.controller.state.position + Vector3(0.0, 0.0, -6.0)
+	var local_killer: int = _client.killcam_bodies.id_for(game, &"u93")
+	var local_victim: int = _client.killcam_bodies.id_for(game, _client.player.player_id)
+	while clock[0] < 104.0:
+		clock[0] += 1.0 / 60.0
+		rival.teleport(start + Vector3(clock[0] - 100.0, 0.0, 0.0))
+		kc.frame()
+		if absf(clock[0] - 102.0) < 1.0 / 120.0:
+			kc.note_kill(local_killer, local_victim, "deagle")
+	game.killview_rules.enabled = true
+	var bridge := KillBridge.new()
+	add_child(bridge)
+	var host := G2GClientKillView.new()
+	add_child(host)
+	host.attach(_client, bridge, game)
+	host.view.kv.auto_process = false
+	var flat := PackedFloat32Array()
+	for i in range(12):
+		var t := -1.0 + float(i) * 0.2
+		flat.append_array(PackedFloat32Array([t, 0.0, 1.6, 0.0, 0.0, 0.0, 0.0, 1.0, 90.0, -1.0, -1.0]))
+	# 9000 is a server entity id: nothing on this client is numbered that.
+	var info := {"killer": "Rival", "weapon": "deagle", "killer_key": "u93"}
+	var clip := {"v": 1, "killer": 9000, "cursor": false, "f": flat, "info": info}
+	bridge.killview_received.emit(clip, info)
+	_check(host.view.is_active(), "the server's clip starts the kill view")
+	for _i in range(6):
+		host.view.kv.advance(0.1)
+	var posed: Dictionary = host.view.get("_posed")
+	_check(posed.has("eye") and posed.has("target"),
+		"the stage found the killer and the victim by the server's keys and posed them", str(posed.keys()))
+	host.view.kv.killcam.skip()
+	_check(not host.view.is_active(), "and a skip ends the replay")
+	game.killview_rules.enabled = false
+	host.queue_free()
+	bridge.queue_free()
+	game.remove_player(&"u93")
 	await get_tree().process_frame
 	_done()
 
