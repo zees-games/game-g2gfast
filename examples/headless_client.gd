@@ -22,7 +22,7 @@ const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 82
+const CHECKS := 85
 const SECTIONS := 15
 
 var _entered := 0
@@ -340,9 +340,11 @@ func _test_the_end_of_a_deathmatch() -> void:
 		kc.frame()
 		if absf(clock[0] - 8.0) < step * 0.5:
 			kc.note_kill(&"u92", _client.player.player_id, "deagle")
+	_check(kc is DotKillcamHost and DotAddonApi.build_level("dot_replay") >= 6, "the killcam is dot-replay's shared host")
 	_check(kc.buffer.frame_count() > 400 and StringName(kc.buffer.last_event(&"kill")["data"]["killer"]) == &"u92",
 		"every frame drawn and the kill went into the buffer")
 
+	var rig_before := rival.rig.global_transform if rival.rig != null else Transform3D()
 	var rows := [{"name": "Rival", "kills": 40, "deaths": 3}, {"name": "You", "kills": 12, "deaths": 20}]
 	_client._match_over(7.0, rows)
 	_check(kc.is_playing() and kc.camera.current and not _client.hud.visible,
@@ -359,6 +361,8 @@ func _test_the_end_of_a_deathmatch() -> void:
 		n += 1
 	_check(not kc.is_playing() and n * step < 7.0 and get_viewport().get_camera_3d() == before,
 		"it ends inside the budget and gives the view back (%.2f s)" % (n * step))
+	_check(rival.rig == null or rival.rig.global_transform.is_equal_approx(rig_before),
+		"the bodies the replay moved are put back where the tick left them")
 	_check(_client.winner_reveal.is_active() and _client.winner_reveal.name_label.text == "Rival",
 		"then the winner is named over the podium")
 	_check(not _client.hud.visible, "with the HUD still hidden")
@@ -373,6 +377,11 @@ func _test_the_end_of_a_deathmatch() -> void:
 		"mp_killcam_time 0: no killcam, straight to the winner")
 	_client._leave_match_end()
 	_check(not _client.winner_reveal.is_active() and _client.hud.visible, "leaving the end skips what is up")
+
+	kc.note_kill(&"u92", &"u92", "deagle")
+	_client._match_over(7.0, rows)
+	_check(not kc.is_playing() and _client.winner_reveal.is_active(), "a last kill that was a suicide is not replayed")
+	_client._leave_match_end()
 
 	_client.presentation.settings.set_value(&"reduce_motion", true)
 	_client._match_over(0.0, rows)

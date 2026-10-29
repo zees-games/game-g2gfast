@@ -231,7 +231,8 @@ func _covered() -> bool:
 const SUMMARY_BOARD_SEC := 8.0
 
 ## The final killcam: records every frame, replays the last kill before the winner reveal.
-var killcam: G2GKillcam = null
+var killcam: DotKillcamHost = null
+var killcam_bodies := G2GKillcamBodies.new()
 var winner_reveal: DotWinnerReveal = null
 
 var _end_rows: Array = []
@@ -242,7 +243,15 @@ var _killcam_sec: float = 0.0
 
 
 func _build_killcam() -> void:
-	killcam = G2GKillcam.new()
+	if DotAddonApi.build_level("dot_replay") >= 6:
+		_build_killcam_host()
+	_build_winner_reveal()
+
+
+func _build_killcam_host() -> void:
+	killcam = DotKillcamHost.new()
+	killcam_bodies.configure(killcam)
+	killcam.camera_mode_fn = func() -> int: return game.killview_rules.camera if game != null else DotKillViewRules.Camera.BEHIND
 	killcam.name = "FinalKillcam"
 	killcam.players_fn = func() -> Array: return game.players.values() if game != null else []
 	killcam.player_for_fn = func(id: StringName) -> Variant: return game.players.get(id) if game != null else null
@@ -254,9 +263,12 @@ func _build_killcam() -> void:
 		return G2GWeaponIcons.shared.menu_texture(StringName(id))
 	killcam.over.connect(func(_skipped: bool) -> void: _reveal_winner())
 	add_child(killcam)
+
+
+func _build_winner_reveal() -> void:
 	winner_reveal = DotWinnerReveal.new()
 	winner_reveal.name = "WinnerReveal"
-	winner_reveal.skip_actions = G2GKillcam.SKIP_ACTIONS
+	winner_reveal.skip_actions = G2GKillcamBodies.SKIP_ACTIONS
 	winner_reveal.finished.connect(_on_reveal_finished)
 	add_child(winner_reveal)
 	game.map_ready.connect(func(_map: DotMapDef) -> void: _leave_match_end())
@@ -264,12 +276,12 @@ func _build_killcam() -> void:
 
 ## The deathmatch ended: the final killcam if there is a kill to show, then the winner.
 func _match_over(killcam_sec: float, rows: Array) -> void:
-	if killcam == null:
-		return
 	_end_rows = rows
 	_end_active = true
 	_killcam_sec = killcam_sec
-	if killcam.match_ended():
+	if killcam == null:
+		_reveal_winner()
+	elif killcam.match_ended():
 		DotLog.debug("g2g.client", "the winner waits for the final killcam")
 
 
@@ -387,7 +399,7 @@ func _build_ragdolls() -> void:
 ## hiding, or this client's own in first person (the camera is inside its head).
 func fall(id: StringName, death: DotPlayerDeath) -> DotPlayerRagdoll:
 	if killcam != null:
-		killcam.set_alive(id, false)
+		killcam_bodies.set_alive(id, false)
 	var who: G2GPlayer = game.players.get(id) if game != null else null
 	if who == null or ragdolls == null or who.rig == null or not who.rig.is_inside_tree():
 		return null
@@ -400,7 +412,7 @@ func fall(id: StringName, death: DotPlayerDeath) -> DotPlayerRagdoll:
 ## [param id] is alive again: the rig a fall hid is drawn again where they now stand.
 func rise(id: StringName) -> void:
 	if killcam != null:
-		killcam.set_alive(id, true)
+		killcam_bodies.set_alive(id, true)
 	_leave_match_end()
 	var who: G2GPlayer = game.players.get(id) if game != null else null
 	if who != null and who.rig != null:
