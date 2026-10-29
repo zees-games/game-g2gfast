@@ -1,6 +1,7 @@
 extends Node
 
 const G2GArsenal := preload("g2g_arsenal.gd")
+const G2GRig := preload("g2g_rig.gd")
 const G2GKillView := preload("net/g2g_killview.gd")
 
 ## The client half of the shared kill view (dot-replay): the killer's view replayed to the victim.
@@ -31,6 +32,9 @@ func attach(client: Node, bridge: Node, game: Node) -> void:
 	view.setup(game.killview_rules)
 	view.hide_fn = func() -> Array: return [client.hud]
 	view.stage = client.get("killcam")
+	# The victim is the local body, on a layer their own camera culls; the replay camera copies that mask.
+	view.kv.view.connect(func(_x: Transform3D, _f: float, _c: Vector2, _h: bool) -> void:
+		view.camera.cull_mask |= 1 << (G2GRig.LAYER_LOCAL_BODY - 1))
 	if bridge == null:
 		_attach_solo()
 		return

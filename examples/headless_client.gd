@@ -6,6 +6,7 @@ const G2GEvents := preload("../game/net/g2g_events.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GHud := preload("../game/g2g_hud.gd")
 const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
+const G2GRig := preload("../game/g2g_rig.gd")
 const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 
 ## The real client, offline: what a player's keys do, rather than what the pieces do.
@@ -23,7 +24,7 @@ const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 88
+const CHECKS := 90
 const SECTIONS := 16
 
 var _entered := 0
@@ -445,6 +446,10 @@ func _test_an_online_kill_view_poses_the_bodies() -> void:
 	var posed: Dictionary = host.view.get("_posed")
 	_check(posed.has("eye") and posed.has("target"),
 		"the stage found the killer and the victim by the server's keys and posed them", str(posed.keys()))
+	var local_layer := 1 << (G2GRig.LAYER_LOCAL_BODY - 1)
+	_check(host.view.camera.cull_mask & local_layer != 0,
+		"the replay camera draws the layer the local body sits on, or the victim is not in their own kill view",
+		str(host.view.camera.cull_mask))
 	host.view.kv.killcam.skip()
 	_check(not host.view.is_active(), "and a skip ends the replay")
 	game.killview_rules.enabled = false
