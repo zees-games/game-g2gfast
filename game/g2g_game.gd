@@ -280,12 +280,12 @@ var external_tick: bool = false
 var covered: Callable = Callable()
 
 
-## dot-player-controller's `mp_forceview`: whether a player may switch to third person
-## (0), or is held in first (1) or third (2). `sv_allow_thirdperson`, this game's own older
-## switch, writes it (0 is first only); bound REPLICATED by the module and followed by a
-## client through its link, on top of RULES' `thirdperson` for an older server.
+## dot-player-controller's `mp_forceview`: third person allowed (0), held first (1) or third (2).
+## `sv_allow_thirdperson` writes it; bound REPLICATED by the module, followed by a client.
 var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
+## dot-replay's `mp_killview*`: the killer's replayed eye, off until the server turns it on.
+var killview_rules: DotKillViewRules = DotKillViewRules.new()
 
 ## Every camera under the view rules now, and the config's switch kept in step.
 func _on_view_rules_changed() -> void:

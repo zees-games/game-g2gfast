@@ -80,6 +80,7 @@ func _connect_server() -> void:
 	game.announced.connect(_on_announced)
 	game.movement_changed.connect(_on_movement_changed)
 	game.map_ready.connect(_on_map_ready)
+	killview = G2GKillView.new(game)
 	# Built in the game's `_ready`, before any bridge, or never (no deathmatch and no
 	# hunters), so connecting once here sees every combat layer this game will have.
 	if game.combat != null:
@@ -89,6 +90,7 @@ func _connect_server() -> void:
 		# connected player_killed, and a dead runner stood upright on every screen.
 		game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
 			broadcast_death(game.combat.player_id_for(entry.victim_key.to_int()))
+			killview.note_kill(entry)
 			broadcast_kill(entry))
 		if game.combat.match_node != null:
 			# Deferred: the last kill ends the match from inside its own report, before the
@@ -285,6 +287,8 @@ func _on_player_added(player: G2GPlayer) -> void:
 
 
 func _on_player_removed(id: StringName) -> void:
+	if killview != null:
+		killview.forget(id)
 	var session_id := session_of(id)
 	if _behaviours.has(session_id):
 		# The game removed it itself; the entity and the LEAVE are still ours.
@@ -387,6 +391,9 @@ func server_tick(tick: int) -> void:
 	if net != null:
 		net.server_tick(tick)
 	ensure_game_ticked(tick)
+	if killview != null and game.combat != null:
+		for clip: Dictionary in killview.tick(tick):
+			_tell(peer_for_player(session_of(clip["player"])), G2GEvents.Kind.KILLVIEW, clip["body"])
 
 
 func ensure_game_ticked(tick: int) -> void:
@@ -409,21 +416,15 @@ func ensure_game_ticked(tick: int) -> void:
 
 ## Whether the local player is holding the trigger this tick.
 ##
-## Set by the client each frame and read once, when the input packet is built. A field
-## rather than a parameter on [method client_tick] because `client_tick` is called from
-## the clock's "how many ticks is this frame worth" loop and may run two or three times
-## for one frame's worth of input — so the trigger belongs beside the sampler's state
-## rather than in the loop's arguments.
+## Set by the client each frame and read once, when the input packet is built: `client_tick`
+## may run two or three times for one frame, so the trigger is not a parameter.
 var attack_wanted: bool = false
 
 
 ## Tells the combat layer a player pulled the trigger on a tick.
 ##
-## [b]Called from `_net_apply_input`, which runs on a replay as well as on a fresh
-## tick.[/b] The predictor re-applies every unacknowledged command when it reconciles,
-## so a trigger read anywhere else would be a shot the replay could not reproduce — and
-## on the server it is the one place the input for a given tick is known to have been
-## applied to that tick.
+## [b]Called from `_net_apply_input`, which also runs on a replay.[/b] A trigger read anywhere
+## else would be a shot the replay could not reproduce.
 func note_attack(player: G2GPlayer, attack: bool) -> void:
 	if game == null or game.combat == null or player == null:
 		return
@@ -436,23 +437,9 @@ func note_attack(player: G2GPlayer, attack: bool) -> void:
 ## Client: whether the server is simulating this player on a map this client does not have
 ## loaded yet.
 ##
-## [b]Two cases, and they are the same bug.[/b] A joiner is admitted — HELLO, JOIN, its
-## player spawned on the server's map — before it has been announced that map, so on a
-## cold cache it spends the whole download and build with no world at all. A straggler is
-## told to `load` while its download is still running, and spends the rest of it on the
-## old map while the server has moved it to the new one. Either way, a client that
-## predicted here was simulating its player against geometry the server did not have:
-## falling through nothing from the origin, corrected back into the air by every
-## snapshot, while the server applied the keys it was sent to a player on the real map.
-## That was the first connect to a server whose map was not cached — a grey screen that
-## jittered for as long as the download took, and a player somewhere else when it landed
-## — and why reconnecting, with the pack now cached, "fixed" it.
-##
-## [b]From the `load`, not from the announce.[/b] An ordinary change announces the next
-## map while the server is still playing the current one, waiting for every client to say
-## it has the new one; gating on the announce would freeze every player for the length of
-## everybody's download at the end of every map. The server swaps when it sends `load`,
-## and not before.
+## A joiner or a straggler is simulated by the server on a map this client lacks: predicting
+## there falls through nothing and is corrected by every snapshot (the grey screen on a cold
+## cache). Gated from the `load`, not the announce, or every map end freezes for the downloads.
 func in_transit() -> bool:
 	if net == null or net.is_server or game == null or game.maps == null:
 		return false
@@ -613,12 +600,9 @@ func receive_request(peer_id: int, payload: PackedByteArray) -> DotResult:
 
 ## A relayed voice frame arrived. Client side.
 ##
-## [b]Deliberately NOT routed through [DotNetManager].[/b] dot-net's `receive` decodes
-## a bit-packed message against a sealed schema and applies the payload cap and the
-## rate limit that go with it; a voice frame is an opaque blob from a codec and has
-## nothing to do with the replication wire. Putting it through would mean either a
-## message type per codec or a schema that changes when the codec does — and the
-## schema hash is what both ends check to agree they are speaking the same game.
+## [b]Deliberately NOT routed through [DotNetManager].[/b] Its schema hash and payload cap fit
+## the replication wire; a voice frame is an opaque codec blob, and a message type per codec
+## would change the hash both ends compare.
 func receive_voice(payload: PackedByteArray) -> DotResult:
 	if not voice_in_fn.is_valid():
 		return DotResult.fail(DotError.CODE_STATE, "Nothing here plays voice.")
@@ -1347,6 +1331,11 @@ func _ask(kind: int, body: PackedByteArray) -> void:
 
 # --- Server: answering ------------------------------------------------------
 
+## The player asks to leave the kill view and respawn now.
+func ask_respawn() -> void:
+	_ask(G2GEvents.Ask.RESPAWN, PackedByteArray())
+
+
 func _on_request(message: DotNetMessage) -> void:
 	var ask := message as G2GRequest
 	if ask == null or net == null or not net.is_server:
@@ -1393,6 +1382,9 @@ func _on_request(message: DotNetMessage) -> void:
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 		G2GEvents.Ask.SPECTATE:
 			_on_spectate_asked(peer_id, session_id, id, G2GEvents.read_int(reader))
+		G2GEvents.Ask.RESPAWN:
+			if killview != null:
+				killview.skip(id)
 		G2GEvents.Ask.RTV:
 			if rtv_fn.is_valid():
 				rtv_fn.call(id)
@@ -1539,6 +1531,10 @@ func _on_event(message: DotNetMessage) -> void:
 			var rules := G2GEvents.read_rules(reader)
 			if bool(rules["ok"]):
 				rules_received.emit(rules)
+		G2GEvents.Kind.KILLVIEW:
+			var view := DotKillViewClip.unpack(event.body)
+			if bool(view["ok"]):
+				killview_received.emit(view["clip"], view["info"])
 		_:
 			_on_watch_event(event.kind, reader)
 

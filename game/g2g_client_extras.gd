@@ -1,5 +1,6 @@
 extends Node
 
+const G2GClientKillView := preload("g2g_client_killview.gd")
 const G2GGame := preload("g2g_game.gd")
 const G2GNetBridge := preload("net/g2g_net_bridge.gd")
 const G2GServices := preload("g2g_services.gd")
@@ -73,6 +74,11 @@ func attach(p_bridge: G2GNetBridge, p_game: G2GGame) -> DotResult:
 
 	if voice_enabled:
 		_build_voice()
+
+	var killview := G2GClientKillView.new()
+	killview.name = "KillView"
+	add_child(killview)
+	killview.attach(get_parent(), bridge, game)
 
 	return DotResult.success(self)
 

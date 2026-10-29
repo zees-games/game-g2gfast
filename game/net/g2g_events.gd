@@ -93,6 +93,8 @@ enum Kind {
 	## A weapon went off, to everybody: the shooter's session id, the weapon and where. The
 	## other clients play its report (and the room tail, by their own roof). Appended.
 	SHOT,
+	## The replay of the killer's view, to the victim only: a DotKillViewClip body. Appended.
+	KILLVIEW,
 }
 
 enum Ask {
@@ -119,6 +121,8 @@ enum Ask {
 	## Spectating, from a click rather than a chat line: one of the SPECTATE_* steps.
 	## Appended.
 	SPECTATE,
+	## The victim skips the kill view and asks to respawn; the server releases the hold. Appended.
+	RESPAWN,
 }
 
 ## [constant Ask.SPECTATE]'s body. Numbered rather than signed because `write_int` is a

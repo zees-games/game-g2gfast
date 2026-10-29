@@ -4,6 +4,7 @@ const G2GAvatars := preload("../game/g2g_avatars.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GEvents := preload("../game/net/g2g_events.gd")
 const G2GGame := preload("../game/g2g_game.gd")
+const G2GKillView := preload("../game/net/g2g_killview.gd")
 const G2GMovement := preload("../game/g2g_movement.gd")
 const G2GHunters := preload("../game/g2g_hunters.gd")
 const G2GNetBridge := preload("../game/net/g2g_net_bridge.gd")
@@ -52,6 +53,20 @@ func _test_end_of_match_wire() -> void:
 	_check(bool(fired["ok"]) and int(fired["shooter"]) == 7 and fired["weapon"] == "deagle"
 			and (fired["at"] as Vector3).is_equal_approx(Vector3(1.5, -2.0, 3000.0)),
 		"a SHOT round-trips: shooter, weapon and where", str(fired))
+	var flat := PackedFloat32Array()
+	flat.resize(DotKillViewRing.STRIDE * 600)
+	var packed := DotKillViewClip.pack({"v": 1, "f": flat}, {"killer": "Ana", "weapon": "deagle"}, G2GKillView.BYTES)
+	var unpacked := DotKillViewClip.unpack(packed)
+	_check(packed.size() <= G2GKillView.BYTES and packed.size() <= G2GEvent.MAX_BODY and bool(unpacked["ok"])
+			and unpacked["info"]["killer"] == "Ana",
+		"a KILLVIEW clip is thinned to fit an event body and round-trips", str(packed.size()))
+	_check(G2GEvent.fits() and G2GRequest.fits(), "KILLVIEW and RESPAWN fit the kind fields")
+	var rules := DotKillViewRules.new()
+	var names: Array = []
+	var _made := rules.bind_cvars(func(n: String, _v: String, _d: String, _f: int) -> Variant:
+		names.append(n)
+		return null, DotConVar.FLAG_REPLICATED)
+	_check("mp_killview" in names and not rules.enabled, "mp_killview is bound, and off by default", str(names.size()))
 	var rows := [{"name": "Ana", "kills": 40, "deaths": 3}, {"name": "Bo", "kills": 12, "deaths": 20},
 		{"name": "Cy", "kills": 0, "deaths": 9}, {"name": "Dee", "kills": 0, "deaths": 0}]
 	var over := G2GEvents.read_match_end(DotNetReader.new(G2GEvents.write_match_end(7.0, rows)))

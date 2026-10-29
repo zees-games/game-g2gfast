@@ -4,6 +4,7 @@ const G2GConfig := preload("../g2g_config.gd")
 const G2GEvent := preload("g2g_event.gd")
 const G2GEvents := preload("g2g_events.gd")
 const G2GGame := preload("../g2g_game.gd")
+const G2GKillView := preload("g2g_killview.gd")
 const G2GMapCatalogue := preload("../g2g_map_catalogue.gd")
 const G2GNetCommand := preload("g2g_net_command.gd")
 const G2GNetLink := preload("g2g_net_link.gd")
@@ -56,6 +57,7 @@ signal map_loaded(map: DotMapDef)
 
 var game: G2GGame = null
 var net: DotNetManager = null
+var killview: G2GKillView = null
 var link: G2GNetLink = null
 
 ## [code]func(bytes: PackedByteArray) -> void[/code]. Where a received voice frame goes on a client.
@@ -106,6 +108,9 @@ signal shot_received(player: StringName, weapon: StringName, at: Vector3)
 
 ## A hit of this client's player that the server applied (see [signal G2GCombat.hit_landed]).
 signal hit_received(victim: int, amount: float, point: Vector3, killed: bool, headshot: bool)
+
+## The server's replay of this client's death: the clip and who/what killed them.
+signal killview_received(clip: Dictionary, info: Dictionary)
 
 ## A player died: their key, and how the body falls (null from a server that did not say).
 signal death_received(player_id: StringName, death: DotPlayerDeath)

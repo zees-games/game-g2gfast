@@ -76,9 +76,7 @@ func _module_load() -> DotResult:
 				bridge.broadcast_rules()
 	)
 
-	# The family's mp_forceview (dot-player-controller): 0 the player's choice, 1 first person
-	# only, 2 third person only. REPLICATED, because each client places its own camera; the
-	# game keeps config.allow_thirdperson and every camera in step (G2GGame).
+	# mp_forceview: REPLICATED, because each client places its own camera.
 	if not game.config.allow_thirdperson:
 		game.view_rules.force_view = DotPlayerViewRules.FIRST_ONLY
 	var _views := game.view_rules.bind_cvars(
@@ -87,6 +85,8 @@ func _module_load() -> DotResult:
 	game.view_rules.changed.connect(func() -> void:
 		if bridge != null:
 			bridge.broadcast_rules())
+	var _killview := game.killview_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 
 	# Told to every client, because the light is drawn there and nowhere else: a client
 	# holding one when this goes to 0 switches it off on the next RULES.

@@ -667,6 +667,16 @@ func _on_entity_killed(entity_id: int, damage: DotDamage) -> void:
 	player_killed.emit(entry)
 
 
+## Respawns [param entity_id] now if it is waiting in the queue.
+func respawn_now(entity_id: int) -> DotResult:
+	var key := str(entity_id)
+	if match_node == null or not match_node.respawns.is_waiting(key):
+		return DotResult.fail(DotError.CODE_INVALID, "Entity %d is not waiting to respawn." % entity_id)
+	match_node.respawns.cancel(key)
+	_on_respawn_due(key, match_node.choose_spawn(key, game.current_tick()), game.current_tick())
+	return DotResult.success(entity_id)
+
+
 func _on_respawn_due(key: String, spawn: DotSpawnPoint, tick: int) -> void:
 	var kit := _kit_for_entity(key.to_int())
 
@@ -685,8 +695,7 @@ func _on_respawn_due(key: String, spawn: DotSpawnPoint, tick: int) -> void:
 	var health: DotHealth = kit["health"]
 	health.spawn_protection_ticks = match_node.spawn_protection_ticks()
 
-	# The class's numbers, before the reset — `reset` sets health to `max_health`, so
-	# raising the maximum afterwards leaves a "full" player on the old class's number.
+	# Class numbers before the reset: `reset` sets health to `max_health`.
 	if game.player_stack != null:
 		game.player_stack.apply_class_numbers(
 			key, health, player.controller.tunables, player.base_tunables
@@ -694,17 +703,11 @@ func _on_respawn_due(key: String, spawn: DotSpawnPoint, tick: int) -> void:
 
 	health.reset(tick)
 
-	# Through the game's own respawn, not by writing a position: `spawn_player`
-	# abandons the run, puts the player on the start pad and resets the timer, and a
-	# death that left a run going would be a run with a gap in it.
+	# Through `spawn_player`, not a written position: it abandons the run, so no run has a gap.
 	if spawn != null:
-		# [b]The director among the same starts, and dot-match's point as the
-		# fallback.[/b] Both read the map's own track starts — `_on_map_ready` above
-		# registers them with dot-match and `G2GPlayerStack.refresh_spawns` copies them
-		# into the director — so this is a better choice among one set rather than a
-		# second set. It is also the only call that grants the protection window whose
-		# ticks were written into `health` four lines up, because
-		# `DotSpawnProtection.grant` runs inside `choose` and nowhere else.
+		# The director among the same starts, dot-match's point as the fallback: a better choice
+		# among one set. The only call that grants the protection window (`choose` runs
+		# `DotSpawnProtection.grant`).
 		var at := spawn.spawn_transform().origin
 
 		if game.player_stack != null:
