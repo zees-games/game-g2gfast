@@ -339,9 +339,9 @@ func _test_the_end_of_a_deathmatch() -> void:
 		rival.teleport(start + Vector3(clock[0], 0.0, 0.0))
 		kc.frame()
 		if absf(clock[0] - 8.0) < step * 0.5:
-			kc.note_kill(&"u92", _client.player.player_id, "deagle")
+			kc.note_kill(_client.killcam_bodies.id_for(game, &"u92"), _client.killcam_bodies.id_for(game, _client.player.player_id), "deagle")
 	_check(kc is DotKillcamHost and DotAddonApi.build_level("dot_replay") >= 6, "the killcam is dot-replay's shared host")
-	_check(kc.buffer.frame_count() > 400 and StringName(kc.buffer.last_event(&"kill")["data"]["killer"]) == &"u92",
+	_check(kc.buffer.frame_count() > 400 and int(kc.buffer.last_event(&"kill")["data"]["killer"]) == _client.killcam_bodies.id_for(game, &"u92"),
 		"every frame drawn and the kill went into the buffer")
 
 	var rig_before := rival.rig.global_transform if rival.rig != null else Transform3D()
@@ -378,7 +378,7 @@ func _test_the_end_of_a_deathmatch() -> void:
 	_client._leave_match_end()
 	_check(not _client.winner_reveal.is_active() and _client.hud.visible, "leaving the end skips what is up")
 
-	kc.note_kill(&"u92", &"u92", "deagle")
+	kc.note_kill(_client.killcam_bodies.id_for(game, &"u92"), _client.killcam_bodies.id_for(game, &"u92"), "deagle")
 	_client._match_over(7.0, rows)
 	_check(not kc.is_playing() and _client.winner_reveal.is_active(), "a last kill that was a suicide is not replayed")
 	_client._leave_match_end()

@@ -21,6 +21,7 @@ const G2GPresentation := preload("g2g_presentation.gd")
 const G2GSoloMaps := preload("g2g_solo_maps.gd")
 const G2GUnits := preload("g2g_units.gd")
 const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
+const G2GClientKillView := preload("g2g_client_killview.gd")
 
 ## A playable g2gfast: one local player, a camera, a HUD, and the keys. Separate from [G2GGame], the headless simulation; a dedicated server never loads this.
 ## Keys are whatever [G2GBindings] says (WASD, space, Ctrl, N style, M maps, Tab board, R restart, C/V checkpoints, F flashlight, O hide others, F5 view, H help).

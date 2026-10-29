@@ -244,25 +244,14 @@ var _killcam_sec: float = 0.0
 
 func _build_killcam() -> void:
 	if DotAddonApi.build_level("dot_replay") >= 6:
-		_build_killcam_host()
+		killcam = DotKillcamHost.new()
+		killcam_bodies.configure(killcam, game)
+		killcam.seconds_fn = func() -> float: return _killcam_sec
+		killcam.over.connect(func(_skipped: bool) -> void: _reveal_winner())
+		add_child(killcam)
 	_build_winner_reveal()
-
-
-func _build_killcam_host() -> void:
-	killcam = DotKillcamHost.new()
-	killcam_bodies.configure(killcam)
-	killcam.camera_mode_fn = func() -> int: return game.killview_rules.camera if game != null else DotKillViewRules.Camera.BEHIND
-	killcam.name = "FinalKillcam"
-	killcam.players_fn = func() -> Array: return game.players.values() if game != null else []
-	killcam.player_for_fn = func(id: StringName) -> Variant: return game.players.get(id) if game != null else null
-	killcam.seconds_fn = func() -> float: return _killcam_sec
-	killcam.weapon_name_fn = func(id: String) -> String:
-		var def: DotWeaponDef = G2GArsenal.weapon_catalogue().get_def(StringName(id)) if id != "" else null
-		return def.display_name if def != null and def.display_name != "" else id.capitalize()
-	killcam.weapon_icon_fn = func(id: String) -> Texture2D:
-		return G2GWeaponIcons.shared.menu_texture(StringName(id))
-	killcam.over.connect(func(_skipped: bool) -> void: _reveal_winner())
-	add_child(killcam)
+	if _offline:
+		G2GClientKillView.solo(self, game)
 
 
 func _build_winner_reveal() -> void:
@@ -381,9 +370,8 @@ func _build_ragdolls() -> void:
 			if player != null and id == player.player_id:
 				presentation.on_weapon_equipped(at))
 		game.combat.player_killed.connect(func(entry: DotKillFeed.Entry) -> void:
-			var killer := game.combat.player_id_for(entry.killer_key.to_int()) if entry.killer_key != "" else &""
 			if killcam != null:
-				killcam.note_kill(killer, game.combat.player_id_for(entry.victim_key.to_int()), entry.cause, entry.headshot)
+				killcam.note_kill(entry.killer_key.to_int(), entry.victim_key.to_int(), entry.cause, entry.headshot)
 		)
 		if game.combat.match_node != null:
 			# Deferred: the last kill ends the match from inside its own report, before the kill
@@ -721,7 +709,7 @@ func _wire_bridge_world() -> void:
 	bridge.alive_received.connect(rise)
 	bridge.kill_received.connect(func(killer: StringName, victim: StringName, weapon: String, head: bool) -> void:
 		if killcam != null:
-			killcam.note_kill(killer, victim, weapon, head)
+			killcam.note_kill(killcam_bodies.id_for(game, killer), killcam_bodies.id_for(game, victim), weapon, head)
 	)
 	bridge.match_end_received.connect(_match_over)
 	# Everybody else's shots: the local player's own is predicted by the combat layer here.
