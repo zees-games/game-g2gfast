@@ -28,7 +28,7 @@ const ExitProbe := preload("dedicated_exit_probe.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 21
-const CHECKS := 245
+const CHECKS := 246
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
