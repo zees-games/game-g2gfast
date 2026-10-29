@@ -71,15 +71,14 @@ func _on_clip(clip: Dictionary, info: Dictionary) -> void:
 	if killcam != null and killcam.is_playing():
 		return
 	var player: Variant = _client.player
-	var shown := info.duplicate()
+	var shown := info.merged({})
 	var bodies: Variant = _client.killcam_bodies
 	shown["victim_id"] = bodies.id_for(_game, player.player_id) if player != null else 0
 	# The clip names the killer by the server's entity id; the stage records local ids.
 	var key := StringName(String(info.get("killer_key", "")))
 	var staged := clip
 	if key != &"":
-		staged = clip.duplicate()
-		staged["killer"] = bodies.id_for(_game, key)
+		staged = clip.merged({"killer": bodies.id_for(_game, key)}, true)
 	var weapon := String(info.get("weapon", ""))
 	var def: DotWeaponDef = G2GArsenal.weapon_catalogue().get_def(StringName(weapon)) if weapon != "" else null
 	shown["weapon"] = def.display_name if def != null and def.display_name != "" else weapon.capitalize()

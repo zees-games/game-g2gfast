@@ -16,8 +16,7 @@ static func seconds() -> int:
 
 ## Runs [param host]'s scene again with [param flag]: `[exit code, stdout, stderr, killed, seconds allowed]`.
 ## A leak is reported by the engine after `quit()`, so only a second process can read it.
-## Not `OS.execute`: it blocks, and a hung copy held the run and outlived the outer `timeout`.
-## Polled to a deadline and drained each pass (a full pipe blocks the copy); stdin stays open, so suites turn the console off.
+## Not `OS.execute`: it blocks, and a hung copy outlived the outer `timeout`. Polled to a deadline and drained each pass (a full pipe blocks the copy).
 static func run(host: Node, flag: String) -> Array:
 	var allowed := seconds()
 	print("(running this suite once more in a fresh process, to read what it leaves at exit, %d s allowed)" % allowed)

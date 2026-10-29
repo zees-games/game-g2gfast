@@ -172,8 +172,8 @@ func _stage() -> void:
 	if action_at >= 0 and action_at + 2 < OS.get_cmdline_user_args().size():
 		var spec := OS.get_cmdline_user_args()
 		_shots = [
-			{"name": "hud_action_%s_a" % spec[action_at + 2], "arrange": _arrange_action.bind(StringName(spec[action_at + 1]), spec[action_at + 2]), "arranged": false},
-			{"name": "hud_action_%s_b" % spec[action_at + 2], "arrange": func() -> void: pass, "arranged": false, "wait": 40},
+			{"name": "_".join(["hud_action", spec[action_at + 2], "a"]), "arrange": _arrange_action.bind(StringName(spec[action_at + 1]), spec[action_at + 2]), "arranged": false},
+			{"name": "_".join(["hud_action", spec[action_at + 2], "b"]), "arrange": func() -> void: pass, "arranged": false, "wait": 40},
 		]
 		return
 

@@ -34,7 +34,8 @@ class RendezvousStub:
 		while _server.is_connection_available():
 			_open.append({"peer": _server.take_connection(), "bytes": PackedByteArray(), "wait": -1})
 
-		for c in _open.duplicate():
+		for i in range(_open.size() - 1, -1, -1):
+			var c := _open[i]
 			var peer: StreamPeerTCP = c["peer"]
 			peer.poll()
 			var available := peer.get_available_bytes()
@@ -48,23 +49,12 @@ class RendezvousStub:
 					c["bytes"] = buffer
 
 			if int(c["wait"]) < 0:
-				var text := (c["bytes"] as PackedByteArray).get_string_from_utf8()
-				var split := text.find("\r\n\r\n")
-				if split < 0:
+				var request := Wire.parse(c["bytes"] as PackedByteArray)
+				if request.is_empty():
 					continue
-				var length := 0
-				for line in text.substr(0, split).split("\r\n"):
-					if line.to_lower().begins_with("content-length:"):
-						length = line.get_slice(":", 1).strip_edges().to_int()
-				if (c["bytes"] as PackedByteArray).size() < split + 4 + length:
-					continue
-				var first := text.get_slice("\r\n", 0)
-				var target := first.get_slice(" ", 1)
-				var route := target.get_slice("?", 0).get_file()
-				var body: Variant = JSON.parse_string(text.substr(split + 4)) if length > 0 else {}
-				c["route"] = route
-				c["body"] = body if body is Dictionary else {}
-				seen.append({"route": route, "body": c["body"]})
+				c["route"] = request["route"]
+				c["body"] = request["body"]
+				seen.append(request)
 				c["wait"] = delay
 				continue
 
@@ -72,16 +62,39 @@ class RendezvousStub:
 				c["wait"] = int(c["wait"]) - 1
 				continue
 
-			var answer := _answer(str(c["route"]), c["body"] as Dictionary)
-			var status := "200 OK" if refuse == 0 else "%d Refused" % refuse
-			var payload := JSON.stringify(answer).to_utf8_buffer()
-			var head := "HTTP/1.1 %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % [status, payload.size()]
-			peer.put_data(head.to_utf8_buffer())
-			peer.put_data(payload)
+			peer.put_data(Wire.reply(refuse, Wire.answer(present, String(c["route"]), c["body"] as Dictionary)))
 			peer.disconnect_from_host()
-			_open.erase(c)
+			_open.remove_at(i)
 
-	func _answer(route: String, body: Dictionary) -> Dictionary:
+
+## The text side of the stub, apart from its frame loop: parsing a request and writing a reply.
+class Wire:
+	## `{route, body}` once a whole request has arrived, else empty.
+	static func parse(bytes: PackedByteArray) -> Dictionary:
+		var text := bytes.get_string_from_utf8()
+		var split := text.find("\r\n\r\n")
+		if split < 0:
+			return {}
+		var length := 0
+		for line in text.substr(0, split).split("\r\n"):
+			if line.to_lower().begins_with("content-length:"):
+				length = line.get_slice(":", 1).strip_edges().to_int()
+		if bytes.size() < split + 4 + length:
+			return {}
+		var first := text.get_slice("\r\n", 0)
+		var route := first.get_slice(" ", 1).get_slice("?", 0).get_file()
+		var body: Variant = JSON.parse_string(text.substr(split + 4)) if length > 0 else {}
+		return {"route": route, "body": body if body is Dictionary else {}}
+
+	static func reply(refuse: int, answer: Dictionary) -> PackedByteArray:
+		var status := "200 OK" if refuse == 0 else "%d Refused" % refuse
+		var payload := JSON.stringify(answer).to_utf8_buffer()
+		var head := "HTTP/1.1 %s\r\nContent-Type: application/json\r\nContent-Length: %d\r\nConnection: close\r\n\r\n" % [status, payload.size()]
+		var out := head.to_utf8_buffer()
+		out.append_array(payload)
+		return out
+
+	static func answer(present: Array[String], route: String, body: Dictionary) -> Dictionary:
 		match route:
 			"host":
 				present.append(str(body.get("id", "")))
