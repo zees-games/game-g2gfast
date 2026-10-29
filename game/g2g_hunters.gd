@@ -502,6 +502,41 @@ func spawn_one(npc_id: StringName, at: Vector3) -> DotNpcInstance:
 	return spawner.spawn(npc_id, at) if spawner != null else null
 
 
+## Hunters stop seeing through a cloud of [param radius] for [param seconds] (hearing passes); dot-npc API 6.
+## No g2gfast item makes smoke yet: this is the hook a smoke source calls.
+func block_sight(at: Vector3, radius: float, seconds: float) -> int:
+	if senses == null or DotAddonApi.build_level("dot_npc") < 6:
+		return 0
+
+	return senses.add_sight_blocker(at + Vector3.UP, radius, seconds)
+
+
+## Blinds every hunter within [param radius] of a flash at [param at] that has line of sight to it; returns how many.
+func flash(at: Vector3, radius: float, seconds: float) -> int:
+	if spawner == null or senses == null or DotAddonApi.build_level("dot_npc") < 6:
+		return 0
+
+	var space := _world.get_world_3d().direct_space_state if _world != null and _world.is_inside_tree() else null
+	var blinded := 0
+
+	for npc in spawner.all_npcs():
+		var eye := npc.position() + Vector3.UP * (npc.def.eye_height if npc.def != null else 1.5)
+
+		if not npc.is_alive() or eye.distance_to(at) > radius:
+			continue
+
+		if space != null:
+			var q := PhysicsRayQueryParameters3D.create(at, eye, senses.occlusion_mask)
+
+			if not space.intersect_ray(q).is_empty():
+				continue
+
+		npc.blind_for(senses.now, seconds)
+		blinded += 1
+
+	return blinded
+
+
 func clear() -> int:
 	return spawner.clear_all(DotNpcSpawner.REASON_ADMIN) if spawner != null else 0
 
