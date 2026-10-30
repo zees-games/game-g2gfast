@@ -264,9 +264,8 @@ func _module_load() -> DotResult:
 	# reaction from them; REPLICATED, because the clients draw the bodies (the client's
 	# _build_netcode follows them). Bound whether or not anybody can die yet, so a config's
 	# `sv_ragdoll_style stiff` holds when deathmatch or the hunters are turned on later.
-	var _ragdolls := game.ragdoll_rules.bind_cvars(
-		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
-	)
+	var _ragdolls := game.ragdoll_rules.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+	var _drops := game.weapon_layer.rules.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 
 	# sv_falldamage stays 0 (see G2GGame.fall_rules); bound so an admin sees it is a decision.
 	var _fall := game.fall_rules.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY)

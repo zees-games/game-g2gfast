@@ -31,17 +31,13 @@ func attach(p_game: G2GGame, p_net: DotNetManager, link_parent: Node) -> DotResu
 
 	link = G2GNetLink.attached_to(link_parent, self, net.is_server)
 	# Not a bare add_child: the link must sit under the server node (RPCs route by path) yet die
-	# with this bridge. Without that a module reload left a second link, Godot renamed the live
-	# one `@Node@n`, and every RPC to a real client was lost without an error. DotGameLink frees
-	# it with the bridge, and without remove_child, which errors when the whole tree is torn down.
+	# with this bridge, or a module reload leaves a second link and every RPC is lost silently.
 	DotGameLink.attach(link, link_parent, self, G2GNetLink.NODE_NAME)
 
 	_build_map_sync()
 
-	# Both ends: the server's tick is server_tick, and the client's is client_tick,
-	# which simulates what it predicts and leaves the rest to interpolation. A
-	# client game still running its own loop would simulate the local player twice
-	# a tick and dead-reckon every remote one from stale state.
+	# Both ends tick through server_tick / client_tick; a client game running its own loop
+	# would simulate the local player twice a tick.
 	game.external_tick = true
 
 	if net.is_server:
@@ -388,6 +384,7 @@ func server_tick(tick: int) -> void:
 	_game_ticked_for = -1
 	_watch_hunters()
 	_watch_spectate()
+	weapon_net.watch(game.weapon_layer)
 	if net != null:
 		net.server_tick(tick)
 	ensure_game_ticked(tick)
@@ -648,18 +645,14 @@ func _admit(peer_id: int) -> void:
 	for other in _behaviours.keys():
 		_send_timer(int(other), peer_id)
 
-	# The time left now, rather than at the clock's next change — which on a quiet map is
-	# never, and a joiner would count down nothing until it came.
+	# The time left now: a quiet map's clock never changes, so a joiner would count nothing.
 	if clock_fn.is_valid():
 		_tell(peer_id, G2GEvents.Kind.CLOCK, G2GEvents.write_clock(clock_fn.call()))
 
 	_tell(peer_id, G2GEvents.Kind.RULES, G2GEvents.write_rules(rules_body()))
 
-	# The joiner's own standing, again. The join's spawn already worked it out, but inside
-	# `game.add_player` — before this peer was mapped to its player, and before it was
-	# ready — so a store that answers from its cache emitted it to nobody, and a returning
-	# player's timer showed no best and no record until their next finish (while the Tab
-	# board, which reads the same standing on the server, showed both).
+	# The joiner's own standing, again: the join's spawn emitted it before this peer was
+	# mapped or ready, so a cached store told nobody.
 	var standing := game.standing_of(_player_key(session_id))
 	if not standing.is_empty():
 		_tell(peer_id, G2GEvents.Kind.STANDING, G2GEvents.write_standing(session_id, standing))
@@ -667,8 +660,7 @@ func _admit(peer_id: int) -> void:
 	if not reference.is_empty():
 		_tell(peer_id, G2GEvents.Kind.STAGE_REF, G2GEvents.write_stage_ref(session_id, reference))
 
-	# Every hunter already out on the course. A runner joining a server whose hunters were
-	# released an hour ago would otherwise be hit by things it was never told about.
+	# Every hunter already out, or the joiner is hit by things it was never told about.
 	for instance_id in _hunter_nets.keys():
 		var hunter: G2GNpcNet = _hunter_nets[instance_id]
 		if hunter.identity != null and hunter.npc != null and hunter.npc.is_alive():
@@ -676,6 +668,7 @@ func _admit(peer_id: int) -> void:
 				hunter.identity.net_id, hunter.npc.def.id, hunter.npc.position()
 			))
 
+	weapon_net.send_snapshot(peer_id, game.weapon_layer)
 	# Last, so everything above describes the world the announce is about to put it in.
 	_map_admit(peer_id)
 	if peer_ready_fn.is_valid():
@@ -1289,6 +1282,10 @@ func ask_restart(mode: int = G2GEvents.RESTART_TRACK) -> void:
 	_ask(G2GEvents.Ask.RESTART, G2GEvents.write_int(mode))
 
 
+func ask_drop_weapon() -> void:
+	_ask(G2GEvents.Ask.DROP_WEAPON, PackedByteArray())
+
+
 ## A spectating step: one of `G2GEvents.SPECTATE_*`.
 func ask_spectate(step: int) -> void:
 	_ask(G2GEvents.Ask.SPECTATE, G2GEvents.write_int(step))
@@ -1380,6 +1377,8 @@ func _on_request(message: DotNetMessage) -> void:
 			var _restarted := game.restart(id, G2GEvents.read_int(reader))
 			if _track_of(id) != track_before:
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
+		G2GEvents.Ask.DROP_WEAPON:
+			var _thrown := game.weapon_layer.throw_for(id)
 		G2GEvents.Ask.SPECTATE:
 			_on_spectate_asked(peer_id, session_id, id, G2GEvents.read_int(reader))
 		G2GEvents.Ask.RESPAWN:
@@ -1536,7 +1535,8 @@ func _on_event(message: DotNetMessage) -> void:
 			if bool(view["ok"]):
 				killview_received.emit(view["clip"], view["info"])
 		_:
-			_on_watch_event(event.kind, reader)
+			if not weapon_net.apply(event.kind, reader, game.weapon_layer):
+				_on_watch_event(event.kind, reader)
 
 ## The spectate, hit, death, kill, shot and match-end events, split off to keep _on_event short.
 func _on_watch_event(kind: int, reader: DotNetReader) -> void:

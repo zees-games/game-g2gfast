@@ -95,6 +95,12 @@ enum Kind {
 	SHOT,
 	## The replay of the killer's view, to the victim only: a DotKillViewClip body. Appended.
 	KILLVIEW,
+	## A deagle left a hand or a corpse: id, weapon, ammo, pose, throw, seconds left, at rest. Also one per lying weapon at signon.
+	WEAPON_DROP,
+	## A dropped weapon came to rest: its id and the pose to snap to.
+	WEAPON_SETTLED,
+	## A dropped weapon is gone, taken or expired: its id.
+	WEAPON_GONE,
 }
 
 enum Ask {
@@ -123,6 +129,8 @@ enum Ask {
 	SPECTATE,
 	## The victim skips the kill view and asks to respawn; the server releases the hold. Appended.
 	RESPAWN,
+	## The drop key: throw the weapon in hand. No body.
+	DROP_WEAPON,
 }
 
 ## [constant Ask.SPECTATE]'s body. Numbered rather than signed because `write_int` is a

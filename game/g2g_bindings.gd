@@ -46,6 +46,8 @@ const ROWS: Array[Dictionary] = [
 	{"action": &"dot_menu_maps", "setting": &"bind_map_next", "label": "Change map", "default": "M", "group": "Running"},
 	{"action": &"g2g_zones", "setting": &"bind_zones", "label": "Zone editor (offline, or an admin)", "default": "Z", "group": "Running"},
 
+	{"action": &"g2g_drop_weapon", "setting": &"bind_drop_weapon", "label": "Drop weapon (deathmatch)", "default": "Q", "group": "Running"},
+
 	{"action": &"g2g_flashlight", "setting": &"bind_flashlight", "label": "Flashlight", "default": "F", "group": "View"},
 	{"action": &"g2g_hide_others", "setting": &"bind_hide_others", "label": "Hide other players", "default": "O", "group": "View"},
 	# Only a spectator's key: it sends the free-camera request while somebody is watching, and

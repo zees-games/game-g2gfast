@@ -723,6 +723,7 @@ func _wire_bridge_world() -> void:
 	# say, and the rules keep their defaults.
 	if link != null:
 		var _bodies := game.ragdoll_rules.follow_cvars(link)
+		var _weapons := game.weapon_layer.rules.follow_cvars(link)
 		# The server's mp_forceview: this end places its own camera (G2GGame keeps every
 		# camera under it).
 		var _view := game.view_rules.follow_cvars(link)
@@ -1162,13 +1163,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			sampler.handle_event(event)
 		return
 
-	# Push to talk, handled BEFORE the "is this a press" filter below, because a talk
-	# key needs its release as much as its press: a key whose release nobody reads is
-	# a microphone that never closes.
-	#
-	# [b]K, not V, by default.[/b] V is this game's second checkpoint key and has been since
-	# the client was written; the genre's own voice key is unbound here because the genre
-	# binds it per player. K is what is left that nothing else claims.
+	# Push to talk, before the "is a press" filter: a talk key needs its release too, or the
+	# microphone never closes. K by default, because V is the second checkpoint key.
 	if event.is_action(DotVoiceManager.TALK_ACTION) and not event.is_echo():
 		if extras != null:
 			extras.set_talking(event.is_pressed())
@@ -1186,8 +1182,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
 
-	# Actions rather than keycodes, so every one of these is the player's own key. A mouse
-	# button bound to one arrives here as well as a key does.
+	# Actions rather than keycodes, so each is the player's own key (a mouse button too).
 	if event.is_action_pressed(&"g2g_servers"):
 		show_servers()
 	elif event.is_action_pressed(&"g2g_roam"):
@@ -1205,6 +1200,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		menu_choose_style(styles[_style_index].id)
 	elif event.is_action_pressed(&"g2g_restart"):
 		_restart_key()
+	elif event.is_action_pressed(&"g2g_drop_weapon"):
+		bridge.ask_drop_weapon()
 	elif event.is_action_pressed(&"g2g_zones"):
 		if zone_editor != null:
 			zone_editor.toggle()

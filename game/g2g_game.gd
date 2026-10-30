@@ -18,6 +18,7 @@ const G2GProps := preload("g2g_props.gd")
 const G2GReplays := preload("g2g_replays.gd")
 const G2GSpectate := preload("g2g_spectate.gd")
 const G2GUnits := preload("g2g_units.gd")
+const G2GWeaponLayer := preload("g2g_weapon_layer.gd")
 
 ## g2gfast: the simulation. Maps, timers, styles, records, and every player.
 ##
@@ -216,6 +217,9 @@ var replays: G2GReplays = G2GReplays.new()
 var entities := DotEntityTable.new()
 
 var combat: G2GCombat = null
+
+## Weapons lying in the world (both sides build it; the server simulates).
+var weapon_layer: G2GWeaponLayer = null
 
 ## What a dead body does, and which death reactions the server allows: dot-player-char's
 ## `sv_ragdoll*` cvars, bound by the module (REPLICATED) and followed by a client through its
@@ -803,16 +807,12 @@ func _build_spectate() -> void:
 
 ## The deathmatch, the hunters and the props, if this server runs any.
 ##
-## [b]Before `_build_maps`, and that is load-bearing.[/b] All three connect to
-## `map_ready`, and `_build_maps` can fire it during `_ready` when an initial map is
-## configured — so a layer built afterwards misses the first map of the session, which
-## for the hunters means no route and for the props means nothing cleared.
-##
-## [b]Each one is built whether or not it is enabled.[/b] `enabled` is a live cvar an
-## operator flips mid-map, and a layer that only existed when it was on would have to
-## be constructed under live players — which is where the interesting failures are.
-## Built and off costs a node and three signal connections.
+## Before `_build_maps`: they connect to `map_ready`, which `_ready` can fire for an initial
+## map. Each is built even when disabled, because `enabled` is a cvar flipped mid-map.
 func _build_layers() -> void:
+	weapon_layer = G2GWeaponLayer.new()
+	weapon_layer.setup(self)
+
 	if not authoritative:
 		# Spectating is the one layer a client needs: its camera is drawn from this client's poses.
 		_build_spectate()
@@ -1471,12 +1471,11 @@ func _simulate_tick(step: float) -> void:
 	if progress != null:
 		progress.sample(step)
 
-	# The three layers, in the order their inputs are produced. Combat resolves shots
-	# against the world as it ends the tick — half a tick of movement at surf speeds
-	# is two metres, which at range is a different part of the map. The hunters
-	# perceive where the players ended up. The props are only a rate limit.
+	# In the order their inputs are produced: combat resolves shots against the world as the
+	# tick ends (half a tick at surf speed is two metres), the hunters see where players ended up.
 	if combat != null:
 		combat.tick(step)
+		weapon_layer.tick(step)
 
 	if hunters != null:
 		hunters.tick(step)
@@ -1546,13 +1545,12 @@ func _on_map_changing(_from: DotMapDef, _to: DotMapDef) -> void:
 
 
 func _on_map_changed(map: DotMapDef, loaded: Node) -> void:
+	if weapon_layer != null:
+		weapon_layer.clear()
 	var g2g_map := loaded as G2GMap
 
-	# An imported map is data, and this is where it learns which data. It must happen
-	# before `timer_zones()` below: the zones come out of the manifest, so asking an
-	# unbuilt map for them returns an empty set and the map plays with no start, no
-	# finish and no pit -- with nothing erroring, because an empty zone set is a
-	# legitimate thing for a map to have.
+	# An imported map learns its data here, before `timer_zones()` below: the zones come out of
+	# the manifest, and an unbuilt map returns an empty set without erroring.
 	var bsp := loaded as G2GBspMap
 	if bsp != null:
 		bsp.global_worlds = config != null and config.global_worlds

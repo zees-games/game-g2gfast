@@ -224,6 +224,7 @@ func _build_match() -> DotResult:
 		return player.controller.state.position if player != null else Vector3.ZERO
 
 	match_node.respawn_due.connect(_on_respawn_due)
+	match_node.round_preparing.connect(func(_round: int) -> void: game.weapon_layer.clear())
 
 	return DotResult.success(match_node)
 
@@ -630,6 +631,8 @@ func _on_entity_killed(entity_id: int, damage: DotDamage) -> void:
 		# a breakable — and the scoreboard must not get a row keyed on it.
 		return
 
+	if game.weapon_layer != null:
+		game.weapon_layer.drop_dead(player_id_for(entity_id))
 	(kit["health"] as DotHealth).alive = false
 	(kit["hitboxes"] as DotHitboxSet).enabled = false
 	(kit["arsenal"] as DotWeaponArsenal).disabled = true

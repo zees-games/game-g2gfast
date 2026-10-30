@@ -13,6 +13,7 @@ const G2GPlayerNet := preload("g2g_player_net.gd")
 const G2GNpcNet := preload("g2g_npc_net.gd")
 const G2GHunters := preload("../g2g_hunters.gd")
 const G2GRequest := preload("g2g_request.gd")
+const G2GWeaponNet := preload("g2g_weapon_net.gd")
 
 ## Joins a [G2GGame] to a [DotNetManager]: the only file in this project that names both.
 ## dot-net simulates per entity but this game ticks as a whole, so [method ensure_game_ticked]
@@ -58,6 +59,13 @@ signal map_loaded(map: DotMapDef)
 var game: G2GGame = null
 var net: DotNetManager = null
 var killview: G2GKillView = null
+
+## The dropped-weapon events; its sink is the bridge's own send.
+var weapon_net := G2GWeaponNet.new(func(peer_id: int, kind: int, body: PackedByteArray) -> void:
+	if peer_id == 0:
+		call(&"_broadcast", kind, body)
+	else:
+		call(&"_tell", peer_id, kind, body))
 var link: G2GNetLink = null
 
 ## [code]func(bytes: PackedByteArray) -> void[/code]. Where a received voice frame goes on a client.
