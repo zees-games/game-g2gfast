@@ -3,6 +3,7 @@ extends Node
 const G2GAwards := preload("g2g_awards.gd")
 const G2GGame := preload("g2g_game.gd")
 const G2GPlayer := preload("g2g_player.gd")
+const G2GStatsRelay := preload("g2g_stats_relay.gd")
 const G2GStats := preload("g2g_stats.gd")
 const G2GUnits := preload("g2g_units.gd")
 
@@ -64,6 +65,14 @@ var _distance_owed: Dictionary = {}
 
 ## player id -> seconds of playtime not yet filed as a whole second.
 var _playtime: Dictionary = {}
+
+## Only the stats report is filed under dot-game's stable key; records, timers and awards keep the record key.
+var stats_feed := DotGameStatsFeed.new()
+
+## player id -> [stats key, userid], noted at join by [method note_session].
+var _stats_keys: Dictionary = {}
+
+var relay := G2GStatsRelay.new()
 
 var _attached: bool = false
 
@@ -140,7 +149,8 @@ func _build() -> DotResult:
 	link = DotAchievementStatsLink.new()
 	link.name = "StatsLink"
 	link.tracker = achievements
-	link.stats = stats
+	relay.follow(stats)
+	link.stats = relay
 	add_child(link)
 
 	var linked := link.start()
@@ -159,6 +169,16 @@ func _key(player_id: StringName) -> StringName:
 	return _game.record_key(player_id) if _game != null else player_id
 
 
+## Notes the stable stats key of a seat before [method begin] runs; a seat never noted files under the record key.
+func note_session(session: DotClientSession) -> void:
+	stats_feed.open_sessions = false
+	_stats_keys[StringName("u%d" % session.userid)] = [stats_feed.key_for(session), session.userid]
+
+
+func _stats_key(player_id: StringName) -> StringName:
+	return _stats_keys[player_id][0] if _stats_keys.has(player_id) else _key(player_id)
+
+
 ## Starts counting for a player.
 ##
 ## A coroutine, because an achievement store may be remote. Dropping the await is
@@ -169,7 +189,8 @@ func begin(player_id: StringName, display_name: String = "") -> void:
 	if not _attached:
 		return
 
-	stats.begin(_key(player_id), display_name)
+	stats.begin(_stats_key(player_id), display_name)
+	relay.record_of[_stats_key(player_id)] = _key(player_id)
 
 	_movement_baseline[player_id] = {}
 	_playtime[player_id] = 0.0
@@ -196,7 +217,11 @@ func leave(player_id: StringName) -> void:
 		record(player_id, G2GStats.DISTANCE, owed)
 	_distance_owed.erase(player_id)
 
-	stats.end(_key(player_id))
+	stats.end(_stats_key(player_id))
+	relay.record_of.erase(_stats_key(player_id))
+	if _stats_keys.has(player_id):
+		stats_feed.forget(int(_stats_keys[player_id][1]))
+		_stats_keys.erase(player_id)
 	link.forget(String(_key(player_id)))
 
 	_movement_baseline.erase(player_id)
@@ -213,11 +238,11 @@ func leave(player_id: StringName) -> void:
 
 func record(player_id: StringName, stat_id: StringName, value: float = 1.0) -> void:
 	if _attached:
-		stats.record(_key(player_id), stat_id, value)
+		stats.record(_stats_key(player_id), stat_id, value)
 
 
 func session_values(player_id: StringName) -> DotStatsValues:
-	return stats.session_values(_key(player_id)) if _attached else DotStatsValues.new()
+	return stats.session_values(_stats_key(player_id)) if _attached else DotStatsValues.new()
 
 
 func points_of(player_id: StringName) -> int:

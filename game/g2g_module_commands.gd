@@ -96,6 +96,8 @@ func _player_id(session: DotClientSession) -> StringName:
 ## session's userid, a server-local counter that restarts at 1. Empty without an identity, then the
 ## userid is the key, which [method G2GGame.is_legacy_key] reads as unranked.
 func _record_key_for(session: DotClientSession) -> StringName:
+	if game != null and game.progress != null:
+		game.progress.note_session(session)
 	var uid := session.uid()
 	if uid == "":
 		log_warn("a session has no identity; its runs are not ranked", {"userid": session.userid})

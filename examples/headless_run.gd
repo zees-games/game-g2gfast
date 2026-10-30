@@ -27,8 +27,9 @@ const G2GReach := preload("../game/g2g_reach.gd")
 const BhopIntro := preload("res://maps/bhop_g2g_intro.gd")
 const SurfIntro := preload("res://maps/surf_g2g_intro.gd")
 const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
+const ProgressKeysCheck := preload("res://examples/progress_keys_check.gd")
 
-const CHECKS := 255
+const CHECKS := 256
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -2919,9 +2920,7 @@ func _test_progression() -> void:
 
 	var progress := game.progress
 
-	# `_check` in this suite returns void, so the guard is a plain test with the
-	# report beside it rather than the `if not _check(...)` shape the other suites in
-	# this family use.
+	# `_check` here returns void, so the guard is a plain test, not `if not _check(...)`.
 	_check(progress != null, "the server keeps progress")
 
 	if progress == null:
@@ -3052,14 +3051,14 @@ func _test_progression() -> void:
 			]
 		)
 
-	# Under Thirty is the trap: a LOWEST stat with an AT_MOST rule is satisfied by a
-	# player who has never been recorded, because a missing stat reads as zero. It is
-	# guarded by a second rule requiring a finished run — so a player who has never
-	# played must NOT have it.
+	# Under Thirty: an AT_MOST rule on a LOWEST stat passes for a never-recorded player (missing
+	# reads as zero), so a second rule needs a finished run; a new player must NOT have it.
 	await progress.begin(&"nobody", "Nobody")
 	_check(
 		not progress.achievements.is_unlocked("nobody", &"g2g.sub_thirty"),
 		"a player who has never run has not finished a course in under thirty seconds"
 	)
 	await progress.leave(&"nobody")
+	var split: Array[String] = await ProgressKeysCheck.run(progress)
+	_check(split.is_empty(), "stats file under the stable key, records under the record key", str(split))
 	_done()
