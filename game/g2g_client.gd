@@ -890,6 +890,8 @@ func _process(delta: float) -> void:
 			if player != null and player.camera != null else null
 		var eye := camera.global_position if camera != null else Vector3.ZERO
 		var forward := -camera.global_transform.basis.z if camera != null else Vector3.FORWARD
+		if platform != null and platform.slide_sounds != null and presentation.steps != null:
+			presentation.steps.surf_rules = platform.slide_sounds.get(&"surf_rules")
 		presentation.present(delta, eye, forward)
 		var stack_now := game.player_stack
 		if stack_now != null and stack_now.physics != null and stack_now.physics.layout != null and player != null:
