@@ -12,115 +12,40 @@ const ReplayFollow := preload("../tools/replay_follow.gd")
 const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 const SurfPlan := preload("../tools/surf_plan.gd")
 
-## Checks a map imported from a Source .bsp: it loads, it is the right size, it is
-## lit, and — the only question that matters — a player put on it stays on it.
-##
-## [codeblock]
-## godot --headless --path . res://examples/headless_imported.tscn
-## [/codeblock]
-##
-## [b]Why collision is the check and geometry is not.[/b] Every number about an
-## imported map can be right while the map is unplayable: the vertex count, the
-## bounds, the material list and the manifest all pass if the triangles are wound
-## inside out or the collision body was never built, and a player then falls through
-## a map that renders perfectly. This file's own repeated lesson — a value produced
-## correctly and consumed by nothing — reaches imported geometry through collision.
-##
-## Skips rather than fails when nothing has been imported: `maps/imported/` is
-## optional content and a clone that has never run the importer is not broken.
+## Checks a map imported from a Source .bsp: it loads, it is the right size, it is lit, and a player put on it stays on it.
+## Collision is the check, not geometry: every count and bound can pass while triangles are wound inside out or the collision body was never built, and the player falls through a map that renders perfectly.
+## Skips rather than fails when nothing is imported: `maps/imported/` is optional content.
 
-## The imported maps that are deliberately NOT courses, and why each one is not.
-##
-## [b]This suite asserted that every imported map is runnable, and `maps/zones/README.md`
-## says in so many words that three of them are not.[/b] The check and the decision
-## contradicted each other for as long as both existed, and the suite was the one that was
-## wrong: it had been exiting 1 on three maps that are behaving exactly as documented.
-##
-## - `buses_from_hell_fixed` is a vehicle map. No teleports, no destinations, eight
-##   `func_rotating` and a `game_ui` — there is no route to time.
-## - `bhop_lego2` is a section-chain map (`s_1`..`s_30`) whose sections are all labelled and
-##   whose END is not. Nothing in the file distinguishes the last gate from the ones before
-##   it, and guessing would produce a leaderboard that looks right and measures a route the
-##   map does not have. `bhop_eazy` was here for the same reason until 2026-10-08, when its
-##   teleport graph was read through (its last gate is the only arrival nothing in a section
-##   leads back to: a hub of menu teleports) and it got a zones file.
-## - Combat surf maps (zones file `kind: arena`) are not imported here at all since 2026-10-17:
-##   they live in `../arena-surf-dm-maps`, and this list used to carry all of them.
-##
-## [b]The exemption is checked in both directions, which is what stops it being a mute
-## button.[/b] A map in here that turns out to HAVE a runnable main track fails — because
-## the reason it is listed has stopped being true and the list is now the lie. That is the
-## same bargain every skip in this family makes: it is allowed to skip a check, it is not
-## allowed to stop asking the question.
+## The imported maps that are deliberately NOT courses (see `maps/zones/README.md`).
+## `buses_from_hell_fixed` is a vehicle map with no route to time. `bhop_lego2` is a section chain whose END is not labelled, and guessing would give a leaderboard that measures a route the map does not have.
+## Checked both ways so it is not a mute button: a listed map that turns out to HAVE a runnable main track fails, because the list is then the lie. Combat surf maps live in `../arena-surf-dm-maps`.
 const NOT_COURSES := ["buses_from_hell_fixed", "bhop_lego2", "kz_bhop_yonkoma", "bunnyhop_pro", "surf_animals",
 	"kz_bhop_lucid", "bhop_training_fun"]
 
-## The imported maps with no pit, which is a different question from having no finish.
-##
-## [b]A separate list of one, rather than reusing [constant NOT_COURSES], and the difference
-## is the whole point.[/b] A surf or bhop map's `trigger_teleport` volumes ARE its pit, and
-## losing them means a player who falls off falls for ever. `bhop_eazy` and `bhop_lego2`
-## have pits and are checked for them; only `buses_from_hell_fixed` has none, because a
-## vehicle map has nothing to fall off. Folding the two lists together would stop asking two
-## maps a question they currently answer correctly, which is how an exemption quietly grows.
+## The imported maps with no pit, a different question from having no finish.
+## A separate list from [constant NOT_COURSES] on purpose: a surf or bhop map's `trigger_teleport` volumes ARE its pit and losing them means falling for ever.
+## Only `buses_from_hell_fixed` has none (nothing to fall off); folding the lists together is how an exemption quietly grows.
 const NO_PIT := ["buses_from_hell_fixed"]
 
-## Maps whose main spawn stands in a `trigger_push`, which since 2026-10-08 is run: the
-## player is carried off the pad the moment they appear, as in Source. surf_quilavar's
-## spawn is the foot of a 2000-unit updraft (1000 u/s, starting 40 units over the floor).
-## For these the "comes to rest inside the start zone" check asks instead that the push
-## moved the player UP and away, asserted both ways: a listed map whose player rests in
-## its start fails, so the entry goes when the push does.
+## Maps whose main spawn stands in a `trigger_push`, which is run: the player is carried off the pad on appearing (surf_quilavar's is the foot of a 2000-unit updraft).
+## For these the "comes to rest inside the start zone" check asks that the push moved the player UP and away, both ways: a listed map whose player rests in its start fails.
 const SPAWNS_IN_A_PUSH := ["surf_quilavar"]
 
-## Arrivals on these maps that DO land inside a pit on their own track, by label.
-##
-## [b]Known, not accepted[/b] (`[arrive-1]`). Two of the three that were here are fixed:
-##
-## - `surf_mesa`'s door landed 237 units over the SLOPED top of a teleport brush and
-##   inside its bounding box -- a zone is a box and a brush is a hull. `trim_to_hull` in
-##   `tools/bsp_import.py` asks `point_in_brush` of every arrival and cuts the box back.
-## - `surf_summit` stage 3 landed on the floor beam of a gate whose far side is the fail
-##   plane. Its zones file gives the stage a destination on the deck past the gate.
-##
-## - `surf_greensway` stage 2 was not a wedge: its arrival (the floor of `checkpoint_1`, a
-##   plane 3,328 wide and 7,168 tall) is INSIDE the hull of the mapper's own teleport, and
-##   so is every floor and both canyon rims within 1,700 units of the line. Its zones file
-##   makes it a split with no restart (`restart: false`, `[arrive-2]`): `!s2` is refused
-##   with the reason, and `_test_stands_where_it_sends_you` asserts that instead.
-##
-## Empty now, and kept so the next one has somewhere to go. Asserted both ways, like
-## [constant NOT_COURSES]: a map in here whose arrival stops landing in a pit fails, so
-## the list cannot outlive its reason.
+## Arrivals on these maps that DO land inside a pit on their own track, by label (`[arrive-1]`: known, not accepted).
+## surf_greensway stage 2 is the standing case: its arrival is inside the hull of the mapper's own teleport, so its zones file makes it a split with no restart (`restart: false`, `[arrive-2]`) and `!s2` is refused with the reason.
+## Empty-able, asserted both ways like [constant NOT_COURSES]: a map whose arrival stops landing in a pit fails.
 const ARRIVES_IN_PIT := {}
 
-## Arrivals the map drops a player from on purpose, by label: the line starts with a fall
-## the player steers out of. surf_rookie's stage 2 puts you over a tube, with its own pit
-## 340 units straight under the arrival returning you to the same arrival; a player who
-## does not steer onto the tube's ramp falls through and is put back at the top. A bot
-## standing still falls 8.2 m in the window this check waits, so for these the bound is
-## 20 m -- a drop the map means, never a fall out of the world (2026-10-09, gb-maps-1).
+## Arrivals the map drops a player from on purpose, by label: surf_rookie's stage 2 puts you over a tube whose own pit returns you to the same arrival.
+## A bot standing still falls 8.2 m in the window this check waits, so the bound is 20 m: a drop the map means, never a fall out of the world.
 const FALLING_ARRIVALS := {"surf_rookie": ["stage 2"]}
 
-## Imported bonuses with no pit of their own, by track, which `route_problems()` reports.
-##
-## [b]Empty since `[track-zone-2]`, and kept so the next one has somewhere to go.[/b] The
-## importer used to turn every leftover `trigger_teleport` into a RESPAWN on the MAIN
-## track, and the timer acts only on the run's own, so bhop_pit's bonus, surf_arcade's,
-## surf_beginner2's four and surf_summit's two had no pit: a player who fell off one fell
-## for ever. `pit_tracks` in `tools/bsp_import.py` gives a teleport to the track whose
-## START its destination is in -- a fail teleport sends a player back to the start of the
-## route they fell off -- and every one of those bonuses has pits now.
-##
-## Asserted both ways, like [constant NOT_COURSES]: a listed map must report exactly
-## these tracks and nothing else, and an unlisted map must report nothing, so a map
-## that gains a pit or loses one fails here and the list cannot outlive its reason.
+## Imported bonuses with no pit of their own, by track, which `route_problems()` reports; empty, kept so the next one has somewhere to go.
+## `pit_tracks` in `tools/bsp_import.py` gives a teleport to the track whose START its destination is in.
+## Asserted both ways: a listed map must report exactly these tracks, an unlisted map none.
 const BONUSES_WITHOUT_PITS := {}
 
-## The share of a map's own triangles drawn in a real texture -- its pakfile's, or a Kenney
-## stand-in for a stock one it did not carry (`G2GStockSubstitutes`) -- at least, for the
-## maps whose stand-ins have been chosen and looked at (`[g2g-maps-stock-1]`). Measured
-## 2026-10-04 with the first table; the grid share before it is in the comment.
+## The least share of a map's triangles drawn in a real texture (its pakfile's, or a Kenney stand-in from `G2GStockSubstitutes`), for the maps whose stand-ins have been chosen and looked at (`[g2g-maps-stock-1]`).
 const STOCK_DRAWN := {
 	"bhop_aztec": 0.66,  # 69.5% on 2026-10-09; 0% before: sandstone courses, looked at along the route
 	"surf_beginner2": 0.89,  # 94.7% on 2026-10-09; 2.6% before: planks, rock, sand, looked at along the route
@@ -185,13 +110,11 @@ const STOCK_DRAWN := {
 
 ## The most of a map, by triangles, that may draw the prototype grid with neither a
 ## stand-in nor a `none` entry saying why (g2g-maps-stock-1's done-when). Every map was
-## under 3% when it was set (2026-10-11); armed by setting it to 0.1%: bhop_lego3, at 0.5%, failed.
+## under 3% when it was set; armed by setting it to 0.1%: bhop_lego3, at 0.5%, failed.
 const UNLISTED_LIMIT := 0.10
 
-## The share of a map's triangles drawn in the texture its own pakfile carried, at least,
-## for the maps where a parsing bug was measured taking it away (2026-09-27): a leading
-## `/` on the material name and a `$basetexture` with a space in it. Measured after the
-## fix at 99%, 97% and 100%; before it, 2%, 8% and 0%.
+## The least share of a map's triangles drawn in the texture its own pakfile carried, for the maps where a parsing bug was measured taking it away:
+## a leading `/` on the material name and a `$basetexture` with a space in it (99%, 97% and 100% after the fix; 2%, 8% and 0% before).
 const OWN_TEXTURES := {
 	"surf_interference": 0.9,
 	"surf_aquaflow": 0.9,
@@ -199,20 +122,16 @@ const OWN_TEXTURES := {
 }
 
 ## Maps whose terrain is mostly `WorldVertexTransition` blends with both textures in the
-## pakfile, measured 2026-10-04: losing the second texture is the largest visible change
+## pakfile: losing the second texture is the largest visible change
 ## any of them can have, and it fails nothing else.
 const BLENDED := ["surf_mesa", "surf_summit", "surf_greensway", "bhop_evolve", "surf_aquaflow"]
 
-## The least estimated linear luminance the view from a map's main spawn may have
-## (`_spawn_view_luminance`), about 30 of 255 on screen. Set from the spread of all 87 maps
-## on 2026-10-11: the black holding rooms that prompted it measured 0.000 (bhop_lego2,
-## bhop_lego3, kz_bhop_yonkoma), the lit maps 0.014 and up.
+## The least estimated linear luminance the view from a map's main spawn may have (`_spawn_view_luminance`), about 30 of 255 on screen.
+## Set from the spread of all 87 maps: the black holding rooms measured 0.000, the lit maps 0.014 and up.
 const SPAWN_VIEW_FLOOR := 0.012
 
-## Maps whose spawn view is dark on purpose, each with why, asserted both ways: a listed map
-## whose spawn view clears [constant SPAWN_VIEW_FLOOR] fails, so the entry goes when the
-## reason does. A dark spawn is listed only after it was rendered and compared with the
-## map's own screenshots; "the importer drew it wrong" is never a reason.
+## Maps whose spawn view is dark on purpose, each with why, asserted both ways: a listed map whose view clears [constant SPAWN_VIEW_FLOOR] fails.
+## Listed only after it was rendered and compared with the map's own screenshots; "the importer drew it wrong" is never a reason.
 const DARK_SPAWNS := {
 	"kz_bhop_lucid": "the hub is a tools/toolsblack box round a lit floor with neon route markers; the map's own screenshots are neon on dark brick (rendered 2026-10-11)",
 	"bhop_fury_2": "dark rooms lit by green and cyan neon, as its screenshots are (rendered 2026-10-11)",
@@ -224,7 +143,7 @@ const DARK_SPAWNS := {
 }
 
 ## The maps with `$additive` surfaces the importer must find, asserted both ways (a map
-## that loses them, or one not listed that gains them, fails). 2026-10-11's re-import.
+## that loses them, or one not listed that gains them, fails).
 const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_ocean",
 	"bhop_overthinker", "bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference",
 	"surf_lt_omnific", "surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
@@ -232,10 +151,8 @@ const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_ela
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
 const CHECKS_PER_MAP := 58
 
-## Sections every map runs, entered against run to their last line. A runtime error inside
-## a section aborts that function and nothing says so; a section that bailed out after a
-## failed guard is counted as not finished on purpose, and the two that end early because
-## a map legitimately has nothing to check (no course, no door) say so first.
+## Sections every map runs, entered against run to their last line.
+## A runtime error aborts that function silently, so a section that bailed out after a failed guard counts as not finished; the two that end early because a map has nothing to check say so first.
 const SECTIONS_PER_MAP := 13
 
 ## A script error inside a test aborts THAT TEST and not the run, so a suite that has
@@ -342,7 +259,7 @@ func _test_loads(manifest_path: String) -> void:
 
 	_check(game.maps != null and game.maps.current != null and game.maps.current.id == _map_id,
 		"the imported map is in the catalogue and loads")
-	# Discovery, not a list. If this fails the map was found by something naming it.
+	# Discovery, not a list. If this fails the map was located by name.
 	_check(FileAccess.file_exists(manifest_path), "its manifest is beside it")
 	_done()
 
@@ -360,9 +277,8 @@ func _test_geometry() -> void:
 		"%d surfaces" % mesh.get_surface_count())
 
 	# Every surface the manifest lists is drawn, across however many instances it took.
-	# A mesh holds 256 and `bhop_monster_jam` has 311: in one mesh the last 55 were
-	# refused by the engine and the map was drawn with holes in it while every
-	# collision and standing check passed, because collision is built from the brushes.
+	# A mesh holds 256 and `bhop_monster_jam` has 311: the last 55 were refused by the engine and
+	# the map drew with holes while collision (built from brushes) still passed.
 	var drawn := 0
 	for child in node.get_children():
 		if child is MeshInstance3D and (String(child.name).begins_with("World")
@@ -374,14 +290,9 @@ func _test_geometry() -> void:
 	_check(drawn == listed, "and every surface the manifest lists is drawn",
 		"%d of %d" % [drawn, listed])
 
-	# [b]A floor is drawn from above (2026-10-07).[/b] Every brush face was wound inside
-	# out until then: culled from the side a player stands on and drawn from behind, so a
-	# floor showed its slab's underside and a surf ramp with a nodraw underside showed
-	# nothing at all -- surf_mesa's first ramp was clear from on top of it. Every check
-	# here passed throughout, because a culled triangle is still a triangle in the mesh.
-	# So the winding is asked directly: on every surface whose faces point up (PLATFORM),
-	# most triangles must be front-facing from above. Godot's front face is clockwise from
-	# the viewer, which is a right-hand cross product pointing AWAY from them -- down.
+	# A floor is drawn from above: on every PLATFORM surface most triangles must be front-facing from above.
+	# Wound inside out, a floor shows its slab's underside, every other check still passes (a culled triangle is still a triangle),
+	# and Godot's front face is clockwise from the viewer, a cross product pointing AWAY from them.
 	var upside_down := PackedStringArray()
 	var world_surfaces: Array[Dictionary] = []
 	for s: Dictionary in (node as G2GBspMap).manifest.get("surfaces", []):
@@ -415,11 +326,8 @@ func _test_geometry() -> void:
 	_check(upside_down.is_empty(), "and a floor is drawn from the side a player stands on",
 		", ".join(upside_down))
 
-	# [b]Static props are drawn (2026-09-27).[/b] 17 of the 26 maps place them and every
-	# one was absent: surf_aquaflow's whole reef, surf_greensway's forest, surf_summit's
-	# trees and arches. The count of props the importer DREW is from the models it read,
-	# the count PLACED is from the lump; a map that placed props it carried and drew none
-	# is an importer that stopped reading them.
+	# Static props are drawn: 17 of the 26 maps place them. The count DRAWN is from the models read,
+	# the count PLACED from the lump; props placed and none drawn is an importer that stopped reading them.
 	var manifest_props: Dictionary = (node as G2GBspMap).manifest.get("static_props", {})
 	var carried := int(manifest_props.get("placed", 0)) - int(manifest_props.get("stock_models", 0))
 	var prop_surfaces := 0
@@ -431,7 +339,7 @@ func _test_geometry() -> void:
 		"and the static props its pakfile carried are drawn",
 		"%s; %d prop surfaces drawn" % [manifest_props, prop_surfaces])
 
-	# [b]A stock-model prop with a written stand-in is drawn as its box (2026-10-17).[/b]
+	# [b]A stock-model prop with a written stand-in is drawn as its box.[/b]
 	# `stock_standins` is how many the importer boxed, out of the same lump `drawn` counts;
 	# a map that boxed some and drew fewer props than that, or no prop surface, lost them.
 	var boxed := int(manifest_props.get("stock_standins", 0))
@@ -439,7 +347,7 @@ func _test_geometry() -> void:
 		"and its stock-model stand-in boxes are drawn",
 		"%s; %d prop surfaces drawn" % [manifest_props, prop_surfaces])
 
-	# [b]And a 3D skybox is a backdrop, not a miniature (2026-09-27).[/b] Ten maps have one;
+	# [b]And a 3D skybox is a backdrop, not a miniature.[/b] Ten maps have one;
 	# its faces were drawn at a sixteenth of their size where they were compiled and no
 	# backdrop at all. Drawn, they are their own `Sky` instances, scaled about the camera.
 	var sky: Variant = (node as G2GBspMap).manifest.get("skybox", null)
@@ -455,7 +363,7 @@ func _test_geometry() -> void:
 		"and its 3D skybox is drawn as a backdrop exactly when it has one to draw",
 		"skybox %s, Sky node %s" % [sky, sky_node != null])
 
-	# [b]And a 3D skybox has something in it (2026-10-02).[/b] bhop_pandora2_fix and
+	# [b]And a 3D skybox has something in it.[/b] bhop_pandora2_fix and
 	# bhop_supernova build theirs from `prop_dynamic`s alone, and a static-props-only
 	# importer found the room and drew nothing in it: faces 0, props 0, an empty sky.
 	var sky_things := 0
@@ -464,11 +372,8 @@ func _test_geometry() -> void:
 	_check(not (sky is Dictionary and bool((sky as Dictionary).get("drawn", true))) or sky_things > 0,
 		"and a 3D skybox it draws has faces or props in it", str(sky))
 
-	# [b]And it is in front of the camera's far plane (4000 m).[/b] Drawn at the sky
-	# camera's own 512, pandora's nearest asteroid was 5 km out and its islands past 20 km:
-	# imported and invisible. The importer measures where the nearest and farthest of the
-	# sky land (`reach_units`); the nearest must be visible, and a scale it drew at may be
-	# smaller than the mapper's but never larger.
+	# And it is in front of the camera's far plane (4000 m). Drawn at the sky camera's own 512, the nearest
+	# asteroid was 5 km out: imported and invisible. The nearest of the sky (`reach_units`) must be visible, and a drawn scale may be smaller than the mapper's but never larger.
 	var visible := true
 	var reach_detail := "no 3D skybox drawn"
 	if sky is Dictionary and bool((sky as Dictionary).get("drawn", true)) and sky_things > 0:
@@ -494,11 +399,9 @@ func _test_geometry() -> void:
 
 	var aabb := mi.get_aabb()
 	var units := aabb.size / G2GUnits.METRES_PER_UNIT
-	# Source's own limit is +/-16384 units, so a map is at most 32768 across. Ten
-	# times that means the unit ratio was applied twice or not at all -- the one
-	# mistake that makes an imported map silently unplayable rather than wrong.
-	# The LONGEST side, not x: bhop_grove is one corridor 704 units across and 32,192
-	# long, and asking its x of the unit ratio failed a map that is exactly right.
+	# Source's limit is +/-16384 units, so a map is at most 32768 across; ten times that means the unit
+	# ratio was applied twice or not at all. The LONGEST side, not x: bhop_grove is one corridor 704
+	# across and 32,192 long.
 	var longest := maxf(units.x, maxf(units.y, units.z))
 	_check(longest > 1000.0 and longest < 40000.0,
 		"and is the size a Source map can be", "%.0f x %.0f x %.0f units" % [units.x, units.y, units.z])
@@ -521,10 +424,8 @@ func _test_lighting() -> void:
 		"and the atlas is bound to every one of them")
 
 	# A texture the map did not carry is painted its own measured colour, not a role grey.
-	# Most of a map is such surfaces, so a regression here turns every map back into the
-	# four greys it looked like before -- a thing no other check in this suite can see,
-	# because every greyscale surface is still a correctly configured material. Most rather
-	# than all: a light panel vrad measured as black keeps its role colour on purpose.
+	# Most of a map is such surfaces, so a regression turns every map back into four greys, which no other
+	# check sees (a grey surface is a correctly configured material). Most, not all: a light panel vrad measured as black keeps its role colour.
 	var prototype := 0
 	var coloured := 0
 	for entry: Dictionary in node.manifest.get("surfaces", []):
@@ -542,14 +443,9 @@ func _test_lighting() -> void:
 		"and a surface whose texture did not ship is painted the map's own colour for it",
 		"%d of %d prototype surfaces coloured" % [coloured, prototype])
 
-	# [b]A texture the pakfile carried is drawn, not replaced by the prototype grid.[/b]
-	# Two spellings the importer did not read: a material typed with a leading `/`
-	# (`/SURFACE`, looked up as `materials//surface.vmt`) and a `$basetexture` with a
-	# space in it (`"hammer textures/..."`, cut at the space). Between them they cost
-	# surf_interference 97% of its own textures, surf_aquaflow a third and bhop_eazy all
-	# of them, and nothing said so: a prototype surface is a correctly configured
-	# material. A name with the slash still on it fails every map; the share is asserted
-	# for the maps it was measured on, see [constant OWN_TEXTURES].
+	# A texture the pakfile carried is drawn, not replaced by the prototype grid.
+	# Two spellings were unread (a leading `/`, and a `$basetexture` with a space) and nothing said so, since a prototype surface is a correctly configured material.
+	# A name with the slash still on it fails every map; the share is asserted for the maps in [constant OWN_TEXTURES].
 	var tris := 0
 	var own := 0
 	var slashed := PackedStringArray()
@@ -580,11 +476,9 @@ func _test_lighting() -> void:
 	_check(drawn >= drawn_floor,
 		"and a stock texture it did not carry has its Kenney stand-in",
 		"%.1f%% drawn textured, %.0f%% expected" % [drawn * 100.0, drawn_floor * 100.0])
-	# [b]And what is still on the grid is there for a written reason.[/b] Every triangle,
-	# props included, that shipped no texture, is not water, has no stand-in and no `none`
-	# entry in textures/stock/substitutes.json is a material nobody has looked at: under
-	# [constant UNLISTED_LIMIT] of the map, which is the done-when of g2g-maps-stock-1. A
-	# new import with an unknown material family fails here, not on somebody's screen.
+	# And what is still on the grid is there for a written reason: every triangle with no texture, not water, no stand-in
+	# and no `none` entry in textures/stock/substitutes.json is a material nobody looked at, under
+	# [constant UNLISTED_LIMIT] of the map. A new unknown material family fails here, not on somebody's screen.
 	var all_tris := 0
 	var unlisted := 0
 	var worst := {}
@@ -631,13 +525,9 @@ func _test_lighting() -> void:
 		"%.0f%% of triangles in their own texture, %.0f%% expected; names with a leading '/': %s"
 			% [share * 100.0, floor_share * 100.0, slashed])
 
-	# [b]A blend material draws both its textures.[/b] `WorldVertexTransition` paints a
-	# second texture by vertex alpha, and the importer took only the first: grey rock where
-	# surf_mesa's reference footage has warm orange, on 67% of its triangles. The alpha
-	# travels in its own block (`alpha_offset`) and reaches the shader as COLOR.a, so a
-	# drawn blend surface has to have both the texture and a colour array that varies.
-	# [constant BLENDED] names maps that must have one, which is what catches an importer
-	# that stopped finding them.
+	# A blend material draws both its textures: `WorldVertexTransition` paints a second texture by vertex alpha,
+	# which travels in its own block (`alpha_offset`) and reaches the shader as COLOR.a, so a drawn blend surface
+	# needs the texture and a varying colour array. [constant BLENDED] names maps that must have one.
 	var listed := 0
 	for entry: Dictionary in node.manifest.get("surfaces", []):
 		if entry.has("texture2") and entry.has("alpha_offset"):
@@ -666,13 +556,9 @@ func _test_lighting() -> void:
 		"and a material that blends two textures draws both",
 		"%d listed, %d drawn with a varying alpha, broken: %s" % [listed, drawn_ok, drawn_bad])
 
-	# [b]An `$additive` surface is drawn added (2026-10-11).[/b] surf_lt_unicorn's spawn is
-	# inside rainbow bands whose black is see-through; drawn opaque they were black sheets
-	# round the camera, and every value involved was correct. Every surface the manifest
-	# marks `additive` is on the additive shader, and [constant ADDITIVE] names maps that
-	# must have some, which catches an importer that stopped reading `$additive`. Armed by
-	# taking the additive branch out of G2GBspMap._material_for, and the flag out of the
-	# importer.
+	# An `$additive` surface is drawn added: drawn opaque, surf_lt_unicorn's see-through rainbow bands were black sheets
+	# with every value correct. Every manifest surface marked `additive` is on the additive shader; [constant ADDITIVE]
+	# names maps that must have some. Armed by taking the additive branch out of G2GBspMap._material_for.
 	var additive_wanted := 0
 	for entry: Dictionary in node.manifest.get("surfaces", []):
 		if bool(entry.get("additive", false)):
@@ -689,10 +575,8 @@ func _test_lighting() -> void:
 		"%d drawn added, %d marked additive, listed in ADDITIVE: %s"
 			% [additive_drawn, additive_wanted, ADDITIVE.has(String(_map_id))])
 
-	# [b]No sky is a blank white dome.[/b] The procedural sky's top is the map's `_ambient`,
-	# and four maps never set theirs and carry the editor's default 255 255 255 (surf_beginner2,
-	# bhop_aztec, bhop_platformer_fxd, bhop_evolve); G2GLighting looks those up by sky name.
-	# Armed by taking that out: it fires on exactly those four.
+	# No sky is a blank white dome: the procedural sky's top is the map's `_ambient`, and four maps carry the editor's
+	# default 255 255 255 (surf_beginner2, bhop_aztec, bhop_platformer_fxd, bhop_evolve); G2GLighting looks those up by sky name.
 	var top := Color(0, 0, 0)
 	var world := node.get_node_or_null("Lighting") as WorldEnvironment
 	if world != null and world.environment != null and world.environment.sky != null:
@@ -703,10 +587,8 @@ func _test_lighting() -> void:
 		"and its sky is not a blank white dome", "sky top %s, sky name '%s'"
 			% [top, node.manifest.get("lighting", {}).get("sky_name", "")])
 
-	# [b]A sky the map packed is the sky drawn.[/b] 36 of the held maps carry their own six
-	# faces (`lighting.sky_faces`), and every one was drawn as a colour from a table of sky
-	# names. Passes on a map with none by asking nothing of it. Armed by taking
-	# `_apply_packed_sky` out of G2GBspMap: it fires on every map that packs one.
+	# A sky the map packed is the sky drawn: 36 held maps carry their own six faces (`lighting.sky_faces`).
+	# Passes on a map with none. Armed by taking `_apply_packed_sky` out of G2GBspMap.
 	var faces: Variant = node.manifest.get("lighting", {}).get("sky_faces", null)
 	var packed_ok := true
 	var packed_why := "no packed sky"
@@ -723,10 +605,8 @@ func _test_lighting() -> void:
 		packed_why = "%d of 6 faces bound" % bound
 	_check(packed_ok, "and a sky it packed is the sky drawn", packed_why)
 
-	# [b]And a sky named black is black, horizon included.[/b] surf_kitsune names `blacksky`
-	# and sets nothing else, and was drawn under dot-lighting's pale default dome. Passes on
-	# every map whose sky is not named black. Armed by taking `_darken_black_sky` out of
-	# G2GLighting.apply: it fires on surf_kitsune alone.
+	# And a sky named black is black, horizon included: surf_kitsune names `blacksky` and was drawn under the pale default dome.
+	# Armed by taking `_darken_black_sky` out of G2GLighting.apply; fires on surf_kitsune alone.
 	var lit: Dictionary = node.manifest.get("lighting", {})
 	var dark := true
 	var seen := "no sky material"
@@ -743,17 +623,9 @@ func _test_lighting() -> void:
 	_check(dark, "and a sky named black is drawn black",
 		"sky name '%s': %s" % [lit.get("sky_name", ""), seen])
 
-	# [b]And what a player sees from the spawn is lit (2026-10-11).[/b] Five maps rendered
-	# black or near it from where a player appears, and every check above passed: three held
-	# the player in a sealed black spawn room whose floor is the teleport out (the importer
-	# made it send back to the spawn), one wrapped the spawn in `$additive` rainbow sheets
-	# drawn opaque, one is dark by design. No headless run can render, so this estimates the
-	# frame instead: rays from the eye through the drawn meshes, each hit what the shader
-	# would draw there (the albedo the material samples, times the baked light under it,
-	# plus the material's ambient), each miss the sky. See [constant DARK_SPAWNS]. Armed on
-	# the manifests from before the fix: bhop_lego2, bhop_lego3 and kz_bhop_yonkoma measured
-	# 0.000. bhop_badges' dark spawn room measured 0.017, as bright as its lit black-walled
-	# sections: an estimate cannot tell those apart, and its zones file now names the start.
+	# And what a player sees from the spawn is lit. No headless run can render, so this estimates the frame: rays from the eye
+	# through the drawn meshes, each hit what the shader would draw there (albedo, baked light, ambient), each miss the sky.
+	# See [constant DARK_SPAWNS]. An estimate cannot tell bhop_badges' dark spawn room from its lit black-walled sections, so its zones file names the start.
 	var view := _spawn_view_luminance(node as G2GBspMap, world)
 	var listed_dark := DARK_SPAWNS.has(String(_map_id))
 	print("  spawn view %s: %.3f (display %.0f of 255)" % [_map_id, view, pow(view, 1.0 / 2.2) * 255.0])
@@ -765,12 +637,9 @@ func _test_lighting() -> void:
 	_done()
 
 
-## The estimated linear luminance of the view from a map's main spawn: 8 headings by 3
-## pitches from eye height, through every drawn World and Props surface. A hit is what
-## the material draws (see [method _surface_albedo]) under the atlas's light; a surface a
-## player sees through (additive, translucent, water, or the back of a one-sided face) is
-## passed through; a miss is the sky. No fog and no tone map, so it reads a little bright,
-## which is the safe side for a floor.
+## The estimated linear luminance of the view from a map's main spawn: 8 headings by 3 pitches from eye height, through every drawn World and Props surface.
+## A hit is what the material draws ([method _surface_albedo]) under the atlas's light; see-through surfaces are passed through; a miss is the sky.
+## No fog and no tone map, so it reads a little bright, the safe side for a floor.
 func _spawn_view_luminance(node: G2GBspMap, world: WorldEnvironment) -> float:
 	var meshes: Array[MeshInstance3D] = []
 	for child in node.find_children("*", "MeshInstance3D", true, false):
@@ -960,10 +829,8 @@ func _test_zones() -> void:
 		_check(respawns > 0, "with the pit volumes carried across as RESPAWN zones",
 			"%d respawn zones" % respawns)
 
-	# Source sweeps its trigger tests; dot-timer samples a point per tick. A pit drawn
-	# as a 16-unit plane -- which is how every one of them is drawn, because in Source
-	# that is enough -- is stepped clean over by a player falling at genre speed, and
-	# they then fall for ever. 48 of surf_kitsune's 53 were that thin on import.
+	# Source sweeps its trigger tests; dot-timer samples a point per tick. A 16-unit plane pit, enough in Source,
+	# is stepped clean over by a player falling at genre speed, who then falls for ever.
 	var thin := zones.thin_zones(G2GUnits.to_metres(3500.0), game.tick_rate)
 	_check(thin.is_empty(), "and no zone a 3500 u/s player passes through between ticks",
 		"%d thin" % thin.size())
@@ -985,10 +852,8 @@ func _test_zones() -> void:
 			"the main track has both a start line and a finish",
 			"runnable tracks: %s" % str(tracks))
 
-	# A track a player cannot be put on is a track nobody plays. `spawn_for` falls
-	# back to `fallback_spawn_units` for a missing one, which is the main track's
-	# spawn -- so a bonus with no spawn of its own silently starts at the map's start,
-	# and looks like a bonus that does not work rather than like a missing zone.
+	# A track a player cannot be put on is a track nobody plays: `spawn_for` falls back to the main track's spawn,
+	# so a bonus with no spawn silently starts at the map's start and looks like a bonus that does not work.
 	var without := PackedStringArray()
 	for track in tracks:
 		if zones.first_of_kind(DotTimerZone.Kind.SPAWN, track) == null:
@@ -1020,11 +885,8 @@ func _test_runnable() -> void:
 		_check(false, "and its stages come out in order")
 		return
 
-	# [b]Drive the timer over the map's own zones and see a time come out.[/b] Every
-	# other check here is about a zone existing; this is the only one about the zones
-	# adding up to a run. A start with no reachable finish, a stage numbered past the
-	# end, a finish inside the start -- all of them pass `problems()` and none of them
-	# produces a time.
+	# Drive the timer over the map's own zones and see a time come out: the only check about the zones adding up to a run.
+	# A start with no reachable finish, a stage past the end, a finish inside the start all pass `problems()`.
 	var timer := DotTimer.new()
 	timer.bind(zones, game.tick_rate)
 	var finished: Array[DotTimerRun] = []
@@ -1049,13 +911,9 @@ func _test_runnable() -> void:
 		_check(false, "and its stages come out in order")
 		return
 
-	# [b]A tick outside every zone, between the start and everything after it.[/b] The
-	# run begins on the tick the player LEAVES the start line, and that happens after
-	# the zone handling for the same tick -- so a route that steps straight from the
-	# start into the first stage arrives while the run is still IDLE and the split is
-	# dropped. It is an artifact of stepping a timer by hand rather than walking a
-	# map, and it cost every staged map here exactly one split until the gap was put
-	# back in.
+	# A tick outside every zone, between the start and everything after it. The run begins on the tick the player LEAVES
+	# the start line, after that tick's zone handling, so stepping straight into the first stage arrives while the run is
+	# IDLE and the split is dropped. An artifact of stepping a timer by hand rather than walking a map.
 	var bounds: Dictionary = (game.current_map_node() as G2GBspMap).manifest.get("bounds", {})
 	var away := G2GUnits.vector_to_metres(Vector3(
 		float((bounds.get("max", [0, 0, 0]) as Array)[0]),
@@ -1101,12 +959,8 @@ func _test_runnable() -> void:
 func _test_stands_on_it() -> void:
 	_section("collision")
 	var node := game.current_map_node()
-	# Anywhere under the map, not under the MeshInstance3D. The solid used to BE the
-	# mesh -- `create_trimesh_collision()` parents a `World_col` to it -- and it is not
-	# any more: it is built from the .bsp's brushes, which is a different set of
-	# geometry from the drawn faces and belongs to the map rather than to the drawing of
-	# it. The old shape is still what a pre-collision manifest falls back to, so this
-	# has to find both.
+	# Anywhere under the map, not under the MeshInstance3D: the solid is built from the .bsp's brushes and belongs to the map,
+	# but a pre-collision manifest falls back to the old `create_trimesh_collision()` shape, so this finds both.
 	var body: Node = null
 	for c in node.find_children("*", "StaticBody3D", true, false):
 		body = c
@@ -1147,15 +1001,9 @@ func _test_stands_on_it() -> void:
 	# Let it fall. On a map whose collision never got built this is the only check in
 	# the file that fails, and it fails by hundreds of metres rather than marginally.
 	var floor_y := start.y
-	# [b]Watching for the pits while it falls (2026-10-11).[/b] bhop_lego2's, kz_bhop_yonkoma's
-	# and bhop_badges' players appear in a sealed black room whose floor is the teleport out,
-	# and the importer had that teleport send back to the spawn: the player dropped into it,
-	# was put back, and dropped again, for ever, and "still standing three seconds later"
-	# passed because the spawn is where it kept being put. A pit on the main track touched
-	# at any tick of the three seconds is that, or a spawn over a hole. Armed on the
-	# manifests from before the fix: it fired on bhop_lego2 (180 of 180 ticks). It does not
-	# see a pit the player stands over without its feet entering the zone (bhop_badges' pad
-	# was hung below the floor); the spawn view below is the other half.
+	# Watching for the pits while it falls: a sealed black spawn room whose floor is the teleport out sent the player back to the
+	# spawn for ever, and "still standing three seconds later" passed because the spawn is where it was put. A main-track pit
+	# touched at any tick is that, or a spawn over a hole. It does not see a pit the feet never enter; the spawn view below is the other half.
 	var pits: Array[DotTimerZone] = game.timers.zones.of_kind(DotTimerZone.Kind.RESPAWN, DotTimerTrack.MAIN) \
 		if game.timers.zones != null else ([] as Array[DotTimerZone])
 	var in_pit := 0
@@ -1171,13 +1019,9 @@ func _test_stands_on_it() -> void:
 	_check(in_pit == 0, "and never touches a pit on the way down",
 		"inside a main-track pit on %d of 180 ticks" % in_pit)
 
-	# [b]And where it came to rest is inside the start zone (2026-09-27).[/b] The timer asks
-	# the zone about the player's own position every tick; a start box that stops short of
-	# the floor contains the spawn in mid-air and not the player standing under it, so the
-	# run starts as they fall out of it and a player on the pad can never be "in the
-	# start". surf_arcade was that: its start is a box around `s1_reset`, which stands
-	# 240 units over the pad, and at +/-128 the player rested 112 units under it. Armed
-	# by putting the old box back.
+	# And where it came to rest is inside the start zone. The timer asks the zone about the player's own position every tick;
+	# a start box that stops short of the floor contains the spawn in mid-air and not the player under it (surf_arcade's
+	# stood 240 units over the pad), so the run starts as they fall out of it.
 	var start_zone := game.timers.zones.first_of_kind(DotTimerZone.Kind.START, DotTimerTrack.MAIN) \
 		if game.timers.zones != null else null
 	if start_zone == null:
@@ -1194,14 +1038,9 @@ func _test_stands_on_it() -> void:
 			"at %s, zone %s..%s" % [at / G2GUnits.METRES_PER_UNIT,
 				start_zone.from / G2GUnits.METRES_PER_UNIT, start_zone.to / G2GUnits.METRES_PER_UNIT])
 
-	# [b]And it is not shut in (2026-10-09).[/b] surf_year3000's spawn was a sealed
-	# 240 x 128 unit void between two arrival booths: the player stood on a floor, inside
-	# the start zone, and could go nowhere, and every check above passed. Sixteen rays at
-	# waist height from where it came to rest; one has to run 5 m before it meets anything.
-	# The void's longest was 3.2 m. 5 and not more because a start room a mapper leaves by
-	# a teleport is a closed room too, and the smallest of those here are kz_bhop_badg3s's
-	# (6.9 m) and bhop_tesquo_v2's (7.4 m): rays cannot tell a room with a teleport in it
-	# from one without. Armed by taking surf_year3000's "remove" back out of its zones file.
+	# And it is not shut in: sixteen rays at waist height from where it came to rest, and one has to run 5 m before it meets
+	# anything. 5 and not more because a start room a mapper leaves by a teleport is a closed room too (the smallest here are
+	# kz_bhop_badg3s's 6.9 m and bhop_tesquo_v2's 7.4 m). Armed by taking surf_year3000's "remove" out of its zones file.
 	var space := bot.get_world_3d().direct_space_state
 	var waist := bot.global_position + Vector3.UP * 0.9
 	var longest := 0.0
@@ -1221,13 +1060,8 @@ func _test_stands_on_it() -> void:
 
 
 ## Every place the map can put a player: each track's spawn, and each `!s<n>`.
-##
-## [b]A destination is the one field nothing else checks.[/b] `DotTimerManager`
-## resolves "go to stage 3" to a zone's [member DotTimerZone.destination] and hands it
-## to the host, which teleports; a destination that is in the sky, inside a wall, or
-## left at the origin succeeds at every step and drops the player out of the world.
-## Standing on it for a second is the whole test, and it is the same test as the one
-## above with somewhere else to stand.
+## A destination is the one field nothing else checks: `DotTimerManager` resolves "go to stage 3" to a zone's
+## [member DotTimerZone.destination], and one in the sky, a wall, or at the origin succeeds at every step. Standing on it for a second is the test.
 func _test_stands_where_it_sends_you() -> void:
 	_section("destinations")
 	var node := game.current_map_node()
@@ -1252,13 +1086,9 @@ func _test_stands_where_it_sends_you() -> void:
 				spots.append(["stage %d" % n, stage.destination, stage.destination_yaw])
 	_expected += spots.size() + splits.size() * 2
 
-	# [b]A stage faces a player the way the map's own door into it does (2026-10-09).[/b]
-	# A stage built `around` a destination used to put the player there facing yaw 0, so on
-	# surf_kitsune every `!s<n>` and stage restart faced a wall side-on while the door into
-	# the same section faced down it: two reference runs never showed those walls, and
-	# ours showed one at every stage. Where a door (a TELEPORT on the track) lands inside a
-	# stage's own volume, the stage must agree with one of them within ten degrees. Armed by re-importing
-	# without bsp_import.py's around_yaw.
+	# A stage faces a player the way the map's own door into it does. Built `around` a destination, a stage faced yaw 0,
+	# so on surf_kitsune every `!s<n>` faced a wall side-on while the door faced down it. Where a door (a TELEPORT on the
+	# track) lands inside a stage's volume, the stage must agree with one within ten degrees. Armed by re-importing without `around_yaw`.
 	var facings := 0
 	var disagree: Array[String] = []
 	if zones != null:
@@ -1318,18 +1148,9 @@ func _test_stands_where_it_sends_you() -> void:
 	_done()
 
 
-## Every place the map puts a player -- a spawn, a stage, the far side of a door -- is
-## outside every pit on that track.
-##
-## [b]A pit that contains its own arrival is a loop nobody can see from the zone list.[/b]
-## A respawn fires on ENTRY, so a player put inside one is sent back to the start the
-## first time they move -- which from the player's side is a `!s2` that does nothing and
-## a stage nobody can reach. bhop_pandora2_fix spawned every player inside its first pit
-## because the importer thickened a 16-unit plane 48 units under the start room into a
-## 192-unit slab reaching up through the floor; `tools/bsp_import.py` `inflate_pit` is the
-## fix and this is the check that fails without it. `_test_stands_where_it_sends_you`
-## could not see it: it teleports a bot to each arrival and measures how far it FELL,
-## and a bot the pit put back at a higher spawn has fallen a negative distance.
+## Every place the map puts a player -- a spawn, a stage, the far side of a door -- is outside every pit on that track.
+## A respawn fires on ENTRY, so a player put inside a pit is sent back the first time they move (a `!s2` that does nothing).
+## `_test_stands_where_it_sends_you` cannot see it: a bot put back at a higher spawn has fallen a negative distance. Armed without `inflate_pit` in `tools/bsp_import.py`.
 func _test_arrivals_miss_the_pits() -> void:
 	_section("arrivals")
 	var zones := game.timers.zones
@@ -1368,15 +1189,8 @@ func _test_arrivals_miss_the_pits() -> void:
 
 
 ## Walking through one of the map's doors does not end the run.
-##
-## [b]`doorways` in a map's zone file exists so that a door is a TELEPORT, which keeps
-## the run, rather than a RESPAWN, which ends it -- and the game's handler for TELEPORT
-## called `G2GPlayer.teleport`, which ends it.[/b] So every door the importer ever
-## made ended the run anyway, on surf_kitsune (the map the rule was written for), on
-## bhop_interloper's three parts, on bhop_badges_mini's hundred and eighty sections. The
-## zone list was exactly right and the only symptom was a timer that stopped at the
-## first door. Driven through the real handler: the manager's signal, which is what the
-## timer emits when a player walks in.
+## `doorways` makes a door a TELEPORT, which keeps the run, but the game's TELEPORT handler called `G2GPlayer.teleport`, which ends it,
+## so the zone list was right and the only symptom was a timer that stopped at the first door. Driven through the real handler: the manager's signal.
 func _test_a_door_keeps_the_run() -> void:
 	_section("doors")
 	var zones := game.timers.zones
@@ -1429,14 +1243,9 @@ const GATED_COURSES := ["bhop_eazy", "bhop_eazy_v2"]
 const PIT_SAMPLES := 12
 
 
-## [b]A pit sends the player where its trigger_teleport aims, with the run kept (nightly
-## fgr-g2g-teleports-1).[/b] The zones are checked as data above; this one puts a running
-## player INTO a main-track pit and lets the game's own tick fire it, so the importer, the
-## zone index and `_on_effect_requested` are all in the line. A pit that carries no
-## destination is the spawn (the map's labels name the ones that legitimately do), so only
-## pits that carry one are sampled, and each must land exactly and leave the run going.
-## Then the finish: on a map with gates, one of them must land inside the finish zone, or
-## the gates all work and nobody completes the map.
+## A pit sends the player where its trigger_teleport aims, with the run kept (nightly fgr-g2g-teleports-1).
+## Puts a running player INTO a main-track pit and lets the game's own tick fire it, so importer, zone index and `_on_effect_requested` are all in the line.
+## Only pits that carry a destination are sampled, each must land exactly and keep the run. Then the finish: on a map with gates, one must land inside the finish zone.
 func _test_pits_land_at_their_destination() -> void:
 	_section("pits")
 	var zones := game.timers.zones
@@ -1483,10 +1292,8 @@ func _test_pits_land_at_their_destination() -> void:
 			await get_tree().physics_frame
 			if not landed.is_empty():
 				break
-		# A pit whose middle lies in another pit's volume (a sloped slab round a hub, a
-		# trigger over a trigger) fires whichever the index finds first; that overlap is
-		# the map's, not a wrong destination, so the sample says only that SOME
-		# destination-carrying pit took the player exactly where it aims.
+		# A pit whose middle lies in another pit's volume fires whichever the index finds first; that overlap is the map's,
+		# so the sample says only that SOME destination-carrying pit took the player exactly where it aims.
 		if landed.is_empty() or landed[0][0] != pit:
 			if landed.is_empty() or not (landed[0][0] as DotTimerZone).payload.has(G2GBspMap.SENDS_TO):
 				continue
@@ -1512,11 +1319,9 @@ func _test_pits_land_at_their_destination() -> void:
 		"%d of %d: %s" % [bad.size(), sampled, "; ".join(bad.slice(0, 3))])
 
 
-	# [b]The gates, in order, to the finish.[/b] bhop_eazy and bhop_eazy_v2 are rooms joined
-	# by gates, and the map is completed by being sent through each one: a gate that
-	# fell back to the spawn is a run nobody finishes (nightly fgr-g2g-teleports-1). So
-	# from the start, every gate whose landing is inside the next stage (or the finish) is
-	# walked into in stage order with the run going, and the run must come out finished.
+	# The gates, in order, to the finish (nightly fgr-g2g-teleports-1): bhop_eazy's rooms are joined by gates and a gate that
+	# fell back to the spawn is a run nobody finishes. Each gate landing inside the next stage (or the finish) is walked into
+	# in stage order with the run going, and the run must come out finished.
 	var finishes: Array[float] = []
 	var on_finish := func(run: DotTimerRun) -> void:
 		finishes.append(run.time())
@@ -1574,24 +1379,13 @@ func _run_up(timer: DotTimer, start: DotTimerZone) -> void:
 const ROUTE_SECONDS := 300.0
 
 
-## A bot runs the map from its main spawn to its finish, on the imported collision,
-## following the route written down for it in `maps/routes/<id>.json` (`g2g-maps-1`).
-##
-## [b]Every other section here asks about a place; this one asks about the whole way.[/b]
-## `_test_runnable` drives a timer over the zones, `_test_stands_where_it_sends_you` drops
-## a player at each arrival, and a map can pass all of it with a block missing, a gap
-## nobody can clear, or a solid that is not where it is drawn. A run that starts in the
-## start zone, crosses everything in between and is timed by the finish -- the timer the
-## game itself feeds, with no put-back by a pit on the way -- is the one check that a
-## block moved or a brush lost fails. A map with no route file says so and passes: a
-## route is data written per map (`tools/route_plan.py`), and most maps do not have one
-## yet. See game/g2g_route_bot.gd for how the bot drives it.
+## A bot runs the map from its main spawn to its finish on the imported collision, following the route in `maps/routes/<id>.json` (`g2g-maps-1`).
+## The one check about the whole way: the zone checks can pass with a block missing, a gap nobody can clear, or a solid not where it is drawn.
+## No put-back by a pit on the way; a map with no route file says so and passes (see game/g2g_route_bot.gd and `tools/route_plan.py`).
 func _test_runs_its_route() -> void:
 	_section("route")
-	# The route bot lands on a block and runs to its lip, and the recording is that bot's:
-	# both are a test of the collision line, and a sinking block (a door, or a map's
-	# anti-standing trap, 0.09 s on bhop_grove) sends a player who does that straight
-	# back. In Source too: a person hops every block. `headless_mechanics` asks the blocks.
+	# The route bot lands on a block and runs to its lip, and the recording is that bot's: a sinking block (a door, or a
+	# map's anti-standing trap, 0.09 s on bhop_grove) sends a player who does that straight back. `headless_mechanics` asks the blocks.
 	if game.mechanics != null:
 		game.mechanics.blocks.clear()
 	var why: Array = []
@@ -1665,25 +1459,13 @@ const LIFT_FROM_FRAME := 2000
 const LIFT_UNITS := 200.0
 
 
-## A bot drives the REAL movement along the run recorded for the map
-## (`maps/routes/<id>.replay`, a dot-timer replay) and the game's own timer finishes it
-## (`g2gfast-route-bot-1`). See replay_follow.gd.
-##
-## [b]This and the route section ask different things.[/b] The route is points a planner
-## or a person wrote down and a bot that finds its own way between them; a recording is
-## the way one run actually went, tick by tick, and following it is the check that the
-## collision is still the collision that run was made on. When it is not, the answer
-## is a place: "left the recorded line at frame N, (x, y, z)". The second check proves
-## that report, on a copy of the recording lifted off the map from [constant
-## LIFT_FROM_FRAME]: it must say the line was left there, not that a pit fired or that
-## time ran out. A map with no recording passes both and says so: a recording is a
-## person's ride (or `stage_ride`'s, saved with RIDE_SAVE_REPLAY), one per map.
+## A bot drives the REAL movement along the run recorded for the map (`maps/routes/<id>.replay`) and the game's own timer finishes it (`g2gfast-route-bot-1`); see replay_follow.gd.
+## A recording is the way one run went tick by tick, so following it checks the collision is still the one it was made on; a failure names a place ("left the recorded line at frame N").
+## The second check proves that report on a copy lifted off the map from [constant LIFT_FROM_FRAME]. A map with no recording passes both and says so.
 func _test_follows_its_recording() -> void:
 	_section("recording")
-	# The route bot lands on a block and runs to its lip, and the recording is that bot's:
-	# both are a test of the collision line, and a sinking block (a door, or a map's
-	# anti-standing trap, 0.09 s on bhop_grove) sends a player who does that straight
-	# back. In Source too: a person hops every block. `headless_mechanics` asks the blocks.
+	# The route bot lands on a block and runs to its lip, and the recording is that bot's: a sinking block (a door, or a
+	# map's anti-standing trap, 0.09 s on bhop_grove) sends a player who does that straight back. `headless_mechanics` asks the blocks.
 	if game.mechanics != null:
 		game.mechanics.blocks.clear()
 	var why: Array = []
@@ -1717,25 +1499,15 @@ func _test_follows_its_recording() -> void:
 	_done()
 
 
-## Perturbed starts the surf section rides besides the stage's own arrival, and how many
-## of them must arrive. Not all: the pilot arrives from 72 to 80% of perturbed starts
-## (measured on 50 simulated and 20 live rides, see game-dev/docs/surf-bots-study.md), so
-## asking for every one would be asking for a number nobody has measured. The ride from
-## the stage's own arrival must arrive. Seeded, so the same rides are asked every run.
+## Perturbed starts the surf section rides besides the stage's own arrival, and how many must arrive.
+## Not all: the pilot arrives from 72 to 80% of them (50 simulated and 20 live rides, game-dev/docs/surf-bots-study.md); the stage's own arrival must. Seeded.
 const SURF_PERTURBED := 4
 const SURF_PERTURBED_ARRIVING := 3
 
 
-## A surf bot rides the first stage in the map's surf cache (`maps/routes/<id>.surf.json`,
-## written by `tools/surf_plan.gd`) in the real game, from the stage's own arrival and from
-## [constant SURF_PERTURBED] perturbed starts (of which [constant SURF_PERTURBED_ARRIVING]
-## must arrive), and the game sends it into the next stage
-## (`fpt-arena-surf-bots-1`). First the simulator it plans and vetoes with is checked to be
-## the motor: a simulated ride leaves the live player untouched, repeats exactly, and ends
-## where the live player ends after the same commands, along the cache's own first ride.
-##
-## A map with no cache passes both and says so. A failure here after a movement or
-## collision change is the cache going stale: re-run `tools/surf_plan.gd` for the stage.
+## A surf bot rides the first stage in the map's surf cache (`maps/routes/<id>.surf.json`, from `tools/surf_plan.gd`) from the stage's own arrival and [constant SURF_PERTURBED] perturbed starts
+## (`fpt-arena-surf-bots-1`). First the simulator is checked to be the motor: a simulated ride leaves the live player untouched, repeats exactly, and ends where the live player does.
+## A map with no cache passes both; a failure after a movement or collision change is a stale cache: re-run `tools/surf_plan.gd`.
 func _test_surfs_from_its_cache() -> void:
 	_section("surf bot")
 	var path := G2GSurfCourse.cache_path(_map_id)

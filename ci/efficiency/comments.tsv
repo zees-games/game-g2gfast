@@ -7,8 +7,6 @@ examples/headless_bots.gd::long_block	2
 examples/headless_client.gd::long_block	3
 examples/headless_feel.gd::banner	3
 examples/headless_feel.gd::long_block	9
-examples/headless_imported.gd::history	26
-examples/headless_imported.gd::long_block	48
 examples/headless_link.gd::long_block	1
 examples/headless_maps.gd::banner	1
 examples/headless_maps.gd::history	2
@@ -21,9 +19,7 @@ examples/headless_net.gd::long_block	24
 examples/headless_presentation.gd::banner	12
 examples/headless_presentation.gd::history	1
 examples/headless_presentation.gd::long_block	14
-examples/headless_run.gd::banner	11
-examples/headless_run.gd::history	5
-examples/headless_run.gd::long_block	46
+examples/headless_run.gd::history	1
 examples/headless_stack.gd::banner	6
 examples/headless_stack.gd::long_block	1
 examples/headless_workshop.gd::long_block	1
@@ -44,8 +40,6 @@ game/g2g_browser.gd::long_block	7
 game/g2g_bsp_map.gd::history	1
 game/g2g_bsp_map.gd::long_block	18
 game/g2g_camera.gd::long_block	2
-game/g2g_client.gd::history	1
-game/g2g_client.gd::long_block	32
 game/g2g_client_extras.gd::banner	2
 game/g2g_client_extras.gd::history	2
 game/g2g_client_extras.gd::long_block	9
@@ -56,9 +50,7 @@ game/g2g_config.gd::history	1
 game/g2g_config.gd::long_block	24
 game/g2g_effects.gd::long_block	5
 game/g2g_flashlight.gd::long_block	1
-game/g2g_game.gd::banner	7
-game/g2g_game.gd::history	4
-game/g2g_game.gd::long_block	50
+game/g2g_game.gd::long_block	1
 game/g2g_geometry.gd::history	1
 game/g2g_geometry.gd::long_block	3
 game/g2g_hud.gd::long_block	6
