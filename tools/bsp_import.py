@@ -3286,6 +3286,45 @@ def spawn_through_pits(z, pits):
     return moved
 
 
+def cap_pits_under_blocks(zones, blocks, solids):
+    """Lower every RESPAWN slab's top to the top of a block standing in its footprint.
+
+    [b]A block's top is somewhere a player lands; the slab must not cover it.[/b] The
+    sliced slabs of a sloped pit (and any slab grown past its plane) can reach a few
+    units above a trap block drawn over the pit, so a player who landed was respawned
+    before being grounded. A slab that reaches a whole player's height above the top is
+    the mapper's sheet over a block, which Source respawns too, and is left alone. Works on emitted zones and mechanics (Godot axes, y up);
+    `solids` are Hammer boxes. The slab keeps one tick of depth by going down instead.
+    """
+    capped = 0
+    tops = []
+    for blk in blocks:
+        bx = blk["min"], blk["max"]
+        top = None
+        for a, b in solids:
+            ga, gb = bsp_mechanics.godot_box(a, b)
+            if ga[0] >= bx[1][0] or gb[0] <= bx[0][0] or ga[2] >= bx[1][2] or gb[2] <= bx[0][2]:
+                continue
+            if bx[0][1] <= gb[1] <= bx[1][1] + 1.0:
+                top = gb[1] if top is None else max(top, gb[1])
+        tops.append((bx, bx[1][1] if top is None else top))
+    for zone in zones:
+        if zone["kind"] != "RESPAWN" or "min" not in zone:
+            continue
+        lo, hi = zone["min"], zone["max"]
+        for bx, top in tops:
+            if lo[0] >= bx[1][0] or hi[0] <= bx[0][0] or lo[2] >= bx[1][2] or hi[2] <= bx[0][2]:
+                continue
+            # Feet stand on the top; the zone test also reaches TOUCH_BELOW under them.
+            limit = top - 3.0
+            if lo[1] < top - TICK_DEPTH and top <= hi[1] + 2.0 and hi[1] - top < PLAYER_HEIGHT:
+                hi[1] = limit
+                if hi[1] - lo[1] < TICK_DEPTH:
+                    lo[1] = hi[1] - TICK_DEPTH
+                capped += 1
+    return capped
+
+
 def emit_zones(z):
     """The zone list as the manifest carries it: genre units, Godot axes."""
     out = []
@@ -3808,6 +3847,9 @@ def main(argv=None):
     zones = emit_zones(z)
     mech = bsp_mechanics.mechanics(bsp, entity_origin, z.destinations, DESTINATION_LIFT,
                                    yaw_to_godot, z.traps)
+    capped = cap_pits_under_blocks(zones, mech["blocks"], solids)
+    if capped:
+        notes.append("%d pit slabs lowered below the top of a block in their footprint" % capped)
     for s in spawns:
         s.pop("origin_src", None)
         s.pop("yaw_src", None)

@@ -32,24 +32,9 @@ const G2GUnits := preload("../game/g2g_units.gd")
 
 const SAMPLE := 12
 
-## Trap blocks whose top lies inside an importer pit slab (a centred 192-unit inflate of
-## the mapper's sheet), so a player landing on them is respawned on arrival: map-data bug
-## (a ratchet: the count may only go down; 13 maps as of 2026-10-31).
-const BLOCKS_IN_PIT := {
-	"bhop_badges": 1,
-	"bhop_badges_mini": 3,
-	"bhop_depot": 1,
-	"bhop_forgotten": 2,
-	"bhop_freakin": 2,
-	"bhop_fury": 1,
-	"bhop_lego3": 3,
-	"bhop_monster_jam": 1,
-	"bhop_null_fix": 1,
-	"bhop_pharma": 1,
-	"bhop_platformer_fxd": 1,
-	"bhop_strength_v2": 1,
-	"kz_bhop_lucid": 6,
-}
+## Maps whose trap blocks still lie inside a pit slab because the source .bsp is no longer
+## in inspirations/g2gfast, so the importer cannot rebuild them (a ratchet: only down).
+const BLOCKS_IN_PIT := {"bhop_platformer_fxd": 1}
 
 ## Pits whose destination is known to be somewhere a player cannot stand, by map: the
 ## mapper's own `info_teleport_destination` in a wall or over nothing. Asserted both ways
