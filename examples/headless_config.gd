@@ -9,7 +9,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
 const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
-const CHECKS := 24
+const CHECKS := 26
 
 
 func _ready() -> void:
@@ -50,6 +50,15 @@ func _run() -> void:
 	_check(fall.damage_for(60.0) == 0.0, "a 60 m/s landing costs nothing while it is off")
 	console.set_cvar("sv_falldamage", "1")
 	_check(fall.enabled and fall.damage_for(60.0) > 0.0, "the cvar is the only way on (and it works)")
+	var manager := DotCombatManager.new()
+	var ff_rules := DotDamageRules.new()
+	ff_rules.friendly_fire = config.friendly_fire
+	manager.rules = ff_rules
+	var _ff := manager.bind_cvars(console.cvar, DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+	_check(console.get_int("mp_friendlyfire") == 1, "mp_friendlyfire starts at the game's rule (on)")
+	console.set_cvar("mp_friendlyfire", "0")
+	_check(not ff_rules.friendly_fire, "the cvar drives the damage rules")
+	manager.free()
 	_layers()
 	_templates(binder)
 	var wb := DotGameWorkbench.new()

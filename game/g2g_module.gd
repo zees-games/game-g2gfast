@@ -270,6 +270,10 @@ func _module_load() -> DotResult:
 	# sv_falldamage stays 0 (see G2GGame.fall_rules); bound so an admin sees it is a decision.
 	var _fall := game.fall_rules.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY)
 
+	# mp_friendlyfire and mp_teammate_passthrough; the default is the rules the combat layer built (G2GConfig.friendly_fire).
+	if game.combat != null and game.combat.manager != null:
+		var _combat := game.combat.manager.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+
 	add_cvar("sv_deathmatch", "1" if game.config.deathmatch else "0",
 		"Whether players can shoot each other.").changed.connect(
 		func(_old: String, new_value: String) -> void:
