@@ -197,6 +197,20 @@ do_test() {
         [ "$fails" -eq 0 ] && printf '  %sok%s   every script parses\n' "$GRN" "$OFF"
     fi
 
+    if [ $# -eq 0 ]; then
+        echo "running the tool checks"
+        local tc
+        for tc in tools/test_*.py; do
+            [ -f "$tc" ] || continue
+            if out="$(python3 -I "$tc" 2>&1)"; then
+                printf '  %sok%s   %s  %s\n' "$GRN" "$OFF" "$tc" "$(printf '%s' "$out" | tail -1)"
+            else
+                printf '  %sFAIL%s %s\n%s\n' "$RED" "$OFF" "$tc" "$out"
+                fails=$((fails + 1))
+            fi
+        done
+    fi
+
     echo "running the suites"
     local scene
     for scene in ${*:-$SUITES}; do
