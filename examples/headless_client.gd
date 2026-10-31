@@ -436,9 +436,10 @@ func _test_an_online_kill_view_poses_the_bodies() -> void:
 	for i in range(12):
 		var t := -1.0 + float(i) * 0.2
 		flat.append_array(PackedFloat32Array([t, 0.0, 1.6, 0.0, 0.0, 0.0, 0.0, 1.0, 90.0, -1.0, -1.0]))
+		flat.resize(flat.size() + DotKillViewRing.AUX)
 	# 9000 is a server entity id: nothing on this client is numbered that.
 	var info := {"killer": "Rival", "weapon": "deagle", "killer_key": "u93"}
-	var clip := {"v": 1, "killer": 9000, "cursor": false, "f": flat, "info": info}
+	var clip := {"v": DotKillViewRing.VERSION, "killer": 9000, "cursor": false, "f": flat, "info": info}
 	bridge.killview_received.emit(clip, info)
 	_check(host.view.is_active(), "the server's clip starts the kill view")
 	for _i in range(6):
