@@ -32,6 +32,25 @@ const G2GUnits := preload("../game/g2g_units.gd")
 
 const SAMPLE := 12
 
+## Trap blocks whose top lies inside an importer pit slab (a centred 192-unit inflate of
+## the mapper's sheet), so a player landing on them is respawned on arrival: map-data bug
+## (a ratchet: the count may only go down; 13 maps as of 2026-10-31).
+const BLOCKS_IN_PIT := {
+	"bhop_badges": 1,
+	"bhop_badges_mini": 3,
+	"bhop_depot": 1,
+	"bhop_forgotten": 2,
+	"bhop_freakin": 2,
+	"bhop_fury": 1,
+	"bhop_lego3": 3,
+	"bhop_monster_jam": 1,
+	"bhop_null_fix": 1,
+	"bhop_pharma": 1,
+	"bhop_platformer_fxd": 1,
+	"bhop_strength_v2": 1,
+	"kz_bhop_lucid": 6,
+}
+
 ## Pits whose destination is known to be somewhere a player cannot stand, by map: the
 ## mapper's own `info_teleport_destination` in a wall or over nothing. Asserted both ways
 ## (a listed map whose destinations all stand fails), so the list cannot outlive its
@@ -300,24 +319,34 @@ func _test_blocks() -> void:
 	var tried := 0
 	var wrong := PackedStringArray()
 	var hop_bad := PackedStringArray()
-	var no_headroom := 0
+	var arrived_taken := 0
 	for b: Dictionary in _sample(m.blocks, SAMPLE):
 		var box: AABB = b["box"]
-		# A door block is stood on top of; a trap is the map's teleport sheet lying ON a
-		# block, so its bottom is where the feet go.
-		var floor_y := box.position.y if bool(b.get("touch", false)) else box.end.y
-		var top := Vector3(box.get_center().x, floor_y + G2GUnits.to_metres(2.0), box.get_center().z)
+		# A trap's sheet can be taller than the block under it, so neither its min nor its
+		# max is the floor: ask the world for the solid top under the sheet's centre.
+		var cx := box.get_center().x
+		var cz := box.get_center().z
+		var q := PhysicsRayQueryParameters3D.create(
+			Vector3(cx, box.end.y + G2GUnits.to_metres(2.0), cz),
+			Vector3(cx, box.position.y - G2GUnits.to_metres(64.0), cz))
+		var hit := bot.get_world_3d().direct_space_state.intersect_ray(q)
+		if hit.is_empty():
+			continue
+		var top: Vector3 = (hit["position"] as Vector3) + Vector3(0, G2GUnits.to_metres(2.0), 0)
 		# Somewhere to stand at all: a block narrower than the hull, or one under a ceiling,
 		# is checked by the ones beside it.
 		bot.teleport(top, 0.0, true)
 		bot.controller.state.velocity = Vector3.ZERO
 		var landed := false
-		for _i in range(8):
+		for _i in range(20):
 			await get_tree().physics_frame
 			if bot.controller.state.is_grounded():
 				landed = true
 				break
 		if not landed:
+			# Taken before it was ever seen standing: a pit slab overlaps the block's top.
+			if bot.global_position.distance_to(b["destination"]) < G2GUnits.to_metres(64.0):
+				arrived_taken += 1
 			continue
 		tried += 1
 		var on_since := bot.global_position
@@ -352,19 +381,15 @@ func _test_blocks() -> void:
 				rose = maxf(rose, bot.global_position.y - jumped_from)
 		if hop_ok:
 			hopped_ok += 1
-		elif rose < G2GUnits.to_metres(4.0):
-			# A ceiling right over the block: the jump never leaves the floor, so there is
-			# no hop to test and the player is rightly taken.
-			tried -= 1
-			no_headroom += 1
 		else:
 			hop_bad.append("%s -> %s at %s" % [_u(top), _u(dest), _u(bot.global_position)])
 	_planned += 2
 	_check(tried == 0 or sank == stood,
 		"a player who stays on a block is taken off it by the plate under it (%d of %d)" % [sank, stood],
 		", ".join(wrong))
-	_check(tried == 0 or hopped_ok == tried,
-		"a player who hops off a block on landing is not (%d of %d, %d under a ceiling)" % [hopped_ok, tried, no_headroom],
+	var allowed: int = int(BLOCKS_IN_PIT.get(String(_map_id), 0))
+	_check(arrived_taken <= allowed and (tried == 0 or hopped_ok == tried),
+		"a player who hops off a block on landing is not (%d of %d, %d taken on arrival, %d known)" % [hopped_ok, tried, arrived_taken, allowed],
 		", ".join(hop_bad))
 	_done()
 
