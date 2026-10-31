@@ -299,6 +299,8 @@ func _test_blocks() -> void:
 	var hopped_ok := 0
 	var tried := 0
 	var wrong := PackedStringArray()
+	var hop_bad := PackedStringArray()
+	var no_headroom := 0
 	for b: Dictionary in _sample(m.blocks, SAMPLE):
 		var box: AABB = b["box"]
 		# A door block is stood on top of; a trap is the map's teleport sheet lying ON a
@@ -335,22 +337,35 @@ func _test_blocks() -> void:
 		bot.teleport(top + Vector3(0, G2GUnits.to_metres(40.0), 0), 0.0, true)
 		bot.controller.state.velocity = Vector3.ZERO
 		var hop_ok := true
+		var jumped_from := -INF
+		var rose := 0.0
 		for _i in range(int(0.3 * game.tick_rate)):
 			await get_tree().physics_frame
 			if bot.controller.state.is_grounded():
+				jumped_from = bot.global_position.y
 				bot.controller.state.velocity.y = G2GUnits.to_metres(G2GUnits.JUMP_VELOCITY)
 				bot.controller.motor.set_mode(bot.controller.state, DotFpsState.Mode.AIR)
 			if bot.global_position.distance_to(dest) < G2GUnits.to_metres(32.0):
 				hop_ok = false
 				break
+			if jumped_from > -INF:
+				rose = maxf(rose, bot.global_position.y - jumped_from)
 		if hop_ok:
 			hopped_ok += 1
+		elif rose < G2GUnits.to_metres(4.0):
+			# A ceiling right over the block: the jump never leaves the floor, so there is
+			# no hop to test and the player is rightly taken.
+			tried -= 1
+			no_headroom += 1
+		else:
+			hop_bad.append("%s -> %s at %s" % [_u(top), _u(dest), _u(bot.global_position)])
 	_planned += 2
 	_check(tried == 0 or sank == stood,
 		"a player who stays on a block is taken off it by the plate under it (%d of %d)" % [sank, stood],
 		", ".join(wrong))
 	_check(tried == 0 or hopped_ok == tried,
-		"a player who hops off a block on landing is not (%d of %d)" % [hopped_ok, tried])
+		"a player who hops off a block on landing is not (%d of %d, %d under a ceiling)" % [hopped_ok, tried, no_headroom],
+		", ".join(hop_bad))
 	_done()
 
 
