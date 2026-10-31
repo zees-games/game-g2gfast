@@ -144,7 +144,7 @@ const DARK_SPAWNS := {
 
 ## The maps with `$additive` surfaces the importer must find, asserted both ways (a map
 ## that loses them, or one not listed that gains them, fails).
-const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_ocean",
+const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_elate", "bhop_forgotten", "bhop_ocean",
 	"bhop_overthinker", "bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference",
 	"surf_lt_omnific", "surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 

@@ -224,3 +224,25 @@ From the "Next by likes" list above, in like order (the ranking was not extended
 | [124486](https://gamebanana.com/mods/124486) | bhop_atmosphere | 13 | 3,514 | imported: start round `spawn`, finish at the wall teleport to `end` |
 
 **Next by likes**, not yet read: bhop_psykeeysss [125780], bhop_treason [601212], bhop_giga_citadel [125120], bhop_alvo2 [124417], bhop_verisimilitude [126310] (129 MB archive). After those, read page 3 of the Bunny Hop most-liked browse.
+
+## Imported 2026-10-31
+
+The rest of the 2026-10-26 "Next by likes" bunny-hop list, then surf maps from the Surf category. Every page is game 2 and states CC BY-NC-ND 4.0, forbidding commercial use only; none says anything against porting. Like and view counts were not recorded this round.
+
+| Page | Map | Status |
+| --- | --- | --- |
+| [125780](https://gamebanana.com/mods/125780) | bhop_psykeeysss | downloaded, pending/: twelve fall returns, no finish marked |
+| [601212](https://gamebanana.com/mods/601212) | bhop_treason | not downloaded: 302 MB archive, blocks driven by vscripts |
+| [125120](https://gamebanana.com/mods/125120) | bhop_giga_citadel | not downloaded: unlockables and climb logic |
+| [124417](https://gamebanana.com/mods/124417) | bhop_alvo2 | downloaded, pending/: name-filter gates like bhop_pharos_fix, two triggers to `end`, finish not read |
+| [126310](https://gamebanana.com/mods/126310) | bhop_verisimilitude | not downloaded: 123 MB archive |
+| [125063](https://gamebanana.com/mods/125063) | bhop_forgotten | imported: start round `c1`, finish at the pad teleport to `end`; 159 anti-standing traps become sinking blocks |
+| [125076](https://gamebanana.com/mods/125076) | bhop_FreAkin | imported as `bhop_freakin`: start round the spawn room, finish at the 168-unit door to `ende` (the two hub doors to it stay teleports); all stock CS:S textures, so it draws as the prototype grid |
+| [125791](https://gamebanana.com/mods/125791) | bhop_pym | downloaded, pending/: five stages behind name gates, no finish marked after stage 5 |
+| [122563](https://gamebanana.com/mods/122563) | surf_milkyway | zones written (start at the map's `START` trigger, finish at the door to `end`; its `END` label, a box over the spawn room, is ignored), pending/: the spawn room renders dim purple-brown (spawn view 0.007 against the 0.012 floor) while the page screenshots show the course lit bright blue, so it is not listed as dark until the lighting is checked |
+| [123059](https://gamebanana.com/mods/123059) | surf_stonework4 | zones written, pending/: the import was OOM-killed at its memory ceiling on a short-of-memory VM; re-import from pending/ |
+| [122346](https://gamebanana.com/mods/122346) | surf_japan_reloaded | downloaded, pending/: a combat surf map, belongs with `"kind": "arena"` |
+| [122039](https://gamebanana.com/mods/122039) | surf_fastspiral_retro | downloaded, pending/: start and finish not read from its penalty room and pads |
+| [121859](https://gamebanana.com/mods/121859) | surf_construction | downloaded, pending/: three levels run as a timed round with jails |
+
+**Next**: page 3 of the Bunny Hop most-liked browse, and further Surf candidates.

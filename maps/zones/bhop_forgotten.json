@@ -1,0 +1,43 @@
+{
+ "id": "bhop_forgotten",
+ "author": "sexy but not trying..",
+ "attribution": {
+  "author": "sexy but not trying..",
+  "source": "https://gamebanana.com/mods/125063 (submitter and Key Author: sexy but not trying..; tester Serz; Counter-Strike: Source; licence CC BY-NC-ND 4.0, the page forbids commercial use only and says nothing against porting)",
+  "archive": "bhop_forgotten.rar",
+  "recorded": "2026-10-31"
+ },
+ "notes": "Credit, and zones from the spawn point and the single trigger aimed at the destination `end` (gb-maps-1, chk-maps run 117). cp1..cp29 are where each section returns a player who fell, not splits; lj1, b1, secret1 and bhop_fur_suck1..4 are side areas. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "the map's anti-standing trap: a trigger_multiple on top of each block sets the player's name to `default` 0.1 s after landing, and the 1-unit teleport under it is behind filter_activator, so it only fires on a player who stood too long. Imported as per-player sinking blocks (bsp_mechanics.trap_blocks)"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "c1",
+    "extents": [
+     256,
+     256,
+     120
+    ]
+   },
+   "note": "around c1, the destination among the 15 info_player_terrorist spawns"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "c1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "the only trigger aimed at `end`, a 258x322 pad at the far end of the route (5137 12622 1225)"
+  }
+ ]
+}

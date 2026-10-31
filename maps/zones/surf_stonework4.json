@@ -1,0 +1,91 @@
+{
+ "id": "surf_stonework4",
+ "author": "Mr.Cow",
+ "attribution": {
+  "author": "Mr.Cow",
+  "source": "https://gamebanana.com/mods/123059 (Key Author: Mr.Cow; ceiling texture by Hazel Whorley as credited on the page; Counter-Strike: Source; licence CC BY-NC-ND 4.0, the page forbids commercial use only and says nothing against porting)",
+  "archive": "surf_stonework4_378e8.zip",
+  "recorded": "2026-10-31"
+ },
+ "notes": "Credit, and zones from the map's own Stage<n>StartZone and Stage7EndZone triggers and Stage<n> destinations (gb-maps-1, chk-maps run 117). Not published.",
+ "ignore_labels": {
+  "names": [
+   "Stage1StartZone",
+   "Stage2StartZone",
+   "Stage3StartZone",
+   "Stage4StartZone",
+   "Stage5StartZone",
+   "Stage6StartZone",
+   "Stage7StartZone",
+   "Stage7EndZone"
+  ],
+  "why": "zone_role reads Stage<n>StartZone as a START on a track per stage (seven tracks for one route) and Stage7EndZone as the end of a track of its own; the zones below put the same triggers on track 0 as START, STAGE 2..7 and END"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "named": "Stage1StartZone",
+   "note": "the map's own Stage1StartZone trigger, on Stage1"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "Stage1"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 2,
+   "named": "Stage2StartZone",
+   "destination": "Stage2",
+   "note": "the map's own Stage2StartZone trigger, on Stage2"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 3,
+   "named": "Stage3StartZone",
+   "destination": "Stage3",
+   "note": "the map's own Stage3StartZone trigger, on Stage3"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 4,
+   "named": "Stage4StartZone",
+   "destination": "Stage4",
+   "note": "the map's own Stage4StartZone trigger, on Stage4"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 5,
+   "named": "Stage5StartZone",
+   "destination": "Stage5",
+   "note": "the map's own Stage5StartZone trigger, on Stage5"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 6,
+   "named": "Stage6StartZone",
+   "destination": "Stage6",
+   "note": "the map's own Stage6StartZone trigger, on Stage6"
+  },
+  {
+   "kind": "STAGE",
+   "track": 0,
+   "number": 7,
+   "named": "Stage7StartZone",
+   "destination": "Stage7",
+   "note": "the map's own Stage7StartZone trigger, on Stage7"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "named": "Stage7EndZone",
+   "note": "the map's own Stage7EndZone trigger"
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+{
+ "id": "surf_milkyway",
+ "author": "Mr.Cow",
+ "attribution": {
+  "author": "Mr.Cow",
+  "source": "https://gamebanana.com/mods/122563 (Key Author: Mr.Cow; Counter-Strike: Source; licence CC BY-NC-ND 4.0, the page forbids commercial use only and says nothing against porting)",
+  "archive": "surf_milkyway.rar",
+  "recorded": "2026-10-31"
+ },
+ "notes": "Credit, and zones from the map's own START trigger and the door aimed at its `end` target (gb-maps-1, chk-maps run 117). The map also has a trigger named END, a 3072x1024x1280 box over the spawn room that no teleport leads into; the route's last door is the 1536x32 one aimed at the info_target `end`, so END is left unread. Not published.",
+ "ignore_labels": {
+  "names": [
+   "END"
+  ],
+  "why": "a box over the spawn room that no teleport leads into; the course ends at the 1536x32 door aimed at the info_target `end`"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "named": "START",
+   "note": "the map's own START trigger round the spawn room"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "Stage1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "the one 1536x32x544 door aimed at the info_target `end` (7168 -4096 3184)"
+  }
+ ]
+}

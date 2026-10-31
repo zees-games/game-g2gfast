@@ -1,0 +1,50 @@
+{
+ "id": "bhop_freakin",
+ "author": "FreAkin",
+ "attribution": {
+  "author": "FreAkin",
+  "source": "https://gamebanana.com/mods/125076 (Key Author: FreAkin; map file bhop_FreAkin.bsp; Counter-Strike: Source; licence CC BY-NC-ND 4.0, the page forbids commercial use only and says nothing against porting)",
+  "archive": "bhop_freakin.rar",
+  "recorded": "2026-10-31"
+ },
+ "notes": "Credit, and zones from the spawn room and the door at the end of the green level aimed at `ende` (gb-maps-1, chk-maps run 117). The route runs lvl1st*, then stageblue into lvlbluest*, then lvlgreen into lvlgreenst*; those destinations are fall returns, not splits. The two 12x96 doors in the lower area also aimed at `ende` stay teleports. Not published.",
+ "conditional_teleports": {
+  "filters": [
+   "filter_activator"
+  ],
+  "note": "the map's anti-standing trap: a trigger_multiple on top of each block sets the player's name to `default` 0.1 s after landing, and the 1-unit teleport under it is behind filter_activator, so it only fires on a player who stood too long. Imported as per-player sinking blocks (bsp_mechanics.trap_blocks)"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     4416,
+     1536,
+     -1279
+    ],
+    "extents": [
+     256,
+     256,
+     120
+    ]
+   },
+   "note": "the spawn room, round the 32 info_player_counterterrorist"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "near": {
+    "point": [
+     4776,
+     8320,
+     2534
+    ],
+    "class": "trigger_teleport",
+    "within": 64
+   },
+   "note": "the 4x168x137 door aimed at `ende` at the end of the green level"
+  }
+ ]
+}
