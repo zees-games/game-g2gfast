@@ -74,6 +74,9 @@ var _stats_keys: Dictionary = {}
 
 var relay := G2GStatsRelay.new()
 
+## Kills and hits by body zone, through dot-stats' event feed; ids are combat entity ids.
+var feed: DotStatsEventFeed = null
+
 var _attached: bool = false
 
 
@@ -111,6 +114,10 @@ func _build() -> DotResult:
 	stats.report_interval = report_interval
 	stats.define_on_start = report_to_backbone
 	add_child(stats)
+
+	feed = DotStatsEventFeed.new(stats)
+	feed.key_of = func(id: Variant) -> StringName:
+		return _stats_key(_game.combat.player_id_for(int(id))) if _game.combat != null else StringName(str(id))
 
 	var stats_started := stats.start()
 
@@ -239,6 +246,18 @@ func leave(player_id: StringName) -> void:
 func record(player_id: StringName, stat_id: StringName, value: float = 1.0) -> void:
 	if _attached:
 		stats.record(_stats_key(player_id), stat_id, value)
+
+
+## A landed hit, filed by body zone (and wall or body crossed) through the dot-stats hook.
+func report_damage(damage: DotDamage) -> void:
+	if feed != null:
+		var _filed := DotStatsDamage.report(feed, damage)
+
+
+## A player kill for the head-to-head table; world deaths and suicides are refused by the feed.
+func report_kill(killer: int, victim: int, weapon: String) -> void:
+	if feed != null and killer != 0:
+		var _ok := feed.report_kill(killer, victim, weapon)
 
 
 func session_values(player_id: StringName) -> DotStatsValues:

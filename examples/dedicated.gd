@@ -30,7 +30,7 @@ const DedicatedWorld := preload("dedicated_world.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 23
-const CHECKS := 276
+const CHECKS := 279
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -54,9 +54,19 @@ var query_host: DotQueryHost = null
 var game: G2GGame = null
 
 
+var _stats_errors: PackedStringArray = []
+
+
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.ERROR)
+	DotLog.signals().record.connect(_on_log_record)
 	_run.call_deferred()
+
+
+## An ERROR from the stats layer would otherwise scroll past and leave a stat dead with every check green.
+func _on_log_record(rec: Dictionary) -> void:
+	if int(rec.get("level", 0)) >= DotLog.Level.ERROR and String(rec.get("channel", "")).begins_with("stats"):
+		_stats_errors.append(str(rec.get("message", rec)))
 
 
 func _run() -> void:
@@ -282,6 +292,16 @@ func _test_cvars_reach_the_movement() -> void:
 	_check(absf(player.controller.tunables.air_accelerate - 150.0) < 0.001, "and rebuilds the player's tunables", "%.1f" % player.controller.tunables.air_accelerate)
 
 	_run_command("sv_gravity 600")
+	var shooter := game.entities.id_for_key(&"u1")
+	var zoned := DotDamage.make(shooter, 9999, 5.0, game.combat.manager.damage_type(&"kinetic"))
+	zoned.hit_group = DotHitGroup.NECK
+	zoned.weapon_id = &"probe"
+	game.progress.report_damage(zoned)
+	_check(game.progress.session_values(&"u1").get_cell(DotStatsHitzones.HITS, "zone:neck") >= 1.0,
+		"a hit with a hit_group is filed by body zone through the dot-stats hitzone hook")
+	_check(game.progress.stats.schema.validate().ok, "the stats schema, hitzones included, validates")
+	_check(_stats_errors.is_empty(), "the stats layer logged no error", str(_stats_errors))
+
 	_check(absf(player.controller.tunables.gravity - G2GUnits.to_metres(600.0)) < 0.001, "sv_gravity 600 is 11.43 m/s² on the player")
 
 	_run_command("sv_maxvelocity 100")

@@ -184,6 +184,9 @@ func _on_damage_applied(damage: DotDamage) -> void:
 	if by == &"" or not game.players.has(by):
 		return
 
+	if game.progress != null:
+		game.progress.report_damage(damage)
+
 	hit_landed.emit(by, damage.victim, damage.health_lost, damage.point, damage.lethal,
 		damage.hit_group == DotHitGroup.HEAD)
 
@@ -666,6 +669,8 @@ func _on_entity_killed(entity_id: int, damage: DotDamage) -> void:
 
 			if shooter != &"":
 				game.progress.record(shooter, G2GStats.KILLS)
+				game.progress.report_kill(damage.attacker, entity_id,
+					String(damage.weapon_id if damage.weapon_id != &"" else damage.type.id))
 
 	player_killed.emit(entry)
 

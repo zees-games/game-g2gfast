@@ -82,6 +82,7 @@ static func ids() -> Array[StringName]:
 
 static func schema() -> DotStatsSchema:
 	var schema := DotStatsSchema.new()
+	var _zones := DotStatsHitzones.declare(schema)
 
 	_counter(schema, RUNS_STARTED, "Runs started", "runs", false)
 	_counter(schema, RUNS_FINISHED, "Runs finished", "runs", true)
