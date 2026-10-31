@@ -29,8 +29,8 @@ const DedicatedWorld := preload("dedicated_world.gd")
 ## aborts that function; the section counter sees it, and the checks it never reached are
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
-const SECTIONS := 22
-const CHECKS := 270
+const SECTIONS := 23
+const CHECKS := 276
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -77,6 +77,7 @@ func _run() -> void:
 		await _test_autobhop_live()
 		_test_thirdperson_cvar()
 		_test_stagger_cvar()
+		_test_stats_report()
 		_test_config_and_noblock()
 		_test_commands()
 		_test_replay_bot_cvar()
@@ -292,6 +293,35 @@ func _test_cvars_reach_the_movement() -> void:
 
 
 ## docs/movement.md "Two names for a movement setting": the shared spellings write G2GConfig, and the g2g ones keep working.
+func _test_stats_report() -> void:
+	_section("stats_report")
+	var cv: DotConVar = server.console.find_cvar("stats_report")
+	var progress: Object = game.progress
+	_check(cv != null and cv.get_string() == "0", "stats_report is registered and off by default")
+	_check(progress != null and progress.stats != null and not progress.stats.report_to_backbone,
+		"and the tracker does not report at boot")
+	if cv == null or progress == null:
+		return
+	var _off := cv.set_value("1")
+	_check(not progress.stats.report_to_backbone, "on with no backbone client stays off, not a crash")
+
+	var client := Node.new()
+	var script := GDScript.new()
+	script.source_code = "extends Node\nfunc post_integration(_a = null, _b = null, _c = null): return null\n"
+	var _reloaded := script.reload()
+	client.set_script(script)
+	DotRegistry.register(&"dot_backbone_client", client)
+	var _r0 := cv.set_value("0")
+	var _r1 := cv.set_value("1")
+	_check(progress.stats.report_to_backbone, "on with a backbone client makes the tracker report")
+	_check(progress.stats.get_node_or_null(DotGameStatsReport.TIMER_NAME) != null, "and adds the flush timer")
+	var _r2 := cv.set_value("0")
+	_check(not progress.stats.report_to_backbone, "off stops it again")
+	DotRegistry.unregister_instance(&"dot_backbone_client", client)
+	client.free()
+	_done()
+
+
 func _test_the_shared_movement_names() -> void:
 	_section("the shared movement names")
 	var player: G2GPlayer = game.players[&"u1"]

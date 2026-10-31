@@ -45,6 +45,7 @@ func _module_load() -> DotResult:
 	_movement_cvar("sv_crestlaunch", "crest_launch", "A ramp's crest throws a player above this many times sv_maxspeed. 0 never.")
 
 	_bind_shared_movement_names()
+	_bind_stats_report()
 
 	# The record's ghost, live. Turning it off takes the current one away rather than
 	# waiting for the next map: an operator who turns a bot off wants it gone now.
@@ -846,6 +847,8 @@ func _player_named(text: String) -> StringName:
 
 
 func _module_unload() -> void:
+	if game != null and game.progress != null and DotRegistry.get_service(DotGameStatsFeed.SERVICE) == game.progress.stats:
+		DotRegistry.unregister_instance(DotGameStatsFeed.SERVICE, game.progress.stats)
 	# The link and the runtime hold each other through broadcast.
 	if profile_link != null:
 		profile_link.release()
@@ -1115,6 +1118,17 @@ func _bind_shared_movement_names() -> void:
 	adapter.changed_fn = _mirror_to_g2g_cvar
 	_shared_names = DotFpsCvars.new().add_target(adapter)
 	var _made := _shared_names.bind_cvars(Callable(self, "add_cvar"), DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY)
+
+
+## The family `stats_report` cvar (off by default); the tracker is registered when first needed, since the progress node may not exist at load.
+func _bind_stats_report() -> void:
+	var _cv := DotGameStatsReport.bind(self,
+		func(on: bool) -> DotResult:
+			if game.progress == null or game.progress.stats == null:
+				return DotResult.fail(DotError.CODE_STATE, "No progress yet.")
+			if DotRegistry.get_service(DotGameStatsFeed.SERVICE) != game.progress.stats:
+				DotRegistry.register(DotGameStatsFeed.SERVICE, game.progress.stats)
+			return DotGameStatsReport.apply_default(self, on))
 
 
 ## The config field changed (or a shared-name write was refused): both spellings show what G2GConfig holds.

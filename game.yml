@@ -33,6 +33,8 @@ cvars:
   sv_autobunnyhopping: "1"
   sv_enablebunnyhopping: "1"
   sv_gravity: "800"
+  # 1 files the players' stats with the backbone using the server's own ticket; 0 keeps them here.
+  stats_report: "0"
   sv_allow_thirdperson: "1"
   sv_replay_bot: "1"
 
