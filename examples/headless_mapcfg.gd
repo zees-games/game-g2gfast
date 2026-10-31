@@ -7,7 +7,7 @@ const G2GMapConfig := preload("../game/g2g_map_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
 
-const CHECKS := 14
+const CHECKS := 17
 
 
 func _ready() -> void:
@@ -57,6 +57,11 @@ func _run() -> void:
 	_check(console.find_cvar("sv_replay_bot").get_int() == 1, "a cvar outside the whitelist is untouched")
 	cfg.restore()
 	_check(air.get_float() == 1000.0, "restore puts the operator's value back")
+
+	# The shared spellings are accepted keys (docs/movement.md); sv_autohop never is.
+	_check(G2GMapConfig.KEYS.has("sv_runspeed") and G2GMapConfig.FIELDS["sv_runspeed"] == "max_speed", "a map file may use the shared sv_runspeed")
+	_check(G2GMapConfig.KEYS.has("sv_airwishspeed") and G2GMapConfig.FIELDS["sv_airwishspeed"] == "air_wish_cap", "and sv_airwishspeed")
+	_check(not G2GMapConfig.KEYS.has("sv_autohop") and not G2GMapConfig.KEYS.has("sv_autobunnyhopping"), "but never either auto-hop spelling")
 
 	var game := G2GGame.new()
 	game.config = G2GConfig.new()

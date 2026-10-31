@@ -16,6 +16,9 @@ const KEYS := {
 	"sv_maxvelocity": {"type": "float", "min": 100.0, "max": 100000.0},
 	"sv_airwishcap": {"type": "float", "min": 0.0, "max": 1000.0},
 	"sv_enablebunnyhopping": {"type": "bool"},
+	# The shared spellings (docs/movement.md); never sv_autohop, for the same reason as the auto-bhop cvar.
+	"sv_runspeed": {"type": "float", "min": 50.0, "max": 5000.0},
+	"sv_airwishspeed": {"type": "float", "min": 0.0, "max": 1000.0},
 }
 
 ## cvar -> the [G2GConfig] field behind it (a client has no console, only the config).
@@ -28,6 +31,8 @@ const FIELDS := {
 	"sv_maxvelocity": "max_velocity",
 	"sv_airwishcap": "air_wish_cap",
 	"sv_enablebunnyhopping": "enable_bunnyhopping",
+	"sv_runspeed": "max_speed",
+	"sv_airwishspeed": "air_wish_cap",
 }
 
 

@@ -2,6 +2,7 @@ extends DotGameCheckSuite
 
 const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GAvatars := preload("../game/g2g_avatars.gd")
+const G2GMovementNames := preload("../game/g2g_movement_names.gd")
 const G2GBrowser := preload("../game/g2g_browser.gd")
 const G2GCamera := preload("../game/g2g_camera.gd")
 const G2GCombat := preload("../game/g2g_combat.gd")
@@ -28,8 +29,8 @@ const DedicatedWorld := preload("dedicated_world.gd")
 ## aborts that function; the section counter sees it, and the checks it never reached are
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
-const SECTIONS := 21
-const CHECKS := 254
+const SECTIONS := 22
+const CHECKS := 270
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##
@@ -72,6 +73,7 @@ func _run() -> void:
 	await _boot()
 	if game != null:
 		_test_cvars_reach_the_movement()
+		_test_the_shared_movement_names()
 		await _test_autobhop_live()
 		_test_thirdperson_cvar()
 		_test_stagger_cvar()
@@ -286,6 +288,43 @@ func _test_cvars_reach_the_movement() -> void:
 
 	_run_command("sv_gravity 800")
 	_run_command("sv_airaccelerate 1000")
+	_done()
+
+
+## docs/movement.md "Two names for a movement setting": the shared spellings write G2GConfig, and the g2g ones keep working.
+func _test_the_shared_movement_names() -> void:
+	_section("the shared movement names")
+	var player: G2GPlayer = game.players[&"u1"]
+	var before: String = player.controller.tunables.fingerprint()
+	for shared: String in ["sv_runspeed", "sv_airwishspeed", "sv_autohop"]:
+		_check(server.console.find_cvar(shared) != null, "%s is registered" % shared)
+	_check(server.console.get_float("sv_runspeed") == server.console.get_float("sv_maxspeed"), "sv_runspeed reads g2g's sv_maxspeed run speed")
+
+	_run_command("sv_runspeed 300")
+	_check(game.config.max_speed == 300.0, "sv_runspeed writes G2GConfig.max_speed")
+	_check(server.console.get_float("sv_maxspeed") == 300.0, "and g2g's sv_maxspeed follows")
+	_check(player.controller.tunables.fingerprint() != before, "and the player's movement fingerprint changed (runs are abandoned)")
+
+	_run_command("sv_maxspeed 250")
+	_check(server.console.get_float("sv_runspeed") == 250.0 and game.config.max_speed == 250.0, "the old name still works and the shared one follows")
+	_check(player.controller.tunables.fingerprint() == before, "and the original fingerprint returns")
+
+	_run_command("sv_runspeed 10000")
+	_check(game.config.max_speed == 250.0, "a value over the config's range is refused through the shared name")
+	_check(server.console.get_float("sv_runspeed") == 250.0 and server.console.get_float("sv_maxspeed") == 250.0,
+		"and both spellings go back to what the config holds")
+	_run_command("sv_airwishspeed 40")
+	_check(game.config.air_wish_cap == 40.0 and server.console.get_float("sv_airwishcap") == 40.0, "sv_airwishspeed writes air_wish_cap")
+	_run_command("sv_airwishcap 30")
+	_check(server.console.get_float("sv_airwishspeed") == 30.0, "sv_airwishcap moves the shared name back")
+
+	_run_command("sv_autohop 0")
+	_check(not game.config.auto_bhop and server.console.get_int("sv_autobunnyhopping") == 0, "sv_autohop 0 writes auto_bhop")
+	_run_command("sv_autobunnyhopping 1")
+	_check(game.config.auto_bhop and server.console.get_int("sv_autohop") == 1, "and sv_autobunnyhopping 1 turns it back on")
+
+	_check(G2GMovementNames.UNBOUND.has("sv_maxspeed") and server.console.get_float("sv_maxspeed") == 250.0,
+		"the shared wish-speed sv_maxspeed is not mapped onto the run speed")
 	_done()
 
 

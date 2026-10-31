@@ -1,5 +1,8 @@
 extends "g2g_module_commands.gd"
 
+var _shared_names: DotFpsCvars = null
+
+
 func _module_name() -> String:
 	return "g2gfast"
 
@@ -40,6 +43,8 @@ func _module_load() -> DotResult:
 	_movement_cvar("sv_edgefriction", "edge_friction", "Friction near a ledge. 1 disables.")
 	_movement_cvar("sv_jumpbuffer", "jump_buffer", "Easy-bhop window in seconds when autobhop is off.")
 	_movement_cvar("sv_crestlaunch", "crest_launch", "A ramp's crest throws a player above this many times sv_maxspeed. 0 never.")
+
+	_bind_shared_movement_names()
 
 	# The record's ghost, live. Turning it off takes the current one away rather than
 	# waiting for the next map: an operator who turns a bot off wants it gone now.
@@ -1096,9 +1101,47 @@ func _movement_cvar(cvar_name: String, field: String, description: String) -> vo
 	)
 
 	cvar.changed.connect(func(_old: String, new_value: String) -> void:
-		game.config.set(field, _coerce(game.config.get(field), new_value))
-		game.apply_movement()
+		var wanted: Variant = _coerce(game.config.get(field), new_value)
+		if game.config.get(field) != wanted:
+			game.config.set(field, wanted)
+			game.apply_movement()
+		_mirror_to_shared_cvar(field)
 	)
+
+
+## Registers the shared movement names that differ from g2g's (`sv_runspeed`, `sv_airwishspeed`, `sv_autohop`) over G2GConfig, through the same binder dot-game's `bind_movement_cvars` uses (this module is a DotModule, not a DotGameModule). The names spelled alike are g2g's own cvars already.
+func _bind_shared_movement_names() -> void:
+	var adapter := G2GMovementNames.new(game)
+	adapter.changed_fn = _mirror_to_g2g_cvar
+	_shared_names = DotFpsCvars.new().add_target(adapter)
+	var _made := _shared_names.bind_cvars(Callable(self, "add_cvar"), DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY)
+
+
+## The config field changed (or a shared-name write was refused): both spellings show what G2GConfig holds.
+func _mirror_to_g2g_cvar(field: String) -> void:
+	for shared: String in G2GMovementNames.RENAMES:
+		if G2GMovementNames.RENAMES[shared]["field"] == field:
+			_set_cvar_text(G2GMovementNames.RENAMES[shared]["g2g"], field)
+			_set_cvar_text(shared, field)
+
+
+## The shared-name cvar of [param field] follows a change made through the g2g name.
+func _mirror_to_shared_cvar(field: String) -> void:
+	_set_cvar_text(G2GMovementNames.shared_name_for(field), field)
+
+
+func _set_cvar_text(cvar_name: String, field: String) -> void:
+	var cv: DotConVar = console.find_cvar(cvar_name) if console != null and cvar_name != "" else null
+	if cv == null:
+		return
+	var current: Variant = game.config.get(field)
+	var text := ("1" if current else "0") if current is bool else str(current)
+	if cv.get_string() != text and not _is_same_number(cv.get_string(), text):
+		var _res := cv.set_value(text)
+
+
+static func _is_same_number(a: String, b: String) -> bool:
+	return a.is_valid_float() and b.is_valid_float() and is_equal_approx(a.to_float(), b.to_float())
 
 
 ## A cvar's string in the type the config field already has.

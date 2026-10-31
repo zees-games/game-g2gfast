@@ -78,6 +78,18 @@ What the probes established, and what is still open:
 
 The survey and the reach use the tunables' own numbers in units: hull `2 × radius` = **32 u**, crouched headroom 54, step 18, slope limit 45.57°. A surface steeper than that is a ramp; a 45° slab is a floor, which is why the stages map's surf bonus faces are 50° (`BONUS_RAMP_PITCH`, map data; the box turns by 90 minus it, because the builder's angle is the box's turn, not the face's).
 
+## Two names for a movement setting
+
+`G2GConfig` is the one source of truth; the cvars are g2g's own (`sv_maxspeed` is the run speed), and the family's shared spellings (dot-player-controller's `DotFpsTunables`, dot-game's `bind_movement_cvars`) are an adapter over it, `game/g2g_movement_names.gd`. A write through either name goes through `G2GConfig.validate` on a copy, then `apply_movement` (every run abandoned, new fingerprint), and the other name follows. The old g2g names stay as they were, so `game.sh` and `cfg/` files keep working. Ten names are spelled alike in both sets (`sv_gravity`, `sv_accelerate`, `sv_airaccelerate`, `sv_friction`, `sv_stopspeed`, `sv_maxvelocity`, `sv_stepsize`, `sv_edgefriction` and the like) and need no table.
+
+| Shared name | g2g cvar | `G2GConfig` field |
+| --- | --- | --- |
+| `sv_runspeed` | `sv_maxspeed` | `max_speed` |
+| `sv_airwishspeed` | `sv_airwishcap` | `air_wish_cap` |
+| `sv_autohop` | `sv_autobunnyhopping` | `auto_bhop` |
+
+The shared `sv_maxspeed` (a ceiling on a key's wish speed) is **not** g2g's `sv_maxspeed` (the run speed) and is never forwarded; `sv_jumpheight`, `sv_bhopcap` and `sv_movement_profile` have no g2g field and are not bound. A map file may use `sv_runspeed` and `sv_airwishspeed`, never `sv_autohop`. Checks: `examples/dedicated` ("the shared movement names"), `examples/headless_mapcfg`.
+
 ## A map may change some movement cvars
 
 `cfg/game/game-g2gfast/dot_map/map/<name>.yml` (a map id or a glob; the operator overrides in `cfg/server/game/game-g2gfast/dot_map/map/`) sets `sv_airaccelerate`, `sv_accelerate`, `sv_gravity`, `sv_friction`, `sv_maxspeed`, `sv_maxvelocity`, `sv_airwishcap` and `sv_enablebunnyhopping` through `G2GMapConfig` (server cvars, and the client's config), and the next map puts them back; never auto-bhop. The default is 1000 everywhere (`game.yml`, `G2GConfig`); `%.yml` sets nothing, so a map without its own file keeps the cvar as the operator left it. 1000 is also written in `bhop_%` and `kz_bhop_%`; 100 for the two maps whose own entities ask for it. Check: `examples/headless_mapcfg`.
