@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Read a VBSP map (v19-v21) far enough to get geometry and zones out of it.
 
-[b]The reader itself is dot-map's shared one[/b] (`dot-map/tools/bsp/dotbsp/reader.py`), which
+[b]The reader itself is dot-map-convert's shared one[/b] (`dot-map-convert/dotbsp/reader.py`), which
 every game's converter uses, so a fix to how the format is read reaches all of them. This file
 keeps the names this repository's tools import (`from bsp_read import Bsp, ...`) and the
-g2gfast-specific dump below. dot-map is found as a sibling checkout (`../dot-map`, where
+g2gfast-specific dump below. dot-map-convert is found as a sibling checkout (`../dot-map-convert`, where
 dot-bootstrap clones it) or at `$DOTBSP_PATH`.
 
 Point it at a surf or bhop map and it writes an .obj of the world geometry and a .json of
@@ -36,11 +36,11 @@ import sys
 
 def _shared():
     here = os.path.dirname(os.path.abspath(__file__))
-    for p in (os.environ.get("DOTBSP_PATH", ""), os.path.join(here, "..", "..", "dot-map", "tools", "bsp")):
+    for p in (os.environ.get("DOTBSP_PATH", ""), os.path.join(here, "..", "..", "dot-map-convert")):
         if p and os.path.isfile(os.path.join(p, "dotbsp", "reader.py")):
             return os.path.abspath(p)
-    sys.exit("bsp_read: dot-map's shared reader was not found. Clone dot-map beside this "
-             "repository (dot-bootstrap does) or set DOTBSP_PATH to dot-map/tools/bsp.")
+    sys.exit("bsp_read: dot-map-convert's shared reader was not found. Clone dot-map-convert beside this "
+             "repository (dot-bootstrap does) or set DOTBSP_PATH to dot-map-convert.")
 
 
 if _shared() not in sys.path:
