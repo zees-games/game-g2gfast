@@ -195,12 +195,21 @@ func _initialize() -> void:
 	]
 
 
+## Frame sequence after each still (DOT_SHOT_FRAMES); see DotShotSeq.
+var _seq := DotShotSeq.new()
+var _seq_active := false
+
+
 func _process(_delta: float) -> bool:
 	# The world first: a player, a map, and a moment for the lightmaps and the HUD.
 	if _client.player == null or _client.game == null or _client.game.maps.current == null:
 		return false
 	if _loaded < 60:
 		_loaded += 1
+		return false
+
+	if _seq_active:
+		_seq_active = _seq.step(root)
 		return false
 
 	if _wait > 0:
@@ -245,3 +254,7 @@ func _capture(name: String) -> void:
 		return
 
 	print("[menus] %s  %dx%d" % [path, image.get_width(), image.get_height()])
+
+	if _seq.enabled():
+		_seq.begin(path)
+		_seq_active = true
