@@ -34,7 +34,9 @@ const SAMPLE := 12
 
 ## Maps whose trap blocks still lie inside a pit slab because the source .bsp is no longer
 ## in inspirations/g2gfast, so the importer cannot rebuild them (a ratchet: only down).
-const BLOCKS_IN_PIT := {"bhop_platformer_fxd": 1}
+## kz_bhop_lucid, bhop_fury, bhop_training_fun: the mapper's own tiny sheet sits on the platform top inside
+## a respawn volume taller than a player, which the cap leaves alone (Source respawns there).
+const BLOCKS_IN_PIT := {"bhop_platformer_fxd": 1, "kz_bhop_lucid": 6, "bhop_fury": 1, "bhop_training_fun": 1}
 
 ## Pits whose destination is known to be somewhere a player cannot stand, by map: the
 ## mapper's own `info_teleport_destination` in a wall or over nothing. Asserted both ways
@@ -307,15 +309,22 @@ func _test_blocks() -> void:
 	var arrived_taken := 0
 	for b: Dictionary in _sample(m.blocks, SAMPLE):
 		var box: AABB = b["box"]
-		# A trap's sheet can be taller than the block under it, so neither its min nor its
-		# max is the floor: ask the world for the solid top under the sheet's centre.
-		var cx := box.get_center().x
-		var cz := box.get_center().z
-		var q := PhysicsRayQueryParameters3D.create(
-			Vector3(cx, box.end.y + G2GUnits.to_metres(2.0), cz),
-			Vector3(cx, box.position.y - G2GUnits.to_metres(64.0), cz))
-		var hit := bot.get_world_3d().direct_space_state.intersect_ray(q)
-		if hit.is_empty():
+		# A trap's sheet can be taller than the block under it, and can span platforms with
+		# bare pit floor between them (bhop_badges_mini), so neither its min nor its max nor
+		# its centre is the floor: ray-cast a grid and stand on the highest solid top.
+		var hit := {}
+		for ix in range(5):
+			for iz in range(5):
+				var gx := lerpf(box.position.x, box.end.x, (ix + 0.5) / 5.0)
+				var gz := lerpf(box.position.z, box.end.z, (iz + 0.5) / 5.0)
+				var q := PhysicsRayQueryParameters3D.create(
+					Vector3(gx, box.end.y + G2GUnits.to_metres(2.0), gz),
+					Vector3(gx, box.position.y - G2GUnits.to_metres(64.0), gz))
+				var h := bot.get_world_3d().direct_space_state.intersect_ray(q)
+				if not h.is_empty() and (hit.is_empty() or (h["position"] as Vector3).y > (hit["position"] as Vector3).y):
+					hit = h
+		# Floor only far below the sheet means no block under it to land on.
+		if hit.is_empty() or (hit["position"] as Vector3).y < box.position.y - G2GUnits.to_metres(8.0):
 			continue
 		var top: Vector3 = (hit["position"] as Vector3) + Vector3(0, G2GUnits.to_metres(2.0), 0)
 		# Somewhere to stand at all: a block narrower than the hull, or one under a ceiling,
