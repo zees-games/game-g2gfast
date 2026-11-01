@@ -45,3 +45,76 @@ cvars:
 # which takes the newest version of each on every start. An entry here would be a default
 # every server offers, at the version pinned when the game was installed.
 maps: []
+
+# Map packs the game suggests, not requires: a server offers them by default (suggested_maps: none turns that off) and the
+# Workshop mounts them for solo play unless the player opts out (--no-suggested, --suggested=none, --no-suggested-surf).
+suggested:
+  - bhop=gamemann/bhop_amor
+  - bhop=gamemann/bhop_ananas
+  - bhop=gamemann/bhop_angst
+  - bhop=gamemann/bhop_arcane_v2
+  - bhop=gamemann/bhop_aztec
+  - bhop=gamemann/bhop_badges
+  - bhop=gamemann/bhop_badges2
+  - bhop=gamemann/bhop_badges_mini
+  - bhop=gamemann/bhop_crash_egypt
+  - bhop=gamemann/bhop_depot
+  - bhop=gamemann/bhop_eazy
+  - bhop=gamemann/bhop_eazy_v2
+  - bhop=gamemann/bhop_elate
+  - bhop=gamemann/bhop_epiphany
+  - bhop=gamemann/bhop_evolve
+  - bhop=gamemann/bhop_exodus
+  - bhop=gamemann/bhop_frotinity2
+  - bhop=gamemann/bhop_fur
+  - bhop=gamemann/bhop_fury
+  - bhop=gamemann/bhop_fury_2
+  - bhop=gamemann/bhop_grove
+  - bhop=gamemann/bhop_hellish_dream_css
+  - bhop=gamemann/bhop_interloper
+  - bhop=gamemann/bhop_japan
+  - bhop=gamemann/bhop_lego2
+  - bhop=gamemann/bhop_lego3
+  - bhop=gamemann/bhop_monster_jam
+  - bhop=gamemann/bhop_nature
+  - bhop=gamemann/bhop_ocean
+  - bhop=gamemann/bhop_overthinker
+  - bhop=gamemann/bhop_pandora2_fix
+  - bhop=gamemann/bhop_pit
+  - bhop=gamemann/bhop_platformer_fxd
+  - bhop=gamemann/bhop_sqee
+  - bhop=gamemann/bhop_supernova
+  - bhop=gamemann/bhop_tesquo_v2
+  - bhop=gamemann/bhop_toroux
+  - bhop=gamemann/bhop_training_fun
+  - bhop=gamemann/bhop_tranquility
+  - bhop=gamemann/bhop_underground_crypt
+  - bhop=gamemann/bunnyhop_pro
+  - bhop=gamemann/kz_bhop_badg3s
+  - bhop=gamemann/kz_bhop_lucid
+  - bhop=gamemann/kz_bhop_yonkoma
+  - surf=gamemann/surf_animals
+  - surf=gamemann/surf_aquaflow
+  - surf=gamemann/surf_arcade
+  - surf=gamemann/surf_beginner
+  - surf=gamemann/surf_beginner2
+  - surf=gamemann/surf_eclipse
+  - surf=gamemann/surf_ember
+  - surf=gamemann/surf_greensway
+  - surf=gamemann/surf_hologram
+  - surf=gamemann/surf_interference
+  - surf=gamemann/surf_intro
+  - surf=gamemann/surf_kitsune
+  - surf=gamemann/surf_life_of_duck
+  - surf=gamemann/surf_lithium2
+  - surf=gamemann/surf_lore
+  - surf=gamemann/surf_lt_omnific
+  - surf=gamemann/surf_lt_unicorn
+  - surf=gamemann/surf_mesa
+  - surf=gamemann/surf_omnibus
+  - surf=gamemann/surf_quilavar
+  - surf=gamemann/surf_rookie
+  - surf=gamemann/surf_stonework3
+  - surf=gamemann/surf_summit
+  - surf=gamemann/surf_vegetables
+  - surf=gamemann/surf_year3000
