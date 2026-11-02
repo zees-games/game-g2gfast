@@ -388,10 +388,9 @@ func _test_blocks() -> void:
 	_done()
 
 
-## A booster (a `leave` push: the thin trigger on a block whose OnEndTouch sets the
-## player's base velocity) does nothing to a player standing on it and launches one who
-## jumps off it. Asked both ways, because the two wrong implementations fail one each:
-## given on entering it launches the stander, and not read at all it launches nobody.
+## A booster (a `leave` push) does nothing to a player standing on it and launches one who
+## jumps off it. Asked both ways: given on entering it launches the stander, and not read
+## at all it launches nobody.
 func _test_boosters() -> void:
 	_section("boosters")
 	var m := game.mechanics
@@ -429,10 +428,9 @@ func _test_boosters() -> void:
 			stood += 1
 		else:
 			lame.append("%s pushed %.0f u/s while standing" % [_u(at), G2GUnits.to_units(standing)])
-		# Jump off it and look for the tick the impulse lands: one tick's change in the
-		# velocity along it of at least half the booster (gravity takes 6 u/s a tick). Only
-		# an upward pad is left this way; a sideways booster is left along a route, which a
-		# box cannot say, and running a bot sideways out of one mostly runs it into a wall.
+		# Jump off and look for the tick the impulse lands: a velocity change of at least half
+		# the booster. Only upward pads are left this way; a sideways one is left along a route,
+		# which a box cannot say.
 		if dir.y < 0.7:
 			sideways += 1
 			continue

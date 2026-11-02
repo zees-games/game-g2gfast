@@ -8,6 +8,9 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 var s: DotGameCheckSuite
 var server: DotServer
 var game: G2GGame
+var link: Object
+var map_id: StringName
+var store: DotTimerStore
 
 
 func _init(suite: DotGameCheckSuite, srv: DotServer, g: G2GGame) -> void:
@@ -27,50 +30,24 @@ static func finished_copy(run: DotTimerRun) -> DotTimerRun:
 	return copy
 
 
-## [b]A record belongs to the account, not to the connection.[/b] dot-server's userid is a
-## server-local counter: the same account reconnecting is a new number, and a restarted
-## server hands the old numbers to strangers. Records, boards and the Tab board's Best were
-## keyed by `u<userid>`, so a returning runner was a second row with no Best, and a new
-## player could inherit an old runner's time. Armed by making `_record_key_for` return
-## `&""` (the key falls back to `u<userid>`): both halves fail.
+## [b]A record belongs to the account, not to the connection.[/b] The userid is a server-local counter:
+## a reconnect is a new number and a restart hands old numbers to strangers. Armed by making
+## `_record_key_for` return `&""`: both halves fail.
 func run() -> void:
 	s._section("records follow the account, not the connection")
 
-	var map_id: StringName = game.maps.current.id
-	var store := game.timers.store
+	map_id = game.maps.current.id
+	store = game.timers.store
 
 	# No socket stands behind these peers: swallow what the bridge would send them rather
 	# than have the engine report an RPC to a peer that does not exist.
 	var bridge: Object = server.modules.get_module("g2gfast").get("bridge")
-	var link: Object = bridge.get("link")
+	link = bridge.get("link")
 	var kept_loopback: Callable = link.get("loopback")
 	link.set("loopback", func(_m: StringName, _p: int, _b: PackedByteArray) -> void: pass)
 
-	var join := func(peer: int, userid: int, uid: String, name: String) -> DotClientSession:
-		var session := DotClientSession.new()
-		session.peer_id = peer
-		session.userid = userid
-		session.display_name = name
-		var who := DotGuestIdentity.new()
-		who.uid = uid
-		session.identity = who
-		var _adopted := server.adopt_session(session)
-		# What dot-server fires when a client finishes joining; the module seats the player.
-		server.events.fire("client_spawn", {"userid": userid, "name": name})
-		for _i in range(4):
-			await s.get_tree().physics_frame
-		return session
-
-	var leave := func(session: DotClientSession) -> void:
-		server.client_disconnected.emit(session, "test")
-		var _released := server.release_session(session.peer_id)
-
-	var settle := func() -> void:
-		for _i in range(8):
-			await s.get_tree().physics_frame
-
 	# Alice connects, finishes a run, goes.
-	var first: DotClientSession = await join.call(9201, 8801, "acct:alice", "Alice")
+	var first: DotClientSession = await _join(9201, 8801, "acct:alice", "Alice")
 	var player: G2GPlayer = game.players.get(&"u8801")
 	s._check(player != null, "an account connects as u<userid> in the match", str(game.players.keys()))
 	if player == null:
@@ -85,7 +62,7 @@ func run() -> void:
 	var why: Array = []
 	game.run_filed.connect(func(_id: StringName, _r: DotTimerRun, _rank: int, reason: String) -> void: why.append(reason))
 	player.timer.run_finished.emit(run)
-	await settle.call()
+	await _settle()
 	var mine: DotResult = await store.best_for(map_id, DotTimerTrack.MAIN, &"normal", &"acct:alice")
 	s._check(mine.ok and mine.value is DotTimerRecord, "the finish is on the board under the account", str(why))
 	var by_number: DotResult = await store.best_for(map_id, DotTimerTrack.MAIN, &"normal", &"u8801")
@@ -93,12 +70,19 @@ func run() -> void:
 	await game.refresh_standing(&"u8801")
 	s._check(float(game.board_fields(&"u8801")["best"]) > 0.0, "the Tab board shows the Best")
 
-	leave.call(first)
-	await settle.call()
+	_leave(first)
+	await _settle()
 	s._check(not game.players.has(&"u8801"), "the player leaves")
 
+	await _reconnect()
+	await _legacy()
+	link.set("loopback", kept_loopback)
+	s._done()
+
+
+func _reconnect() -> void:
 	# Alice reconnects: a new userid, the same account.
-	var again: DotClientSession = await join.call(9202, 8802, "acct:alice", "Alice")
+	var again: DotClientSession = await _join(9202, 8802, "acct:alice", "Alice")
 	await game.refresh_standing(&"u8802")
 	s._check(game.players.has(&"u8802") and game.record_key(&"u8802") == &"acct:alice",
 		"the reconnect is a new userid on the same account")
@@ -115,17 +99,20 @@ func run() -> void:
 		"and so does the leaderboard", str(fastest.value) if fastest.ok else str(fastest.error))
 
 	# The server restarts: userids start again, and the number Alice had goes to a stranger.
-	leave.call(again)
-	await settle.call()
-	var stranger: DotClientSession = await join.call(9203, 8801, "acct:bob", "Bob")
+	_leave(again)
+	await _settle()
+	var stranger: DotClientSession = await _join(9203, 8801, "acct:bob", "Bob")
 	await game.refresh_standing(&"u8801")
 	var none: DotResult = await store.best_for(map_id, DotTimerTrack.MAIN, &"normal", &"acct:bob")
 	s._check(none.ok and none.value == null, "a stranger who draws an earlier userid has no record")
 	s._check(float(game.board_fields(&"u8801")["best"]) < 0.0 and int(game.board_fields(&"u8801")["rank"]) == 0,
 		"and the Tab board gives them no Best and no rank", str(game.board_fields(&"u8801")))
-	leave.call(stranger)
-	await settle.call()
+	_leave(stranger)
+	await _settle()
 
+
+
+func _legacy() -> void:
 	# Rows written before the change are retired, not ranked and not deleted.
 	var old := DotTimerRecord.new()
 	old.map_id = map_id
@@ -150,5 +137,28 @@ func run() -> void:
 		"and is kept in legacy_records.jsonl, not deleted", archive)
 	s._check(await game.retire_legacy_records() == 0, "and retiring is idempotent")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(archive))
-	link.set("loopback", kept_loopback)
-	s._done()
+
+
+func _join(peer: int, userid: int, uid: String, name: String) -> DotClientSession:
+	var session := DotClientSession.new()
+	session.peer_id = peer
+	session.userid = userid
+	session.display_name = name
+	var who := DotGuestIdentity.new()
+	who.uid = uid
+	session.identity = who
+	var _adopted := server.adopt_session(session)
+	server.events.fire("client_spawn", {"userid": userid, "name": name})
+	for _i in range(4):
+		await s.get_tree().physics_frame
+	return session
+
+
+func _leave(session: DotClientSession) -> void:
+	server.client_disconnected.emit(session, "test")
+	var _released := server.release_session(session.peer_id)
+
+
+func _settle() -> void:
+	for _i in range(8):
+		await s.get_tree().physics_frame
