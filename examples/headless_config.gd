@@ -9,7 +9,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
 const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
-const CHECKS := 26
+const CHECKS := 28
 
 
 func _ready() -> void:
@@ -32,6 +32,11 @@ func _run() -> void:
 	add_child(console)
 	binder.bind_cvars(console.cvar, DotConVar.FLAG_ARCHIVE, console.has_name)
 	_check(console.get_int("g2g_score_limit") == 40 and console.get_int("g2g_max_players") == 64, "cvars start at the defaults")
+	console.set_cvar("g2g_max_players", "300")
+	_check(config.max_players == 300, "max_players is not capped at the old 128")
+	console.set_cvar("g2g_max_players", "64")
+	var cap_src := FileAccess.get_file_as_string("res://game/g2g_module.gd") + FileAccess.get_file_as_string("res://game/g2g_client.gd")
+	_check(not cap_src.contains("max_entities_per_snapshot = 64"), "no 64-entity snapshot cap on server or client")
 	console.set_cvar("g2g_respawn_delay", "4")
 	_check(config.respawn_delay == 4.0 and binder.source_of("respawn_delay") == "cvar", "a cvar writes the field")
 	var rules := G2GArsenal.match_rules(config.score_limit, config.respawn_delay, config.spawn_protection)

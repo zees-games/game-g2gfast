@@ -356,7 +356,7 @@ func map_content_id(id: StringName) -> String:
 @export_group("Server")
 
 ## Most players at once, ghost and bots included.
-@export_range(1, 128, 1) var max_players: int = 64
+@export_range(1, 4095, 1) var max_players: int = 64
 
 @export_group("Role")
 

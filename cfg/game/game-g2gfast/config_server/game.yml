@@ -2,7 +2,7 @@
 # an operator overrides in cfg/server/game/game-g2gfast/config_server/game.yml. Layers: defaults < this < env < argv.
 
 # --- Server
-# Most players at once, ghost and bots included. [1..128]
+# Most players at once, ghost and bots included. [1..4095]
 # max_players: 64
 
 # --- Role
