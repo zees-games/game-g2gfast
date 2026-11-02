@@ -110,7 +110,7 @@ func apply_theme(palette: DotMenuPalette = null) -> void:
 	# Text drawn straight over the world gets an outline in the theme's ink: the keys and
 	# the status line have no plate of their own, and white text over a pale sky, or a light
 	# theme's dark text over a dark corridor, is otherwise not there.
-	for label in [_keys, _status, _notice, _spectating, _loading_label]:
+	for label in [_keys, _status, _notice, _spectating]:
 		if label == null:
 			continue
 		(label as Label).add_theme_color_override(&"font_color", p.hud_text)

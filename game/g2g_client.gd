@@ -858,13 +858,24 @@ func _physics_process(delta: float) -> void:
 			bridge.client_tick(net.clock.input_tick() - (ticks - 1 - i), command)
 
 
+## The shared cover instead of a grey world while the server is on a map this client is not on.
+## Edge-triggered: a hold re-closes the gate and restarts its settle.
+func _cover_transit(text: String) -> void:
+	if text == _transit_text or gate == null:
+		return
+	_transit_text = text
+	if text == "":
+		gate.release(&"transit")
+	else:
+		gate.hold(&"transit", text)
+
+
 func _process(delta: float) -> void:
 	if net != null and not _offline:
 		net.interpolate_frame()
 
-	# A cover rather than a grey world, while the server is somewhere this client is not.
-	if hud != null and bridge != null:
-		hud.show_loading(bridge.transit_text())
+	if bridge != null:
+		_cover_transit(bridge.transit_text())
 
 	_fold_look()
 	_fold_correction()

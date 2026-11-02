@@ -53,7 +53,7 @@ func _ready() -> void:
 	_build_labels()
 	_build_crosshair()
 	_build_ammo_and_notice()
-	_build_spectate_and_cover()
+	_build_spectate()
 	apply_theme()
 
 
@@ -131,7 +131,7 @@ func _build_ammo_and_notice() -> void:
 	_notice.offset_bottom = -NOTICE_CLEARANCE
 
 
-func _build_spectate_and_cover() -> void:
+func _build_spectate() -> void:
 	# Who you are watching, under the status line; not movable.
 	_spectating = _label("Spectating", HORIZONTAL_ALIGNMENT_CENTER)
 	_spectating.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -150,28 +150,6 @@ func _build_spectate_and_cover() -> void:
 	_spectators_label = Label.new()
 	_spectators_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_spectators.add_child(_spectators_label)
-
-	# Last, so it draws over every widget above; sized to the viewport in `show_loading`.
-	loading_cover = ColorRect.new()
-	loading_cover.name = "Loading"
-	loading_cover.color = BLIND_COLOUR
-	loading_cover.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	loading_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	loading_cover.visible = false
-	add_child(loading_cover)
-
-	_loading_label = Label.new()
-	_loading_label.name = "Text"
-	_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_loading_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_loading_label.offset_left = 0.0
-	_loading_label.offset_top = 0.0
-	_loading_label.offset_right = 0.0
-	_loading_label.offset_bottom = 0.0
-	_loading_label.add_theme_font_size_override("font_size", 22)
-	_loading_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	loading_cover.add_child(_loading_label)
 
 
 func bind(p_game: G2GGame, p_player: StringName) -> void:
@@ -356,28 +334,6 @@ func _process(delta: float) -> void:
 		parts.append("ground")
 
 	_status.text = "   ·   ".join(parts)
-
-
-## Covers the screen with [param text], or uncovers it when [param text] is empty.
-##
-## Pushed by the client every frame from [method G2GNetBridge.transit_text] rather than
-## read off the game, because whether the server is somewhere this client is not is a
-## fact about the connection, and offline there is no connection to ask.
-func show_loading(text: String) -> void:
-	if loading_cover == null:
-		return
-
-	loading_cover.visible = text != ""
-
-	if not loading_cover.visible:
-		return
-
-	_loading_label.text = text
-
-	if is_inside_tree():
-		var inverse := get_global_transform().affine_inverse()
-		loading_cover.position = inverse * Vector2.ZERO
-		loading_cover.size = inverse.basis_xform(get_viewport_rect().size)
 
 
 ## Fades [member blind_overlay] toward whether the followed player is blinded.

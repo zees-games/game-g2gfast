@@ -97,6 +97,7 @@ var rules: Dictionary = {"flashlight": true, "thirdperson": true, "commands": []
 var _offline := true
 var _style_index := 0
 var _sampler: DotFpsSampler = null
+var _transit_text := ""
 
 ## Whether the cursor is waiting for a click before it can be captured. Web only.
 var _awaiting_click := false

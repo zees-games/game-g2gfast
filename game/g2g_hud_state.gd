@@ -97,5 +97,3 @@ const BLIND_COLOUR := Color(0.01, 0.01, 0.015)
 ## Over everything this HUD draws while the server is on a map this client has not loaded: there
 ## is no run to read ([method G2GNetBridge.in_transit]). The chat box stays above it, so the wait
 ## can still be talked through.
-var loading_cover: ColorRect = null
-var _loading_label: Label = null

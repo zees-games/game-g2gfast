@@ -332,7 +332,11 @@ func _arrange_blind() -> void:
 ## Pushed by hand here, as `G2GClient._process` pushes it from the bridge.
 func _arrange_loading() -> void:
 	_player.blinded = false
-	_hud.show_loading("Loading surf mesa… 45%")
+	var cover := DotLoadingCover.new()
+	cover.show_cover()
+	cover.set_status("Loading surf mesa… 45%")
+	cover.set_progress(0.45)
+	root.add_child(cover)
 
 
 # --- --fx -------------------------------------------------------------------
