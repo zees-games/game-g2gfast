@@ -2,10 +2,8 @@ extends "headless_net_wires.gd"
 
 ## game-g2gfast's netcode, end to end, in one process.
 ##
-## A server game and a client game, each with its own [DotNetManager] and
-## [G2GNetBridge], with a lossy loopback where the socket would be. Exits non-zero on
-## any failure. Everything here that could run over a real socket already has, in
-## dot-2d-hungry; this proves the bridge, not dot-net.
+## A server game and a client game, each with its own [DotNetManager] and [G2GNetBridge], with a
+## lossy loopback where the socket would be. This proves the bridge, not dot-net.
 ##
 ## [b]The client's tick lead is hand-stamped[/b] (INPUT_LEAD): a command for tick N
 ## has to be in the server's hands before it simulates N, and with no clock to

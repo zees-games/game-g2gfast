@@ -22,21 +22,17 @@ const G2GWeaponLayer := preload("g2g_weapon_layer.gd")
 
 ## g2gfast: the simulation. Maps, timers, styles, records, and every player.
 ##
-## [b]A bunny-hop and surf server in the competitive-shooter shape[/b]: the genre's
-## movement cvars in the genre's units, a timer with zones an admin draws from the console, styles,
-## a records table, and a rotation. Runs headless as a dedicated server and is what a
-## client draws.
+## [b]A bunny-hop and surf server in the competitive-shooter shape[/b]: the genre's cvars and
+## units, a timer with zones, styles, a records table and a rotation. Headless it is the server.
 ##
 ## [codeblock]
 ## godot --headless --path . res://examples/headless_run.tscn
 ## godot --headless --path . res://examples/dedicated.tscn
 ## [/codeblock]
 ##
-## [b]What is this game's own, versus the addons'.[/b] Every rule about movement lives
-## in dot-player-controller, every rule about timing in dot-timer, maps in dot-map,
-## records in dot-leaderboard. What this file adds is the joins — the tick order, the
-## unit boundary, the moment a cvar change reaches thirty players — and the joins are
-## where every bug in this family has been.
+## Movement lives in dot-player-controller, timing in dot-timer, maps in dot-map, records in
+## dot-leaderboard; this file adds the joins (tick order, the unit boundary, when a cvar change
+## reaches thirty players), which is where the bugs have been.
 
 
 ## The registry name a dot-server module finds this under.

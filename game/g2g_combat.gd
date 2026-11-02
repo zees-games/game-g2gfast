@@ -13,18 +13,12 @@ const G2GStats := preload("g2g_stats.gd")
 ## hitboxes, health, an arsenal and a scoreboard, and takes nothing away — a player who
 ## never presses fire plays exactly the game they played before.
 ##
-## [b]Entity ids come from [DotEntityTable] and are not derived from anything.[/b] They
-## used to be the player's own id with the `u` taken off, which worked and taught the
-## family why it should not: a derived id means a formula, a formula has an inverse, and
-## the two ends of one serialisation are exactly as capable of never meeting as the two
-## ends of a wire. The comment that used to sit on that inverse said so. Now the game
-## opens an entity keyed on the player id and asks the table in both directions, which
-## is also how [method player_id_for] stopped being a linear scan.
+## [b]Entity ids come from [DotEntityTable] and are not derived from anything[/b]: a derived
+## id is a formula with an inverse, and the two ends of a serialisation can disagree. The game
+## opens an entity keyed on the player id and asks the table both ways ([method player_id_for]).
 ##
-## [b]What the `u` still comes off for is the userid[/b], which is a different thing
-## that happened to share the function: a loadout's storage key and
-## `DotServer.session_by_userid` both want the account number, and neither wants a
-## runtime handle. That is [method userid_of], and it is unchanged on disk.
+## [b]The `u` still comes off for the userid[/b] ([method userid_of]): a loadout's storage key and
+## `DotServer.session_by_userid` want the account number, not a runtime handle.
 ##
 ## The ghost is deliberately excluded: it is a replay, it cannot be hurt, and
 ## registering it would put a bot on the scoreboard that never dies and never leaves.

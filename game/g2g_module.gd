@@ -59,9 +59,7 @@ func _module_load() -> DotResult:
 				game.remove_player(G2GGame.GHOST_ID)
 	)
 
-	# The bots (`g2g_bots.gd`): the family's three cvars, at 0 so a timer server has none until
-	# its operator asks. A records community runs a server for people; a bot riding the first
-	# stage is a demonstration somebody chooses, not a crowd somebody is sold.
+	# The bots (`g2g_bots.gd`): the family's three cvars, at 0 until an operator asks.
 	_quota = DotBotQuota.install(self, 0)
 	add_cvar("bot_nav", "1", "Bots on a map without a route file plan one through the navigation annotations (0 aims them straight at the finish).").changed.connect(
 		func(_old: String, new_value: String) -> void:
@@ -94,8 +92,7 @@ func _module_load() -> DotResult:
 	var _killview := game.killview_rules.bind_cvars(
 		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 
-	# Told to every client, because the light is drawn there and nowhere else: a client
-	# holding one when this goes to 0 switches it off on the next RULES.
+	# Told to every client: the light is drawn there, and 0 switches it off on the next RULES.
 	add_cvar("sv_flashlight", "1" if game.config.flashlight else "0",
 		"Whether players may use their own flashlight (F). Drawn on their screen only.").changed.connect(
 		func(_old: String, new_value: String) -> void:
@@ -113,8 +110,7 @@ func _module_load() -> DotResult:
 				net.config.stagger_snapshots = game.config.stagger_snapshots
 	)
 
-	# Who is watching you. Sent to the watched player and their watchers; off sends
-	# nothing at all, and clears every list already on screen.
+	# Off sends nothing and clears every list already on screen.
 	add_cvar("sv_spec_list", "1" if game.config.spectator_list else "0",
 		"Whether players see who is spectating them. 0 makes spectating anonymous.").changed.connect(
 		func(_old: String, new_value: String) -> void:
@@ -123,9 +119,7 @@ func _module_load() -> DotResult:
 				bridge.broadcast_spectators()
 	)
 
-	# mp_forcecamera, mp_freeroam and mp_freeroam_speed (dot-spectate): free roam is on by
-	# default. REPLICATED, because each client flies its own camera at the server's speed and
-	# hides the key when roaming is off.
+	# dot-spectate's mp_* cvars, REPLICATED: each client flies its own camera at the server's speed.
 	if game.spectate != null and game.spectate.manager != null:
 		var _spectate_cvars := game.spectate.manager.rules.bind_cvars(
 			add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED
@@ -137,12 +131,8 @@ func _module_load() -> DotResult:
 	add_command("g2g_track", _cmd_track, "main, or bonus <n>", "").with_chat()
 	add_command("g2g_stage", _cmd_stage, "To the start of stage <n>, or of this stage", "").with_chat()
 	add_command("g2g_top", _cmd_top, "Fastest times here", "").with_chat()
-	# Not `.with_chat()` and reachable from chat anyway: it carries CHANGEMAP and lets the flag
-	# answer, so an operator can type `/map` in chat and a player without the flag is still refused.
-	# `sv_chat_commands 0`, or `allow_chat_change = false` below, makes it console-only again.
-	add_command(
-		"g2g_map", _cmd_map, "Change map, or list them", DotAdminFlags.CHANGEMAP
-	)
+	# Not `.with_chat()` yet reachable from chat: CHANGEMAP decides, so a player without the flag is refused.
+	add_command("g2g_map", _cmd_map, "Change map, or list them", DotAdminFlags.CHANGEMAP)
 
 	# `map`, `maps` and `mapinfo` come from dot-map; dot-server's `map` changed the GAME and is
 	# `changelevel` now. `allow_chat_change` stays ON, matching `g2g_map`: CHANGEMAP decides.
@@ -1273,125 +1263,6 @@ func _identity_avatar(session: DotClientSession) -> DotAvatar:
 		return null
 
 	return identity.avatar_for("u%d" % session.userid)
-
-
-func _painter_for(id: StringName) -> DotTimerZonePainter:
-	if not _painters.has(id):
-		_painters[id] = DotTimerZonePainter.on(game.timers.zones)
-	var painter: DotTimerZonePainter = _painters[id]
-	painter.zones = game.timers.zones
-	# Zone heights in metres: 128 genre units of headroom, which is what the zone tools on those servers
-	# gives and enough for a jumping player.
-	painter.height = G2GUnits.to_metres(128.0)
-	painter.padding = G2GUnits.to_metres(16.0)
-	return painter
-
-
-func _mark_position(ctx: DotCmdContext) -> Vector3:
-	var player := _caller(ctx)
-	if player != null:
-		return player.controller.state.position
-	var map := game.current_map_node()
-	return map.spawn_for(DotTimerTrack.MAIN) if map != null else Vector3.ZERO
-
-
-func _cmd_zone(ctx: DotCmdContext) -> void:
-	if game.timers.zones == null:
-		ctx.reply("This map has no zone set.")
-		return
-	if ctx.args.is_empty():
-		ctx.reply("g2g_zone <start|end|stage|respawn|stop|teleport> [track] [number]")
-		return
-	var kinds := {"start": DotTimerZone.Kind.START, "end": DotTimerZone.Kind.END,
-		"stage": DotTimerZone.Kind.STAGE, "respawn": DotTimerZone.Kind.RESPAWN,
-		"stop": DotTimerZone.Kind.STOP, "teleport": DotTimerZone.Kind.TELEPORT}
-	var wanted := ctx.args[0].to_lower()
-	if not kinds.has(wanted):
-		ctx.reply("No such zone kind: %s" % ctx.args[0])
-		return
-
-	var track := DotTimerTrack.MAIN
-	var consumed := 1
-	if ctx.args.size() > 1:
-		var text := ctx.args[1]
-		if text.to_lower() in ["bonus", "b"] and ctx.args.size() > 2:
-			text = "%s %s" % [text, ctx.args[2]]
-			consumed = 2
-		track = DotTimerTrack.parse(text)
-		if track < 0:
-			ctx.reply("No such track: %s" % text)
-			return
-
-	var number := 0.0
-	if ctx.args.size() > consumed + 1 and ctx.args[consumed + 1].is_valid_float():
-		number = ctx.args[consumed + 1].to_float()
-
-	var began := _painter_for(_caller_id(ctx)).begin(kinds[wanted], track, number)
-	if not began.ok:
-		ctx.reply_error(began)
-		return
-	ctx.reply("Drawing a %s zone on %s. Stand on one corner and run g2g_zone_mark, then the other." % [
-		wanted, DotTimerTrack.name_of(track)])
-
-
-func _cmd_zone_mark(ctx: DotCmdContext) -> void:
-	var painter := _painter_for(_caller_id(ctx))
-	if painter.zones == null:
-		ctx.reply("This map has no zone set.")
-		return
-	var at := _mark_position(ctx)
-	# `g2g_zone_mark x y z [height]` in genre units is the corner the client's zone editor
-	# aimed at (Z): exact, so no padding, and the height the editor showed. Standing on
-	# the corner and marking without numbers is what it always was.
-	if ctx.args.size() >= 3 and ctx.args[0].is_valid_float() and ctx.args[1].is_valid_float() \
-			and ctx.args[2].is_valid_float():
-		at = G2GUnits.vector_to_metres(Vector3(ctx.args[0].to_float(), ctx.args[1].to_float(),
-			ctx.args[2].to_float()))
-		painter.padding = 0.0
-		if ctx.args.size() >= 4 and ctx.args[3].is_valid_float() and ctx.args[3].to_float() > 0.0:
-			painter.height = G2GUnits.to_metres(clampf(ctx.args[3].to_float(), 8.0, 4096.0))
-	var marked := painter.mark(at)
-	if not marked.ok:
-		ctx.reply_error(marked)
-		return
-	if marked.value == null:
-		ctx.reply("First corner. Now the other.")
-		return
-	game.timers.set_zones(painter.zones)
-	ctx.reply("Drew %s." % str(marked.value))
-
-
-func _cmd_zone_undo(ctx: DotCmdContext) -> void:
-	var undone := _painter_for(_caller_id(ctx)).undo()
-	if not undone.ok:
-		ctx.reply_error(undone)
-		return
-	game.timers.set_zones(game.timers.zones)
-	ctx.reply("Removed %s." % str(undone.value))
-
-
-func _cmd_zone_list(ctx: DotCmdContext) -> void:
-	if game.timers.zones == null:
-		ctx.reply("This map has no zones.")
-		return
-	ctx.reply_lines(_painter_for(_caller_id(ctx)).summary())
-
-
-func _cmd_zone_save(ctx: DotCmdContext) -> void:
-	if game.timers.zones == null:
-		ctx.reply("This map has no zones.")
-		return
-	var problems := game.timers.zones.problems()
-	if not problems.is_empty():
-		ctx.reply("Not saving — fix these first:")
-		ctx.reply_lines(problems)
-		return
-	var path := ctx.args[0] if ctx.args.size() > 0 else "user://zones/%s.json" % String(game.timers.zones.map_id)
-	var wrote := game.timers.zones.save_json(path)
-	if not wrote.ok:
-		ctx.reply_error(wrote)
-		return
-	ctx.reply("Wrote %s (%d zones)." % [path, game.timers.zones.zones.size()])
 
 
 func _cmd_thirdperson(ctx: DotCmdContext) -> void:

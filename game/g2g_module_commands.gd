@@ -576,3 +576,121 @@ func _cmd_rtv(ctx: DotCmdContext) -> void:
 		ctx.reply("%d of %d." % [game.maps.time_limit.rtv_votes(),
 			game.maps.time_limit.rtv_needed(game.players.size())])
 
+
+func _mark_position(ctx: DotCmdContext) -> Vector3:
+	var player := _caller(ctx)
+	if player != null:
+		return player.controller.state.position
+	var map := game.current_map_node()
+	return map.spawn_for(DotTimerTrack.MAIN) if map != null else Vector3.ZERO
+
+
+func _cmd_zone(ctx: DotCmdContext) -> void:
+	if game.timers.zones == null:
+		ctx.reply("This map has no zone set.")
+		return
+	if ctx.args.is_empty():
+		ctx.reply("g2g_zone <start|end|stage|respawn|stop|teleport> [track] [number]")
+		return
+	var kinds := {"start": DotTimerZone.Kind.START, "end": DotTimerZone.Kind.END,
+		"stage": DotTimerZone.Kind.STAGE, "respawn": DotTimerZone.Kind.RESPAWN,
+		"stop": DotTimerZone.Kind.STOP, "teleport": DotTimerZone.Kind.TELEPORT}
+	var wanted := ctx.args[0].to_lower()
+	if not kinds.has(wanted):
+		ctx.reply("No such zone kind: %s" % ctx.args[0])
+		return
+
+	var track := DotTimerTrack.MAIN
+	var consumed := 1
+	if ctx.args.size() > 1:
+		var text := ctx.args[1]
+		if text.to_lower() in ["bonus", "b"] and ctx.args.size() > 2:
+			text = "%s %s" % [text, ctx.args[2]]
+			consumed = 2
+		track = DotTimerTrack.parse(text)
+		if track < 0:
+			ctx.reply("No such track: %s" % text)
+			return
+
+	var number := 0.0
+	if ctx.args.size() > consumed + 1 and ctx.args[consumed + 1].is_valid_float():
+		number = ctx.args[consumed + 1].to_float()
+
+	var began := _painter_for(_caller_id(ctx)).begin(kinds[wanted], track, number)
+	if not began.ok:
+		ctx.reply_error(began)
+		return
+	ctx.reply("Drawing a %s zone on %s. Stand on one corner and run g2g_zone_mark, then the other." % [
+		wanted, DotTimerTrack.name_of(track)])
+
+
+func _cmd_zone_mark(ctx: DotCmdContext) -> void:
+	var painter := _painter_for(_caller_id(ctx))
+	if painter.zones == null:
+		ctx.reply("This map has no zone set.")
+		return
+	var at := _mark_position(ctx)
+	# `g2g_zone_mark x y z [height]` in genre units is the corner the client's zone editor
+	# aimed at (Z): exact, so no padding, and the height the editor showed. Standing on
+	# the corner and marking without numbers is what it always was.
+	if ctx.args.size() >= 3 and ctx.args[0].is_valid_float() and ctx.args[1].is_valid_float() \
+			and ctx.args[2].is_valid_float():
+		at = G2GUnits.vector_to_metres(Vector3(ctx.args[0].to_float(), ctx.args[1].to_float(),
+			ctx.args[2].to_float()))
+		painter.padding = 0.0
+		if ctx.args.size() >= 4 and ctx.args[3].is_valid_float() and ctx.args[3].to_float() > 0.0:
+			painter.height = G2GUnits.to_metres(clampf(ctx.args[3].to_float(), 8.0, 4096.0))
+	var marked := painter.mark(at)
+	if not marked.ok:
+		ctx.reply_error(marked)
+		return
+	if marked.value == null:
+		ctx.reply("First corner. Now the other.")
+		return
+	game.timers.set_zones(painter.zones)
+	ctx.reply("Drew %s." % str(marked.value))
+
+
+func _cmd_zone_undo(ctx: DotCmdContext) -> void:
+	var undone := _painter_for(_caller_id(ctx)).undo()
+	if not undone.ok:
+		ctx.reply_error(undone)
+		return
+	game.timers.set_zones(game.timers.zones)
+	ctx.reply("Removed %s." % str(undone.value))
+
+
+func _cmd_zone_list(ctx: DotCmdContext) -> void:
+	if game.timers.zones == null:
+		ctx.reply("This map has no zones.")
+		return
+	ctx.reply_lines(_painter_for(_caller_id(ctx)).summary())
+
+
+func _cmd_zone_save(ctx: DotCmdContext) -> void:
+	if game.timers.zones == null:
+		ctx.reply("This map has no zones.")
+		return
+	var problems := game.timers.zones.problems()
+	if not problems.is_empty():
+		ctx.reply("Not saving — fix these first:")
+		ctx.reply_lines(problems)
+		return
+	var path := ctx.args[0] if ctx.args.size() > 0 else "user://zones/%s.json" % String(game.timers.zones.map_id)
+	var wrote := game.timers.zones.save_json(path)
+	if not wrote.ok:
+		ctx.reply_error(wrote)
+		return
+	ctx.reply("Wrote %s (%d zones)." % [path, game.timers.zones.zones.size()])
+
+
+func _painter_for(id: StringName) -> DotTimerZonePainter:
+	if not _painters.has(id):
+		_painters[id] = DotTimerZonePainter.on(game.timers.zones)
+	var painter: DotTimerZonePainter = _painters[id]
+	painter.zones = game.timers.zones
+	# Zone heights in metres: 128 genre units of headroom, which is what the zone tools on those servers
+	# gives and enough for a jumping player.
+	painter.height = G2GUnits.to_metres(128.0)
+	painter.padding = G2GUnits.to_metres(16.0)
+	return painter

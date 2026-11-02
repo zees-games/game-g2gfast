@@ -280,6 +280,35 @@ func _test_pit_keeps_the_run() -> void:
 	_done()
 
 
+## A trap's sheet can be taller than the block under it and span platforms with bare pit floor
+## between them, so ray-cast a grid and return the highest solid hit.
+func _block_floor(bot: G2GPlayer, box: AABB) -> Dictionary:
+	var hit := {}
+	for ix in range(5):
+		for iz in range(5):
+			var gx := lerpf(box.position.x, box.end.x, (ix + 0.5) / 5.0)
+			var gz := lerpf(box.position.z, box.end.z, (iz + 0.5) / 5.0)
+			var q := PhysicsRayQueryParameters3D.create(
+				Vector3(gx, box.end.y + G2GUnits.to_metres(2.0), gz),
+				Vector3(gx, box.position.y - G2GUnits.to_metres(64.0), gz))
+			var h := bot.get_world_3d().direct_space_state.intersect_ray(q)
+			if not h.is_empty() and (hit.is_empty() or (h["position"] as Vector3).y > (hit["position"] as Vector3).y):
+				hit = h
+	return hit
+
+
+## Land and leave on the next tick, as a clean run does: true when the block did not take the bot.
+func _hop_stays(bot: G2GPlayer, dest: Vector3) -> bool:
+	for _i in range(int(0.3 * game.tick_rate)):
+		await get_tree().physics_frame
+		if bot.controller.state.is_grounded():
+			bot.controller.state.velocity.y = G2GUnits.to_metres(G2GUnits.JUMP_VELOCITY)
+			bot.controller.motor.set_mode(bot.controller.state, DotFpsState.Mode.AIR)
+		if bot.global_position.distance_to(dest) < G2GUnits.to_metres(32.0):
+			return false
+	return true
+
+
 ## A block sinks under a player who stays on it, and not under one who hops off it.
 func _test_blocks() -> void:
 	_section("blocks")
@@ -309,26 +338,12 @@ func _test_blocks() -> void:
 	var arrived_taken := 0
 	for b: Dictionary in _sample(m.blocks, SAMPLE):
 		var box: AABB = b["box"]
-		# A trap's sheet can be taller than the block under it, and can span platforms with
-		# bare pit floor between them (bhop_badges_mini), so neither its min nor its max nor
-		# its centre is the floor: ray-cast a grid and stand on the highest solid top.
-		var hit := {}
-		for ix in range(5):
-			for iz in range(5):
-				var gx := lerpf(box.position.x, box.end.x, (ix + 0.5) / 5.0)
-				var gz := lerpf(box.position.z, box.end.z, (iz + 0.5) / 5.0)
-				var q := PhysicsRayQueryParameters3D.create(
-					Vector3(gx, box.end.y + G2GUnits.to_metres(2.0), gz),
-					Vector3(gx, box.position.y - G2GUnits.to_metres(64.0), gz))
-				var h := bot.get_world_3d().direct_space_state.intersect_ray(q)
-				if not h.is_empty() and (hit.is_empty() or (h["position"] as Vector3).y > (hit["position"] as Vector3).y):
-					hit = h
+		var hit := _block_floor(bot, box)
 		# Floor only far below the sheet means no block under it to land on.
 		if hit.is_empty() or (hit["position"] as Vector3).y < box.position.y - G2GUnits.to_metres(8.0):
 			continue
 		var top: Vector3 = (hit["position"] as Vector3) + Vector3(0, G2GUnits.to_metres(2.0), 0)
-		# Somewhere to stand at all: a block narrower than the hull, or one under a ceiling,
-		# is checked by the ones beside it.
+		# A block too narrow for the hull or under a ceiling is checked by its neighbours.
 		bot.teleport(top, 0.0, true)
 		bot.controller.state.velocity = Vector3.ZERO
 		var landed := false
@@ -355,24 +370,9 @@ func _test_blocks() -> void:
 		else:
 			wrong.append("%s stayed at %s" % [_u(top), _u(bot.global_position)])
 		stood += 1
-
-		# A hop: land and leave on the next tick, which is what a clean run does.
 		bot.teleport(top + Vector3(0, G2GUnits.to_metres(40.0), 0), 0.0, true)
 		bot.controller.state.velocity = Vector3.ZERO
-		var hop_ok := true
-		var jumped_from := -INF
-		var rose := 0.0
-		for _i in range(int(0.3 * game.tick_rate)):
-			await get_tree().physics_frame
-			if bot.controller.state.is_grounded():
-				jumped_from = bot.global_position.y
-				bot.controller.state.velocity.y = G2GUnits.to_metres(G2GUnits.JUMP_VELOCITY)
-				bot.controller.motor.set_mode(bot.controller.state, DotFpsState.Mode.AIR)
-			if bot.global_position.distance_to(dest) < G2GUnits.to_metres(32.0):
-				hop_ok = false
-				break
-			if jumped_from > -INF:
-				rose = maxf(rose, bot.global_position.y - jumped_from)
+		var hop_ok := await _hop_stays(bot, dest)
 		if hop_ok:
 			hopped_ok += 1
 		else:

@@ -73,9 +73,7 @@ func _initialize() -> void:
 	root.add_child(_client)
 
 	_steps = [
-		# Settings in memory from here on: the frames below flip the theme and drag the
-		# HUD, and a screenshot tool that saved those into the player's own settings file
-		# would change their game.
+		# Settings stay in memory: the frames below flip the theme and drag the HUD.
 		func() -> void:
 			_client.presentation.settings.local_store = DotSettingsStoreMemory.new()
 			_client.presentation.settings.load_now()
@@ -91,7 +89,6 @@ func _initialize() -> void:
 		func() -> void: _capture("menus_light_on"),
 		func() -> void:
 			_client.toggle_flashlight()
-			# Look back and down at the start zone the player is standing in.
 			var sampler := _client.player.sampler
 			if sampler != null:
 				sampler.yaw = (_yaw if is_finite(_yaw) else 0.0) + 180.0
@@ -103,7 +100,7 @@ func _initialize() -> void:
 			_wait = 10,
 		func() -> void:
 			_client.zone_editor.place()
-			var sampler := _client.player.sampler
+			var sampler := _client.player.sampler # looks back and down at the start zone
 			if sampler != null:
 				sampler.yaw += 25.0
 			_wait = 20,

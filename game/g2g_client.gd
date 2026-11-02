@@ -126,14 +126,10 @@ func _avatar_figure(peer_id: int) -> Object:
 ## The screen stays covered, and the local body and the input stay still, until the level is
 ## built, the local player exists and its camera is current.
 ##
-## [b]Without it the first frames were a half-built world.[/b] Solo the player spawned in the
-## tick the first map landed and fell onto a floor that was still arriving; connected, the
-## client drew from its first frame with no player, no camera and a HUD with nobody to read; a
-## map change tore the level down in front of a body that kept moving, and the run timer was
-## fed the whole time. The gate does not stop the simulation by itself: [member G2GGame.covered]
-## freezes the tick (and with it the timers), [method G2GPlayer.simulate] skips a frozen body
-## and reads no keys while it settles, and the keys and the netcode sampling check
-## [method _covered].
+## [b]Without it the first frames were a half-built world[/b] (a player falling onto a floor still
+## arriving, a HUD with nobody to read, a run timer fed through a map change). The gate does not
+## stop the simulation itself: [member G2GGame.covered] freezes the tick and the timers,
+## [method G2GPlayer.simulate] skips a frozen body, and the keys and netcode sampling check [method _covered].
 func _build_gate() -> void:
 	platform = DotGameClient.new()
 	platform.name = "Platform"
@@ -432,20 +428,10 @@ func show_servers() -> void:
 
 ## Hides and captures the cursor, or arranges for a click to do it.
 ##
-## [b]A browser will not hide the cursor because a scene asked it to.[/b] Pointer lock
-## needs transient user activation — a real click — and `_ready()` is the one moment in
-## a client's life that is guaranteed not to have one. The request is refused, and it is
-## refused SILENTLY: `Input.mouse_mode` reads back as CAPTURED, the cursor stays on
-## screen, and the view still turns, so nothing anywhere reports a problem. What the
-## player gets is a mouse that leaves the window mid-run.
-##
-## This is the family's own rule about deployment shapes, on a capability nothing had
-## needed yet: game-hungario is the only other browser client and it is 2D — it reads
-## the cursor's position and never locks it — so g2gfast is the first thing here that
-## has ever asked a browser for pointer lock.
-##
-## Desktop has no such rule and captures immediately, because a player who launched a
-## first-person game should not have to click their own window first.
+## [b]A browser will not hide the cursor because a scene asked it to.[/b] Pointer lock needs a
+## real click and `_ready()` never has one; the request is refused SILENTLY (`Input.mouse_mode`
+## reads CAPTURED, the cursor stays), so the mouse leaves the window mid-run.
+## Desktop captures immediately.
 func _grab_mouse() -> void:
 	if not DotPlatform.is_web():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

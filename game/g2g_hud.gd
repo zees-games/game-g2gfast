@@ -295,9 +295,7 @@ func _process(delta: float) -> void:
 	var move := cmd.move if cmd != null else Vector2.ZERO
 	var buttons := cmd.buttons if cmd != null else 0
 
-	# The speed is NOT repeated here. `DotTimerHud` draws it in the block this line
-	# sits under, and the same number twice, six pixels apart, in two different
-	# formats, is the shape the old layout had.
+	# No speed here: `DotTimerHud` draws it, and the same number twice was the old layout.
 	_keys.text = "%s %s %s %s    %s  %s" % [
 		"W" if move.y > 0.1 else "·",
 		"A" if move.x < -0.1 else "·",
@@ -307,8 +305,7 @@ func _process(delta: float) -> void:
 		"DUCK" if buttons & DotFpsCommand.BUTTON_CROUCH else "····",
 	]
 
-	# The track is not repeated here either — `DotTimerHud` draws it beside the style,
-	# where a player reads the two together.
+	# No track either: `DotTimerHud` draws it beside the style.
 	var parts := PackedStringArray([
 		game.maps.current.label() if game.maps.current != null else "-",
 	])
@@ -317,8 +314,7 @@ func _process(delta: float) -> void:
 	var local := game.maps.time_limit.formatted_remaining() if game.maps.time_limit.duration > 0.0 else ""
 	var time_left := time_left_text(clock_view, local, Time.get_ticks_msec() / 1000.0)
 
-	# Nothing at all when the vote has no clock, rather than "no limit": a status line
-	# spending a slot on something that is not happening is a slot a player learns to skip.
+	# Nothing when the vote has no clock, rather than "no limit": a slot players learn to skip.
 	if time_left != "":
 		parts.append(time_left)
 
