@@ -13,6 +13,7 @@
 #   ./game.sh test NAME...         run only these suites (e.g. ./game.sh test headless_net)
 #   ./game.sh soak [MAP] [MIN]     bot soak on tools/soak.tscn (report in .godot/test-logs/soak-MAP.json)
 #   ./game.sh suites               list the test suites
+#   ./game.sh netchaos [ARGS]      real server and clients under tc netem loss, jitter, blackout
 #   ./game.sh shot [ARGS]          save a screenshot to screenshots/ (tools/shot.sh or tools/screenshot.sh)
 #
 # Options (before the command):
@@ -263,6 +264,10 @@ case "$cmd" in
         ;;
     suites)
         printf '%s\n' $SUITES
+        ;;
+    netchaos)
+        [ -x tools/netchaos.sh ] || die "$GAME_NAME has no netchaos rig." 2
+        exec tools/netchaos.sh "$@"
         ;;
     shot)
         for tool in tools/shot.sh tools/screenshot.sh; do
