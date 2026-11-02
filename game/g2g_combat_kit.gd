@@ -32,6 +32,7 @@ static func catalogue() -> DotWeaponCatalogue:
 		var res := _shared_catalogue.validate()
 		if not res.ok:
 			push_error(res.error.message)
+		_shared_catalogue.warm_scripts()
 	return _shared_catalogue
 
 
