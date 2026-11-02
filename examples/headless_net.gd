@@ -904,7 +904,8 @@ const REPUB_FIXTURE := &"g2g_repub_fixture"
 var _fixture_keys: Dictionary = {}
 const SYNC_FIXTURE_ROOT := "user://g2g_headless_net_sync"
 const SYNC_TIMEOUT := 1.0
-const SLOW_FETCH := 2.0
+## Must outlast the server's swap (timeout plus the map load, over 2 s on a slow box), or the client has caught up.
+const SLOW_FETCH := 5.0
 
 var _cloud: SlowCloud = null
 var _real_cloud: DotCloudClient = null
