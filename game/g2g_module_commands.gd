@@ -60,8 +60,6 @@ var _tick: int = 0
 var _quota: DotBotQuota = null
 var _joined: Dictionary = {}
 
-const SNAPSHOT_RATE := 32
-
 ## Config fields that already have a hand-written cvar above (field -> cvar). The binder leaves
 ## these cvars alone; a workbench or file edit is pushed through the cvar so its handler runs.
 const HAND_CVARS := {

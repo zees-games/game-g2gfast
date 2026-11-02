@@ -911,7 +911,7 @@ func _build_netcode() -> DotResult:
 
 	var config := DotNetConfig.new()
 	config.tick_rate = game.tick_rate
-	config.snapshot_rate = SNAPSHOT_RATE
+	config.snapshot_rate = G2GGame.snapshot_rate_for(game.tick_rate)
 	config.enable_prediction = true
 	config.enable_lag_compensation = false
 	config.max_entities_per_snapshot = 0

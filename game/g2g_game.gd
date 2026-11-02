@@ -103,6 +103,12 @@ func world_is_static() -> bool:
 	return props == null and not body_rules.solid
 
 
+## Snapshots a second sent at [param rate] ticks: the nearest to 32 that is whole ticks apart
+## (60 gives 30). dot-net divides with integers, so 32 at 60 Hz sent every tick.
+static func snapshot_rate_for(rate: int) -> int:
+	return rate / maxi(1, roundi(float(rate) / 32.0))
+
+
 static func _make_body_rules() -> DotPlayerBodyRules:
 	var rules := DotPlayerBodyRules.new()
 	rules.solid = false
