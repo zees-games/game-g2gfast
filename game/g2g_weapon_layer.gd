@@ -20,6 +20,7 @@ func setup(owner_game: G2GGame) -> void:
 	game.add_child(self)
 	drops = DotWeaponDrops.new()
 	drops.name = "WeaponDrops"
+	rules.auto_pickup = true
 	drops.rules = rules
 	drops.is_authority = game.authoritative
 	drops.draws = DisplayServer.get_name() != "headless"
