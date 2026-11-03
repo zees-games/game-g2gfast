@@ -58,6 +58,8 @@ const MAX_AIM_SPEED := 3500.0
 const LEDGE_LEAD := 6.0
 const LEDGE_TICKS := 3.0
 const LEDGE_DROP := 24.0
+## Ground this much (units) under the feet ahead counts as no ground: a step down is not a floor to keep running on.
+const LEDGE_STEP := 4.0
 ## The wall test: a ray at a step's height plus a little, this far ahead.
 const STEP_PLUS := 22.0
 const WALL_LOOK := 40.0
@@ -299,7 +301,9 @@ static func ledge_ahead(space: PhysicsDirectSpaceState3D, position: Vector3, dir
 	var ahead := G2GUnits.to_metres(LEDGE_LEAD + speed * LEDGE_TICKS / 128.0)
 	var from := position + dir * ahead + Vector3.UP * G2GUnits.to_metres(8.0)
 	var to := from + Vector3.DOWN * G2GUnits.to_metres(8.0 + LEDGE_DROP)
-	return space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to)).is_empty()
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	# Ground a few units lower is still the lip of the block the bot stands on (an island over a shallow floor).
+	return hit.is_empty() or (hit["position"] as Vector3).y < position.y - G2GUnits.to_metres(LEDGE_STEP)
 
 
 ## Something too tall to walk up just ahead of the player's knees: jump onto it.

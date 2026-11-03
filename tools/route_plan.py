@@ -4,6 +4,15 @@ import json, struct, sys, heapq, math, argparse, os
 
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 64.0         # terrain is binned into cells this wide
+RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
+
+
+def envelope(rise, safety):
+    """The furthest edge-to-edge gap a jump from a lip at run speed lands, `rise` units above take-off (negative: a drop)."""
+    disc = JUMP_V * JUMP_V - 2.0 * GRAVITY * rise
+    return 0.0 if disc < 0 else safety * RUN_SPEED * (JUMP_V + math.sqrt(disc)) / GRAVITY
+
+
 CLIMB = 54.0         # the most a jump lands on above take-off (57 apex, less margin)
 
 PIT_MARGIN = 2.0  # the hull stands a little above the box top it is caught by
@@ -35,7 +44,7 @@ def load(mid, root):
             bx, by, bz = [p[2][q] - p[0][q] for q in range(3)]
             nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
             ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
-            if abs(ny) / ln < 0.7:
+            if abs(ny) / ln < 0.8:  # a steeper sliver of cliff base is not ground to land on
                 continue
             cx = sum(q[0] for q in p) / 3; cz = sum(q[2] for q in p) / 3; cy = max(q[1] for q in p)
             key = (int(math.floor(cx / CELL)), int(math.floor(cz / CELL)), int(math.floor(cy / 96.0)))
@@ -122,6 +131,7 @@ def main():
     ap.add_argument('map'); ap.add_argument('--root', default='.')
     ap.add_argument('--region', help='x0,z0,x1,z1')
     ap.add_argument('--reach', type=float, default=200.0)
+    ap.add_argument('--safety', type=float, default=0.85, help='fraction of the run-speed jump envelope the planner trusts the follower with')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     a = ap.parse_args()
     d, hulls = load(a.map, a.root)
@@ -281,7 +291,7 @@ def main():
         for j in near(i):
             g = gap(tops[i]['face'], tops[j]['face'])
             rise = tops[j]['top'] - tops[i]['top']
-            if g > a.reach or rise > CLIMB:
+            if g > min(a.reach, envelope(rise, a.safety)) or rise > CLIMB:
                 continue
             if g < 1.0 and abs(rise) > 18.0 and rise > 0:
                 continue  # a wall, not a step
