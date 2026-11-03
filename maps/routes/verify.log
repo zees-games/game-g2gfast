@@ -1,0 +1,66 @@
+bhop_platformer_fxd NOROUTE no route to the finish within reach 280; 2749 tops reached, the furthest at (4832.0, -8416.0)
+bhop_amor NOROUTE no route to the finish within reach 280; 766 tops reached, the furthest at (3237.809523809524, -4179.125)
+bhop_ananas NOROUTE no route to the finish within reach 280; 1537 tops reached, the furthest at (-793.0285714285715, 47.627906976744185)
+bhop_sqee NOROUTE no route to the finish within reach 280; 317 tops reached, the furthest at (-1729.142857142857, 8886.0)
+bhop_strength_v2 NOROUTE no route to the finish within reach 280; 179 tops reached, the furthest at (-3095.333333333333, 6037.0)
+bhop_supernova NOROUTE no route to the finish within reach 280; 359 tops reached, the furthest at (-6964.0, 12196.0)
+bhop_tesquo_v2 NOROUTE no route to the finish within reach 280; 113 tops reached, the furthest at (16.0, -160.0)
+bhop_toroux NOROUTE no route to the finish within reach 280; 143 tops reached, the furthest at (5052.0, -7672.0)
+bhop_training_fun NOROUTE IndexError: list index out of range
+bhop_tranquility NOROUTE no start (0) or no goal (9) top
+bhop_underground_crypt NOROUTE no route to the finish within reach 280; 364 tops reached, the furthest at (-2848.0, 160.0)
+surf_animals NOROUTE IndexError: list index out of range
+surf_aquaflow RIDE_FAILED surf_aquaflow: 116690 tops, route of 42 points, 10915 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] surf_aquaflow after 90.00 s: nowhere, time ran out at (-9880.0, 6744.0, 373.0) u; 1118 u from the arrival, 232 u lower at the deepest, top 272 u/s, 0 ticks surfing, 762 grounded
+bhop_angst NOROUTE no route to the finish within reach 280; 19181 tops reached, the furthest at (-832.0, -4016.0)
+surf_arcade NOROUTE no route to the finish within reach 280; 36 tops reached, the furthest at (-12970.666666666668, 11477.333333333332)
+surf_eclipse NOROUTE no route to the finish within reach 280; 1 tops reached, the furthest at (-12203.333333333332, -9873.0)
+surf_ember NOROUTE no route to the finish within reach 280; 3646 tops reached, the furthest at (-13501.551025390625, -182.37999725341797)
+surf_greensway NOROUTE no route to the finish within reach 280; 1298 tops reached, the furthest at (3808.0, 6560.0)
+surf_hologram RIDE_FAILED surf_hologram: 10523 tops, route of 5 points, 394 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] surf_hologram after 90.00 s: nowhere, time ran out at (-14.0, 15236.0, -12145.0) u; 683 u from the arrival, 24 u lower at the deepest, top 250 u/s, 0 ticks surfing, 7077 grounded
+surf_interference RIDE_FAILED surf_interference: 170792 tops, route of 51 points, 6390 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] surf_interference after 90.00 s: nowhere, time ran out at (-11272.0, 13040.0, 1147.0) u; 1350 u from the arrival, 212 u lower at the deepest, top 272 u/s, 0 ticks surfing, 1621 grounded
+surf_intro NOROUTE no start (0) or no goal (0) top
+surf_kitsune NOROUTE no route to the finish within reach 280; 531 tops reached, the furthest at (-14840.0, 15314.665852864582)
+surf_life_of_duck NOROUTE no route to the finish within reach 280; 100 tops reached, the furthest at (-498.66666666666663, -112.0)
+surf_lithium2 NOROUTE no start (0) or no goal (11) top
+surf_lore NOROUTE no route to the finish within reach 280; 156 tops reached, the furthest at (6045.0, 449.25)
+surf_lt_omnific NOROUTE no route to the finish within reach 280; 16761 tops reached, the furthest at (-4848.347826086956, -976.0)
+surf_lt_unicorn NOROUTE no route to the finish within reach 280; 66 tops reached, the furthest at (15024.0, 14144.0)
+bhop_arcane_v2 NOROUTE no route to the finish within reach 280; 100238 tops reached, the furthest at (-8008.0, 9619.2)
+bhop_atmosphere NOROUTE no start (1) or no goal (0) top
+bhop_aztec NOROUTE no route to the finish within reach 280; 407 tops reached, the furthest at (-760.0, -2275.0)
+bhop_badges NOROUTE no route to the finish within reach 280; 92 tops reached, the furthest at (-6752.0, -6752.0)
+bhop_badges2 NOROUTE no route to the finish within reach 280; 7197 tops reached, the furthest at (4000.0, -2384.313725490196)
+bhop_badges_mini NOROUTE no route to the finish within reach 280; 234 tops reached, the furthest at (1744.0, 1424.0)
+bhop_crash_egypt NOROUTE no route to the finish within reach 280; 1018 tops reached, the furthest at (-1056.0, -672.0)
+bhop_depot NOROUTE no route to the finish within reach 280; 86 tops reached, the furthest at (-14907.0, 12136.727272727272)
+bhop_eazy NOROUTE no route to the finish within reach 280; 110 tops reached, the furthest at (-360.0, -426.6666666666667)
+bhop_eazy_v2 NOROUTE no start (0) or no goal (12) top
+bhop_elate NOROUTE no route to the finish within reach 280; 1247 tops reached, the furthest at (7072.0, 3168.0)
+surf_mesa RIDE_FAILED surf_mesa: 136318 tops, route of 135 points, 15341 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] surf_mesa after 4.22 s: PUT BACK by a pit at (0.0, 10185.0, 800.0) u (last at (-240.0, 9542.0, 256.0) u, route point 7); 0 u from the arrival, 643 u lower at the deepest, top 267 u/s, 0 ticks surfing, 270 grounded
+surf_omnibus NOROUTE no route to the finish within reach 280; 720 tops reached, the furthest at (-6831.428571428572, 1067.6923076923078)
+surf_quilavar NOROUTE no start (0) or no goal (56) top
+surf_rookie NOROUTE no route to the finish within reach 280; 107 tops reached, the furthest at (-5111.10546875, -12818.958984375)
+bhop_epiphany NOROUTE no route to the finish within reach 280; 1349 tops reached, the furthest at (6190.4, 9777.454545454546)
+surf_stonework3 NOROUTE no route to the finish within reach 280; 272 tops reached, the furthest at (-3599.999267578125, 8208.000610351562)
+bhop_evolve NOROUTE no route to the finish within reach 280; 792 tops reached, the furthest at (1233.4545454545455, -4113.454545454546)
+bhop_exanimo NOROUTE no start (1) or no goal (0) top
+bhop_exodus NOROUTE no route to the finish within reach 280; 1636 tops reached, the furthest at (-1504.0, -288.0)
+bhop_forgotten NOROUTE no route to the finish within reach 280; 272 tops reached, the furthest at (352.0, -1504.0)
+bhop_freakin NOROUTE no route to the finish within reach 280; 94 tops reached, the furthest at (5392.0, -1200.0)
+bhop_fur NOROUTE no route to the finish within reach 280; 1657 tops reached, the furthest at (-8432.0, -13461.333333333332)
+bhop_fury NOROUTE no route to the finish within reach 280; 133 tops reached, the furthest at (-8029.333333333334, -3528.0)
+bhop_fury_2 NOROUTE no start (1) or no goal (0) top
+bhop_hellish_dream_css NOROUTE no route to the finish within reach 280; 5348 tops reached, the furthest at (12342.333333333332, -533.3333333333333)
+bhop_interloper NOROUTE no route to the finish within reach 280; 718 tops reached, the furthest at (-5704.0, -7208.0)
+bhop_japan NOROUTE no start (1) or no goal (0) top
+bhop_lego2 NOROUTE IndexError: list index out of range
+bhop_lego3 NOROUTE no route to the finish within reach 280; 5120 tops reached, the furthest at (-5280.0, -6928.0)
+bhop_mario_fxd NOROUTE FileNotFoundError: [Errno 2] No such file or directory: './maps/imported/bhop_mario_fxd/bhop_mario_fxd.json'
+bhop_monster_jam NOROUTE no route to the finish within reach 280; 4524 tops reached, the furthest at (7536.615384615385, -4400.695652173913)
+bhop_nature NOROUTE no route to the finish within reach 280; 194 tops reached, the furthest at (-7424.0, 6416.0)
+bhop_null_fix NOROUTE no route to the finish within reach 280; 898 tops reached, the furthest at (4456.0, -578.0)
+bhop_ocean RIDE_FAILED bhop_ocean: 14084 tops, route of 178 points, 33826 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] bhop_ocean after 1.02 s: PUT BACK by a pit at (4032.0, 144.0, 14856.0) u (last at (4179.0, 109.0, 14705.0) u, route point 3); 0 u from the arrival, 35 u lower at the deepest, top 271 u/s, 0 ticks surfing, 85 grounded
+bhop_overthinker NOROUTE no route to the finish within reach 280; 172 tops reached, the furthest at (12.363636363636367, 6816.0)
+bhop_pandora2_fix NOROUTE no route to the finish within reach 280; 3626 tops reached, the furthest at (2464.0, 10912.0)
+bhop_pharma NOROUTE no start (1) or no goal (0) top
+bhop_pit NOROUTE no route to the finish within reach 280; 488 tops reached, the furthest at (845.7258402506511, 546.7451680501301)
