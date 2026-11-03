@@ -6,6 +6,9 @@ HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 64.0         # terrain is binned into cells this wide
 CLIMB = 54.0         # the most a jump lands on above take-off (57 apex, less margin)
 
+PIT_MARGIN = 2.0  # the hull stands a little above the box top it is caught by
+
+
 def load(mid, root):
     base = '%s/maps/imported/%s/%s' % (root, mid, mid)
     d = json.load(open(base + '.json')); blob = open(base + '.bin', 'rb').read()
@@ -145,11 +148,18 @@ def main():
         # a RESPAWN box reaches up to the floor it catches: anything at or under its top is a fall
         if any(min(z['min'][0], z['max'][0]) <= cx <= max(z['min'][0], z['max'][0]) and
                min(z['min'][2], z['max'][2]) <= cz <= max(z['min'][2], z['max'][2]) and
-               min(z['min'][1], z['max'][1]) - 8 <= t['top'] <= max(z['min'][1], z['max'][1]) + 2 for z in pits):
+               min(z['min'][1], z['max'][1]) - 8 <= t['top'] <= max(z["min"][1], z["max"][1]) + PIT_MARGIN for z in pits):
             return True
         # a floor a little under a teleport trigger is a pit's bottom, not a place to stand
         return tps_from_bsp and any(zb[0] <= cx <= zb[1] and zb[2] <= cz <= zb[3] and 8 < zy[0] - t['top'] <= 96 for zb, zy, _ in tps)
-    tops = [t for t in tops if not in_pit(t)]
+    waters = [(min(w['min'][0], w['max'][0]), max(w['min'][0], w['max'][0]), min(w['min'][2], w['max'][2]),
+               max(w['min'][2], w['max'][2]), min(w['min'][1], w['max'][1]), max(w['min'][1], w['max'][1]))
+              for w in d.get('mechanics', {}).get('water', [])]
+    def in_water(t):
+        # a floor under water is swum over, not hopped on (and on a pit map the water is the pit)
+        f = t['face']; cx, cz = (f[0] + f[1]) / 2, (f[2] + f[3]) / 2
+        return any(w[0] <= cx <= w[1] and w[2] <= cz <= w[3] and w[4] - 8 <= t['top'] <= w[5] for w in waters)
+    tops = [t for t in tops if not in_pit(t) and not in_water(t)]
     sp = d['spawn']['origin']
     end = [z for z in d['zones'] if z['kind'] == 'END' and z.get('track', 0) == 0][0]
     ebox = (min(end['min'][0], end['max'][0]), max(end['min'][0], end['max'][0]),
@@ -166,7 +176,7 @@ def main():
                 if best is None or t['top'] > tops[best]['top']:
                     best = i
         return best
-    s0 = under(sp[0], sp[2], sp[1], 600.0)
+    s0 = under(sp[0], sp[2], sp[1], 3000.0)
     starts = [s0] if s0 is not None else []
     goals = set(i for i, t in enumerate(tops) if overlap(t['face'], ebox) and ey[0] - 300 <= t['top'] <= ey[1])
     # Doors: a TELEPORT zone keeps the run and moves the player to its destination, so a
@@ -242,6 +252,19 @@ def main():
                         if h['bottom'] < y < h['top'] - 1:
                             return False
         return True
+    def falls_into_trigger(i, j):
+        """A drop whose column crosses a teleport trigger (a pit's catch box) lands the player at the pit's destination, not on j."""
+        if tops[i]['top'] - tops[j]['top'] < 24.0:
+            return False
+        lt, tt = tops[j]['top'], tops[i]['top']
+        (px, pz), (qx, qz) = centre(tops[i]), centre(tops[j])
+        n = max(2, int(math.dist((px, pz), (qx, qz)) / 32.0))
+        pts_ = [(px + (qx - px) * k / n, pz + (qz - pz) * k / n) for k in range(n + 1)]
+        for zb, zy, _ in tps + [((w[0], w[1], w[2], w[3]), (w[4], w[5]), None) for w in waters]:
+            if zy[0] < tt - 8.0 and zy[1] > lt + 24.0 and not (zy[0] - 24.0 <= lt <= zy[1]):
+                if any(zb[0] <= x <= zb[1] and zb[2] <= z <= zb[3] for x, z in pts_):
+                    return True
+        return False
     via = {}
     dist = {i: 0.0 for i in starts}; prev = {}; q = [(0.0, i) for i in starts]
     done = None
@@ -262,12 +285,15 @@ def main():
                 continue
             if g < 1.0 and abs(rise) > 18.0 and rise > 0:
                 continue  # a wall, not a step
-            if not clear(i, j):
+            if not clear(i, j) or falls_into_trigger(i, j):
                 continue
             ci, cj = centre(tops[i]), centre(tops[j])
             w = math.dist(ci, cj) + 2.0 * g + (g * g) / 100.0
             if c + w < dist.get(j, 1e18):
                 dist[j] = c + w; prev[j] = i; via.pop(j, None); heapq.heappush(q, (c + w, j))
+    if a.debug and os.environ.get('ROUTE_DUMP'):
+        json.dump({'reached': [[round(centre(tops[i])[0]), round(tops[i]['top']), round(centre(tops[i])[1])] for i in dist],
+                   'all': [[round(centre(t)[0]), round(t['top']), round(centre(t)[1])] for t in tops]}, open(os.environ['ROUTE_DUMP'], 'w'))
     if done is None:
         if a.debug:
             for i in dist:

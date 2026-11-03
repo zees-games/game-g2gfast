@@ -55,6 +55,9 @@ var _top := 0.0
 var _lowest := 0.0
 var _surfed := 0
 var _grounded := 0
+var _point_index := 0
+var _last_good := Vector3.ZERO
+var _before := Vector3.ZERO  ## where the bot stood the tick before the last one: the run's end is often a teleport
 
 
 func _ready() -> void:
@@ -150,9 +153,15 @@ func _run() -> void:
 		await get_tree().physics_frame
 
 		var at := bot.controller.state.position
+		if at.distance_to(_before) < G2GUnits.to_metres(200.0):
+			_last_good = _before
+		if at.distance_to(_before) >= G2GUnits.to_metres(200.0):
+			_last_good = _before
+		_before = at
 		_top = maxf(_top, bot.speed())
 		_lowest = minf(_lowest, at.y)
 		_log_tick(bot, t, at, ramp, router, log_every)
+		_point_index = router.index + 1 if router != null else 0
 		reached = _reached_at(at, finished, put_back[0], goals)
 		if reached != "":
 			break
@@ -307,7 +316,8 @@ func _reached_at(at: Vector3, finished: Array[float], put_back: bool, goals: Arr
 	if not finished.is_empty():
 		return "FINISHED the run in %.2f s at %s u" % [finished[0], str(G2GUnits.vector_to_units(at).round())]
 	if put_back:
-		return "PUT BACK by a pit at %s u" % str(G2GUnits.vector_to_units(at).round())
+		return "PUT BACK by a pit at %s u (last at %s u, route point %d)" % [str(G2GUnits.vector_to_units(at).round()),
+			str(G2GUnits.vector_to_units(_last_good).round()), _point_index]
 	for goal: Array in goals:
 		if (goal[1] as DotTimerZone).contains(at):
 			return "REACHED %s at %s u" % [goal[0], str(G2GUnits.vector_to_units(at).round())]
