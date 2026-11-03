@@ -177,6 +177,14 @@ func command(state: DotFpsState, tunables: DotFpsTunables, delta: float) -> DotF
 		# already past what it asks for), so the turn is made the air's way: at right
 		# angles to the velocity, toward the line.
 		var gspeed := flat.length()
+		# Friction alone sheds a landing's speed too slowly where the recording walked a
+		# few frames before a hop: wish straight back, as the air does, to be where it was.
+		var line_flat := Vector2(line_velocity.x, line_velocity.z).length()
+		if gspeed > line_flat + G2GUnits.to_metres(SPEED_DEADBAND) and gspeed < tunables.max_speed * 0.98:
+			var bw := -flat / gspeed
+			c.yaw = rad_to_deg(atan2(-bw.x, -bw.z))
+			c.move = Vector2(0.0, clampf((gspeed - line_flat) / tunables.max_speed, 0.0, 1.0))
+			return c
 		if gspeed > tunables.max_speed * 0.98:
 			var gheading := flat / gspeed
 			var gside := Vector3(-gheading.z, 0.0, gheading.x)

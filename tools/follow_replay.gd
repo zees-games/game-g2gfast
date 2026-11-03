@@ -62,6 +62,8 @@ func _run() -> void:
 
 	print("[follow] %s: %d frames at %d Hz by %s, run %.2f s" % [
 		id, replay.frames.size(), replay.tick_rate, replay.player_name, replay.time])
+	if game.mechanics != null:
+		game.mechanics.blocks.clear()  # the recording is a route bot's run, which a sinking block would put back
 	var result: Dictionary = await ReplayFollow.drive(game, bot, replay, seconds)
 	print("[follow] %s: %s" % [id, ReplayFollow.summary(result)])
 	get_tree().quit(0 if float(result["finished"]) >= 0.0 else 2)

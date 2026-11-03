@@ -14,13 +14,13 @@ extends "headless_net_wires.gd"
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 251
+const CHECKS := 253
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 32
+const SECTIONS := 33
 
 
 func _ready() -> void:
@@ -37,6 +37,7 @@ func _run() -> void:
 	if await _build():
 		await _test_handshake()
 		await _test_prediction()
+		await _test_prediction_hopping()
 		await _test_timer()
 		await _test_finish()
 		_test_movement_change()
@@ -708,6 +709,29 @@ func _test_handshake() -> void:
 	_check(mine != null and mine.identity != null and mine.identity.is_predicted(), "the local player is predicted")
 	_check(mine != null and mine.identity.net_id == _server_bridge.behaviour_for(SESSION).identity.net_id,
 		"under the server's entity id")
+	_done()
+
+
+func _test_prediction_hopping() -> void:
+	_section("prediction converges while hopping and turning in the start zone")
+	var server := _server_player()
+	var client := _client_player()
+	_server_game.spawn_player(server.player_id)
+	_steps(4)
+	_flush()
+	for i in range(600):
+		var c := DotFpsCommand.new()
+		c.move = Vector2(1.0 if (i / 40) % 2 == 0 else -1.0, 1.0)
+		c.yaw = float(i) * 0.7
+		c.set_button(DotFpsCommand.BUTTON_JUMP, true)
+		_step(c)
+		if i % 4 == 0:
+			_flush()
+	_flush()
+	_check(client.global_position.distance_to(server.global_position) < 0.5, "the client ends where the server has it",
+		"%.3f m apart" % client.global_position.distance_to(server.global_position))
+	_check(_client_net.predictor.correction_rate() < 0.1, "with almost no corrections", "%.3f" % _client_net.predictor.correction_rate())
+	await get_tree().process_frame
 	_done()
 
 

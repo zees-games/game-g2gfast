@@ -96,6 +96,8 @@ func _run() -> void:
 		arrival = G2GUnits.vector_to_metres(
 			Vector3(float(args[3]), float(args[4]), float(args[5])))
 		arrival_yaw = float(args[6])
+	if whole and game.mechanics != null:
+		game.mechanics.blocks.clear()  # a route bot runs to a lip; a sinking block would put it back
 	bot.teleport(arrival, arrival_yaw)
 	await get_tree().physics_frame
 	print("[ride] %s !s%d: arrives at %s u facing yaw %.0f%s" % [
