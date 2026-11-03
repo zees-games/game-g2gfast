@@ -64,3 +64,8 @@ bhop_overthinker NOROUTE no route to the finish within reach 280; 172 tops reach
 bhop_pandora2_fix NOROUTE no route to the finish within reach 280; 3626 tops reached, the furthest at (2464.0, 10912.0)
 bhop_pharma NOROUTE no start (1) or no goal (0) top
 bhop_pit NOROUTE no route to the finish within reach 280; 488 tops reached, the furthest at (845.7258402506511, 546.7451680501301)
+surf_summit RIDE_FAILED surf_summit: 220795 tops, route of 107 points, 16679 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] surf_summit after 33.41 s: PUT BACK by a pit at (1600.0, 11576.0, 0.0) u (last at (1926.0, 10990.0, -163.0) u, route point 28); 18 u from the arrival, 568 u lower at the deepest, top 271 u/s, 0 ticks surfing, 1658 grounded
+surf_the_flow NOROUTE FileNotFoundError: [Errno 2] No such file or directory: './maps/imported/surf_the_flow/surf_the_flow.json'
+surf_vegetables NOROUTE no route to the finish within reach 280; 114 tops reached, the furthest at (-2840.0, 6307.0)
+surf_year3000 NOROUTE no route to the finish within reach 280; 98 tops reached, the furthest at (639.3747035435268, 2931.285714285714)
+bhop_ocean RIDE_FAILED bhop_ocean: 13819 tops, route of 173 points, 35719 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] bhop_ocean after 1.63 s: PUT BACK by a pit at (4032.0, 144.0, 14856.0) u (last at (3872.0, 111.0, 14688.0) u, route point 3); 0 u from the arrival, 33 u lower at the deepest, top 251 u/s, 0 ticks surfing, 78 grounded
