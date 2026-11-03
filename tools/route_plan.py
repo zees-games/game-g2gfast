@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Plan a bhop route over an imported map's collision, and write maps/routes/<id>.json."""
-import json, struct, sys, heapq, math, argparse
+import json, struct, sys, heapq, math, argparse, os
 
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 64.0         # terrain is binned into cells this wide
@@ -42,6 +42,58 @@ def load(mid, root):
                       'face': (gx * CELL, (gx + 1) * CELL, gz * CELL, (gz + 1) * CELL)})
     return d, hulls
 
+def teleports(mid, root, d):
+    """Every teleport as (xz box, y range, destination): the map's own trigger_teleports when the
+    .bsp is beside (stage gates, lane exits and pits are not in the manifest, only their arrivals
+    are), else the manifest's TELEPORT zones. A staged map is a graph: a gate moves the player
+    from one section to the next, a pit back to a lane start."""
+    out = []
+    bsp = os.environ.get('G2G_BSP') or os.path.join(root, '..', 'inspirations', 'g2gfast', mid + '.bsp')
+    if os.path.isfile(bsp):
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from bsp_read import Bsp, to_godot
+        b = Bsp(bsp); b.load()
+        dest = {}
+        for e in b.entities:
+            if e.get('targetname') and e.get('classname') in ('info_teleport_destination', 'info_target', 'info_landmark', 'point_teleport'):
+                dest.setdefault(e['targetname'], e)
+        for e in b.entities:
+            if e.get('classname') != 'trigger_teleport' or not e.get('model', '').startswith('*'):
+                continue
+            t = dest.get(e.get('target', ''))
+            if t is None or 'origin' not in t:
+                continue
+            mi, ma = b.model_bounds(int(e['model'][1:]))
+            og = [float(v) for v in e.get('origin', '0 0 0').split()]
+            lo, hi = to_godot([mi[k] + og[k] for k in range(3)]), to_godot([ma[k] + og[k] for k in range(3)])
+            q = to_godot([float(v) for v in t['origin'].split()])
+            out.append(((min(lo[0], hi[0]), max(lo[0], hi[0]), min(lo[2], hi[2]), max(lo[2], hi[2])),
+                        (min(lo[1], hi[1]), max(lo[1], hi[1])), q))
+        return out, True
+    for z in d['zones']:
+        if z['kind'] != 'TELEPORT' or z.get('track', 0) != 0 or not z.get('destination'):
+            continue
+        out.append(((min(z['min'][0], z['max'][0]), max(z['min'][0], z['max'][0]),
+                     min(z['min'][2], z['max'][2]), max(z['min'][2], z['max'][2])),
+                    (min(z['min'][1], z['max'][1]), max(z['min'][1], z['max'][1])), z['destination']))
+    return out, False
+
+TILE = 96.0          # a long top is cut into nodes this wide: a line between two centres crosses walls a hop never would
+
+def tiles(f, top):
+    """A top as itself, or as a row of tiles when it is long enough that its centre is nowhere near its ends."""
+    area = (f[1] - f[0]) * (f[3] - f[2])
+    tile = max(TILE, math.sqrt(area / 2500.0))   # a floor the size of the map still gets tiles, only coarser
+    nx = max(1, int(math.ceil((f[1] - f[0]) / tile))); nz = max(1, int(math.ceil((f[3] - f[2]) / tile)))
+    if nx == 1 and nz == 1:
+        return [{'face': f, 'top': top}]
+    out = []
+    for ix in range(nx):
+        for iz in range(nz):
+            out.append({'face': (f[0] + (f[1] - f[0]) * ix / nx, f[0] + (f[1] - f[0]) * (ix + 1) / nx,
+                                 f[2] + (f[3] - f[2]) * iz / nz, f[2] + (f[3] - f[2]) * (iz + 1) / nz), 'top': top})
+    return out
+
 def overlap(a, b, m=0.0):
     return not (a[0] > b[1] - m or a[1] < b[0] + m or a[2] > b[3] - m or a[3] < b[2] + m)
 
@@ -67,7 +119,7 @@ def main():
     ap.add_argument('map'); ap.add_argument('--root', default='.')
     ap.add_argument('--region', help='x0,z0,x1,z1')
     ap.add_argument('--reach', type=float, default=200.0)
-    ap.add_argument('--out')
+    ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     a = ap.parse_args()
     d, hulls = load(a.map, a.root)
     region = [float(v) for v in a.region.split(',')] if a.region else None
@@ -78,20 +130,25 @@ def main():
             continue
         if region and not overlap(f, region):
             continue
-        area = (f[1] - f[0]) * (f[3] - f[2]); shade = 0.0
-        for j, o in enumerate(hulls):
-            if j != i and o['box'] is not None and h['top'] - 1 < o['bottom'] < h['top'] + HEADROOM and overlap(f, o['box']):
-                b = o['box']
-                shade += max(0.0, min(f[1], b[1]) - max(f[0], b[0])) * max(0.0, min(f[3], b[3]) - max(f[2], b[2]))
-        covered = shade > 0.5 * area
-        if not covered:
-            tops.append({'face': f, 'top': h['top']})
+        over = [o['box'] for j, o in enumerate(hulls)
+                if j != i and o['box'] is not None and h['top'] - 1 < o['bottom'] < h['top'] + HEADROOM and overlap(f, o['box'])]
+        for t in tiles(f, h['top']):
+            tf = t['face']; shade = 0.0
+            for b in over:
+                shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
+            if shade <= 0.5 * (tf[1] - tf[0]) * (tf[3] - tf[2]):
+                tops.append(t)
+    tps, tps_from_bsp = teleports(a.map, a.root, d)
     pits = [z for z in d['zones'] if z['kind'] == 'RESPAWN' and z.get('track', 0) == 0]
     def in_pit(t):
         f = t['face']; cx, cz = (f[0] + f[1]) / 2, (f[2] + f[3]) / 2
-        return any(min(z['min'][0], z['max'][0]) <= cx <= max(z['min'][0], z['max'][0]) and
-                   min(z['min'][2], z['max'][2]) <= cz <= max(z['min'][2], z['max'][2]) and
-                   min(z['min'][1], z['max'][1]) <= t['top'] + 8 <= max(z['min'][1], z['max'][1]) for z in pits)
+        # a RESPAWN box reaches up to the floor it catches: anything at or under its top is a fall
+        if any(min(z['min'][0], z['max'][0]) <= cx <= max(z['min'][0], z['max'][0]) and
+               min(z['min'][2], z['max'][2]) <= cz <= max(z['min'][2], z['max'][2]) and
+               min(z['min'][1], z['max'][1]) - 8 <= t['top'] <= max(z['min'][1], z['max'][1]) + 2 for z in pits):
+            return True
+        # a floor a little under a teleport trigger is a pit's bottom, not a place to stand
+        return tps_from_bsp and any(zb[0] <= cx <= zb[1] and zb[2] <= cz <= zb[3] and 8 < zy[0] - t['top'] <= 96 for zb, zy, _ in tps)
     tops = [t for t in tops if not in_pit(t)]
     sp = d['spawn']['origin']
     end = [z for z in d['zones'] if z['kind'] == 'END' and z.get('track', 0) == 0][0]
@@ -115,18 +172,16 @@ def main():
     # Doors: a TELEPORT zone keeps the run and moves the player to its destination, so a
     # top the door stands on (or over) is joined to the top under the destination.
     doors = {}
-    for z in d['zones']:
-        if z['kind'] != 'TELEPORT' or z.get('track', 0) != 0 or not z.get('destination'):
-            continue
-        zb = (min(z['min'][0], z['max'][0]), max(z['min'][0], z['max'][0]),
-              min(z['min'][2], z['max'][2]), max(z['min'][2], z['max'][2]))
-        zy = (min(z['min'][1], z['max'][1]), max(z['min'][1], z['max'][1]))
-        q = z['destination']; land = under(q[0], q[2], q[1], 600.0)
+    for zb, zy, q in tps:
+        land = under(q[0], q[2], q[1], 600.0)
         if land is None:
             continue
         for i, t in enumerate(tops):
-            if overlap(t['face'], zb) and zy[0] - 160 <= t['top'] <= zy[1]:
-                doors.setdefault(i, []).append((land, ((zb[0] + zb[1]) / 2, max(zy[0], t['top']), (zb[2] + zb[3]) / 2)))
+            if overlap(t['face'], zb) and zy[0] - 24 <= t['top'] <= zy[1]:
+                if land != i:
+                    doors.setdefault(i, []).append((land, ((zb[0] + zb[1]) / 2, max(zy[0], t['top']), (zb[2] + zb[3]) / 2)))
+    if a.debug:
+        print('teleports', len(tps), 'doors on', len(doors), 'tops', len(tops), file=sys.stderr)
     if not starts or not goals:
         sys.exit('no start (%d) or no goal (%d) top' % (len(starts), len(goals)))
     # grid buckets for neighbours
@@ -214,6 +269,10 @@ def main():
             if c + w < dist.get(j, 1e18):
                 dist[j] = c + w; prev[j] = i; via.pop(j, None); heapq.heappush(q, (c + w, j))
     if done is None:
+        if a.debug:
+            for i in dist:
+                if i in doors: print('door top reached', centre(tops[i]), tops[i]['top'], [dd[0] for dd in doors[i]], file=sys.stderr)
+            print('reached door-less frontier; sample', sorted(centre(tops[i]) for i in dist)[:3], file=sys.stderr)
         reached = max(dist, key=lambda i: dist[i])
         sys.exit('no route to the finish within reach %.0f; %d tops reached, the furthest at %s' % (
             a.reach, len(dist), str(centre(tops[reached]))))
