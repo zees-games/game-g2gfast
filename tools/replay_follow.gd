@@ -172,30 +172,26 @@ func command(state: DotFpsState, tunables: DotFpsTunables, delta: float) -> DotF
 		var go := Vector3(line_velocity.x, 0.0, line_velocity.z) + back * GROUND_PULL
 		if go.length() < G2GUnits.to_metres(5.0):
 			go = Vector3(ahead.position.x - at.x, 0.0, ahead.position.z - at.z)
-		# Over run speed -- a landing from a hop, which is most landings here -- a wish
-		# within about twenty degrees of the velocity adds nothing (the speed along it is
-		# already past what it asks for), so the turn is made the air's way: at right
-		# angles to the velocity, toward the line.
-		var gspeed := flat.length()
-		# Friction alone sheds a landing's speed too slowly where the recording walked a
-		# few frames before a hop: wish straight back, as the air does, to be where it was.
-		var line_flat := Vector2(line_velocity.x, line_velocity.z).length()
-		if gspeed > line_flat + G2GUnits.to_metres(SPEED_DEADBAND) and gspeed < tunables.max_speed * 0.98:
-			var bw := -flat / gspeed
-			c.yaw = rad_to_deg(atan2(-bw.x, -bw.z))
-			c.move = Vector2(0.0, clampf((gspeed - line_flat) / tunables.max_speed, 0.0, 1.0))
+		# Steer the velocity, not the heading: the wish is the change wanted this tick
+		# (the line's velocity less the velocity after this tick's friction), and its size
+		# the least that delivers it. A fixed full wish, or a wish straight back, over- or
+		# undershoots by several ticks' worth on the ground and a hop leaves slow.
+		var kept := flat * maxf(1.0 - tunables.friction * delta, 0.0)
+		var want_v := go
+		if want_v.length() > tunables.max_speed:
+			want_v = want_v.normalized() * tunables.max_speed
+		var err := want_v - kept
+		var need := err.length()
+		if need < G2GUnits.to_metres(2.0):
+			c.yaw = rad_to_deg(atan2(-go.x, -go.z)) if go.length() > 0.01 else here.yaw
+			c.move = Vector2(0.0, clampf(want_v.length() / tunables.max_speed, 0.0, 1.0)) \
+				if go.length() > 0.01 else Vector2.ZERO
 			return c
-		if gspeed > tunables.max_speed * 0.98:
-			var gheading := flat / gspeed
-			var gside := Vector3(-gheading.z, 0.0, gheading.x)
-			var gacross := go.normalized().dot(gside) * gspeed
-			if absf(gacross) > G2GUnits.to_metres(TURN_DEADBAND):
-				var gw := gside * signf(gacross)
-				c.yaw = rad_to_deg(atan2(-gw.x, -gw.z))
-				c.move = Vector2(0.0, 1.0)
-				return c
-		c.yaw = rad_to_deg(atan2(-go.x, -go.z)) if go.length() > 0.01 else here.yaw
-		c.move = Vector2(0.0, 1.0) if go.length() > 0.01 else Vector2.ZERO
+		var dir := err / need
+		var wish_speed := maxf(need / maxf(tunables.accelerate * delta, 0.001),
+			need + maxf(flat.dot(dir), 0.0))
+		c.yaw = rad_to_deg(atan2(-dir.x, -dir.z))
+		c.move = Vector2(0.0, clampf(wish_speed / tunables.max_speed, 0.0, 1.0))
 		return c
 
 	# Air: pure pursuit. The velocity wanted points at the recorded spot [constant
