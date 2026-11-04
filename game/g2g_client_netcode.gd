@@ -12,6 +12,9 @@ func _build_netcode() -> DotResult:
 	config.tick_rate = game.tick_rate
 	config.snapshot_rate = G2GGame.snapshot_rate_for(game.tick_rate)
 	config.enable_prediction = true
+	# DotGameClient's registry watch had not turned these on by this point (measured false).
+	config.reconcile_once_per_frame = true
+	config.skip_matching_replays = true
 	config.enable_lag_compensation = false
 	config.max_entities_per_snapshot = 0
 	config.world_extent = 512.0

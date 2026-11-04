@@ -352,10 +352,9 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 	# behaviours, and every timer — including remote players' — is fed afterwards.
 	if _client_ticked_for != tick:
 		_client_ticked_for = tick
+		# Through the predictor, not a hand loop, so skip_matching_replays has ticks to match.
 		if not transit:
-			for identity in net.registry.predicted():
-				for behaviour in identity.behaviours:
-					behaviour._net_simulate(tick, net.clock.tick_duration())
+			net.predict_tick(tick, packet)
 		game.tick_timers_only(tick)
 
 

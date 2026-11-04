@@ -587,6 +587,9 @@ func _physics_process(delta: float) -> void:
 	if _offline or net == null or not net.is_running() or bridge == null:
 		return
 
+	# Before the clock moves: a replay runs up to clock.tick, so a pending snapshot
+	# reconciled after the advance would simulate the current tick twice.
+	net.flush_reconcile()
 	var ticks := net.clock.advance(delta)
 	# [b]Each pass is its own tick.[/b] `advance` has already moved the clock by all of
 	# them, so `input_tick()` is the LAST one on every pass: a frame worth two ticks sent

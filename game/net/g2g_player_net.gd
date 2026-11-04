@@ -72,14 +72,15 @@ func _register_net_vars() -> void:
 	#
 	# Appended after the movement specs, never among them: the order of declaration is
 	# the order on the wire, and the movement's is DotFpsNetSync's to keep.
-	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only()
-	replicate(&"net_beacon", DotNetVar.Type.BOOL)
+	# All three are written by the server, never by the owner's input: server_driven.
+	replicate(&"net_blind", DotNetVar.Type.BOOL).to_owner_only().server_driven()
+	replicate(&"net_beacon", DotNetVar.Type.BOOL).server_driven()
 
 	# The weapon in hand, for the owner's ammunition counter. A client has no combat layer
 	# to ask, and state rather than an event for the reason the blind is: a lost snapshot or
 	# a late join is corrected by the next one. Owner only, because nobody else's screen
 	# shows it; four bits, and nothing on a tick it did not change.
-	replicate(&"net_weapon", DotNetVar.Type.UINT).bits(4).to_owner_only()
+	replicate(&"net_weapon", DotNetVar.Type.UINT).bits(4).to_owner_only().server_driven()
 
 
 func _net_apply_input(input: DotNetInput, _tick: int) -> void:
