@@ -142,9 +142,8 @@ func _test_a_correction_is_eased() -> void:
 		deltas.append(delta)
 		if _verbose:
 			print("      frame eye %s offset %s" % [_client.player.camera.active().global_position, _client.player.drawn_offset])
-	# Recorded after everything that writes the camera this frame -- read at the top of a
-	# frame instead, the camera is wherever its parent node was dragged by a replay, which
-	# is not what is drawn.
+	# Recorded after everything that writes the camera, not at the top of a frame, where it
+	# is wherever a replay dragged the parent node.
 	_frame_hook = record
 	for _i in range(30):
 		await get_tree().process_frame
@@ -164,16 +163,18 @@ func _test_a_correction_is_eased() -> void:
 	Input.action_release(&"dot_fps_forward")
 
 	var worst := 0.0
+	var worst_delta := 0.0
 	for i in range(nudged_at, eyes.size()):
 		var step := eyes[i] - eyes[i - 1]
-		# A respawn is a teleport, not a correction (as in a window): on a loaded machine
-		# the 120 frames last long enough for the runner to reach the pit, and its 12 m
-		# was reported as the worst frame of a 30 cm correction.
+		# A respawn is a teleport, not a correction: skip it.
 		if step.length() > 0.5:
 			continue
 		var v := velocities[i]
 		var steady := Vector3(v.x, 0.0, v.z) * deltas[i]
-		worst = maxf(worst, (Vector3(step.x, 0.0, step.z) - steady).length())
+		var off := (Vector3(step.x, 0.0, step.z) - steady).length()
+		if off > worst:
+			worst = off
+			worst_delta = deltas[i]
 	var corrected := int(net.predictor.get("_corrections_applied")) - corrections_before
 	# The prediction for the newest tick the server has also simulated, against the server's.
 	var settled := INF
@@ -189,7 +190,7 @@ func _test_a_correction_is_eased() -> void:
 		"%d corrections" % corrected)
 	_check(worst < 0.12,
 		"no frame moved the eye more than 12 cm off its motion for a 30 cm correction",
-		"worst %.1f cm" % (worst * 100.0))
+		"worst %.1f cm, on a %.0f ms frame" % [worst * 100.0, worst_delta * 1000.0])
 	_check(settled < 0.05,
 		"and the prediction agrees with the server again, tick for tick", "%.3f m apart" % settled)
 	_done()

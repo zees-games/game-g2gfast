@@ -155,21 +155,10 @@ func _test_weave_bonus() -> void:
 		last = middle
 	route_length += last.distance_to(Vector2(pad.x, pad.z + 192.0))
 
-	var splits: Array[int] = []
-	var finished: Array[DotTimerRun] = []
-	# An array, not a bool: a lambda captures a local by value, so a bool set inside
-	# one never reaches this function.
-	var reset: Array[bool] = [false]
-	var on_split := func(id: StringName, number: int, _split: float) -> void:
-		if id == &"bot":
-			splits.append(number)
-	var on_effect := func(id: StringName, zone: DotTimerZone) -> void:
-		if id == &"bot" and zone.kind == DotTimerZone.Kind.RESPAWN:
-			reset[0] = true
-	var on_finished := func(run: DotTimerRun) -> void: finished.append(run)
-	game.timers.player_staged.connect(on_split)
-	game.timers.effect_requested.connect(on_effect)
-	bot.timer.run_finished.connect(on_finished)
+	var watch := _watch_run(bot)
+	var splits: Array[int] = watch["splits"]
+	var finished: Array[DotTimerRun] = watch["finished"]
+	var reset: Array[bool] = watch["reset"]
 
 	var resets := 0
 	var furthest := -1
@@ -222,9 +211,7 @@ func _test_weave_bonus() -> void:
 		if not finished.is_empty():
 			break
 
-	game.timers.player_staged.disconnect(on_split)
-	game.timers.effect_requested.disconnect(on_effect)
-	bot.timer.run_finished.disconnect(on_finished)
+	_unwatch_run(watch, bot)
 
 	var run_speed := G2GUnits.to_units(game.tunables.max_speed)
 	var pace := covered / (float(run_ticks) / float(game.tick_rate)) if run_ticks > 0 else 0.0
@@ -234,18 +221,8 @@ func _test_weave_bonus() -> void:
 	])
 
 	_check(furthest == blocks.size() - 1, "the bot reaches the last block", "block %d of %d" % [furthest + 1, blocks.size()])
-	_check(splits == [1, 2], "crossing both of its stage lines, in order", str(splits))
-	_check(resets == 0, "without ever being put back", "%d resets" % resets)
-	_check(finished.size() == 1 and finished[0].track == weave,
-		"and the finish line ends the run, on the bonus's own track",
-		"%d finished, ended at %s u" % [finished.size(), str(G2GUnits.vector_to_units(bot.global_position).round())])
-	_check(pace >= run_speed * 0.8, "at no less than 80% of run speed: every jump is taken on the move",
-		"%.0f u/s against %.0f" % [pace, run_speed])
-
-	game.timers.set_player_track(&"bot", DotTimerTrack.MAIN)
-	game.spawn_player(&"bot")
-	await get_tree().physics_frame
-	_done()
+	_check_bonus_end(bot, splits, resets, "%d resets" % resets, finished, weave, pace, run_speed)
+	await _back_to_main(bot)
 
 
 ## `the bend`, `bhop_g2g_stages` bonus 4: ten blocks round a 640-unit left-hand arc,
@@ -296,19 +273,10 @@ func _test_bend_bonus() -> void:
 		route_length += last.distance_to(middle)
 		last = middle
 
-	var splits: Array[int] = []
-	var finished: Array[DotTimerRun] = []
-	var reset: Array[bool] = [false]
-	var on_split := func(id: StringName, number: int, _split: float) -> void:
-		if id == &"bot":
-			splits.append(number)
-	var on_effect := func(id: StringName, zone: DotTimerZone) -> void:
-		if id == &"bot" and zone.kind == DotTimerZone.Kind.RESPAWN:
-			reset[0] = true
-	var on_finished := func(run: DotTimerRun) -> void: finished.append(run)
-	game.timers.player_staged.connect(on_split)
-	game.timers.effect_requested.connect(on_effect)
-	bot.timer.run_finished.connect(on_finished)
+	var watch := _watch_run(bot)
+	var splits: Array[int] = watch["splits"]
+	var finished: Array[DotTimerRun] = watch["finished"]
+	var reset: Array[bool] = watch["reset"]
 
 	var resets := 0
 	var fell: Array[String] = []
@@ -364,9 +332,7 @@ func _test_bend_bonus() -> void:
 		if not finished.is_empty():
 			break
 
-	game.timers.player_staged.disconnect(on_split)
-	game.timers.effect_requested.disconnect(on_effect)
-	bot.timer.run_finished.disconnect(on_finished)
+	_unwatch_run(watch, bot)
 
 	var run_speed := G2GUnits.to_units(game.tunables.max_speed)
 	var pace := covered / (float(run_ticks) / float(game.tick_rate)) if run_ticks > 0 else 0.0
@@ -376,14 +342,49 @@ func _test_bend_bonus() -> void:
 	])
 
 	_check(furthest >= blocks.size() - 1, "the bot reaches the last block", "piece %d of %d" % [furthest + 1, pieces.size()])
+	_check_bonus_end(bot, splits, resets, "%d resets: %s" % [resets, ", ".join(fell)], finished, bend, pace, run_speed)
+	await _back_to_main(bot)
+
+
+## Listeners for a bonus run by [param bot]: {splits, finished, reset, and the three callables}.
+## The reset flag is an array because a lambda captures a local by value.
+func _watch_run(bot: G2GPlayer) -> Dictionary:
+	var splits: Array[int] = []
+	var finished: Array[DotTimerRun] = []
+	var reset: Array[bool] = [false]
+	var on_split := func(id: StringName, number: int, _split: float) -> void:
+		if id == &"bot":
+			splits.append(number)
+	var on_effect := func(id: StringName, zone: DotTimerZone) -> void:
+		if id == &"bot" and zone.kind == DotTimerZone.Kind.RESPAWN:
+			reset[0] = true
+	var on_finished := func(run: DotTimerRun) -> void: finished.append(run)
+	game.timers.player_staged.connect(on_split)
+	game.timers.effect_requested.connect(on_effect)
+	bot.timer.run_finished.connect(on_finished)
+	return {"splits": splits, "finished": finished, "reset": reset,
+		"on_split": on_split, "on_effect": on_effect, "on_finished": on_finished}
+
+
+func _unwatch_run(watch: Dictionary, bot: G2GPlayer) -> void:
+	game.timers.player_staged.disconnect(watch["on_split"])
+	game.timers.effect_requested.disconnect(watch["on_effect"])
+	bot.timer.run_finished.disconnect(watch["on_finished"])
+
+
+## The checks both bonus routes end on.
+func _check_bonus_end(bot: G2GPlayer, splits: Array[int], resets: int, resets_detail: String,
+		finished: Array[DotTimerRun], track: int, pace: float, run_speed: float) -> void:
 	_check(splits == [1, 2], "crossing both of its stage lines, in order", str(splits))
-	_check(resets == 0, "without ever being put back", "%d resets: %s" % [resets, ", ".join(fell)])
-	_check(finished.size() == 1 and finished[0].track == bend,
+	_check(resets == 0, "without ever being put back", resets_detail)
+	_check(finished.size() == 1 and finished[0].track == track,
 		"and the finish line ends the run, on the bonus's own track",
 		"%d finished, ended at %s u" % [finished.size(), str(G2GUnits.vector_to_units(bot.global_position).round())])
 	_check(pace >= run_speed * 0.8, "at no less than 80% of run speed: every jump is taken on the move",
 		"%.0f u/s against %.0f" % [pace, run_speed])
 
+
+func _back_to_main(bot: G2GPlayer) -> void:
 	game.timers.set_player_track(&"bot", DotTimerTrack.MAIN)
 	game.spawn_player(&"bot")
 	await get_tree().physics_frame

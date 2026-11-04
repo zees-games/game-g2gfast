@@ -57,6 +57,14 @@ func _test_vote() -> void:
 		]
 	)
 
+	_test_vote_ballot(vote)
+	_test_vote_commands(module)
+	_test_status_clock(vote)
+	_done()
+
+
+## The ballot opens, closes, and hands its cues on for the wire.
+func _test_vote_ballot(vote: G2GVote) -> void:
 	# What the module forwards to the wire as a VOTE event, heard at the vote's edge.
 	var heard: Array = []
 	var probe := func(cue: StringName, seconds_left: int, _runoff: bool) -> void:
@@ -81,6 +89,9 @@ func _test_vote() -> void:
 
 	vote.cue_due.disconnect(probe)
 
+
+## The console commands and the bridge's RTV request.
+func _test_vote_commands(module: Object) -> void:
 	# dot-vote's commands, which this game never installed: its own `rtv`, `nominate`,
 	# `nextmap` and `timeleft` stood in for four of them and the operator's four did not
 	# exist.
@@ -128,9 +139,6 @@ func _test_vote() -> void:
 		not game.rotation_ends_maps,
 		"and the map session's own clock no longer ends a map the vote may have extended"
 	)
-
-	_test_status_clock(vote)
-	_done()
 
 
 ## `g2g_status`'s "time left" is the vote's clock, and an extend moves it.
