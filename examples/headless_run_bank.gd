@@ -338,28 +338,25 @@ func _test_transfer_bonus() -> void:
 		"%.1f m apart" % spawn.distance_to(game.current_map_node().spawn_for(DotTimerTrack.of_bonus(1)))
 	)
 
+	var ride: Dictionary = await _transfer_ride(bot, transfer)
+	_transfer_verdict(bot, spawn, ride)
+
+
+## Drives the bot across the transfer; the figures come back in a dictionary.
+func _transfer_ride(bot: G2GPlayer, transfer: int) -> Dictionary:
 	game.config.air_accelerate = 150.0
 	game.apply_movement()
 
-	# Off the pad first, then strafe. Same shape as the main surf run: the spawn is
-	# behind the lip and the strafing below carries the bot sideways, not forward.
+	# Off the pad first, then strafe: the spawn is behind the lip.
 	await _prestrafe(&"bot", 300)
 
 	var started := false
-	var finished := false
 	var yaw := 0.0
 	var entry := bot.global_position
 	var rode := entry
 	var travelled := 0.0
 
-	# [b]An Array, not a bool, and this one was a bool.[/b] A GDScript lambda captures a
-	# local by VALUE, so a flag set inside a signal handler reads false everywhere
-	# outside it. `_test_surf_run` twenty lines up carries a comment saying exactly
-	# this, and the same mistake was live here the whole time: `reset` was written only
-	# by the handler below, so it was false on every tick of every run since this test
-	# was written. The loop therefore never broke early, the bot fell off the route, the
-	# respawn zone put it back, and the check that read its position afterwards was
-	# reading the pad -- and passed. See docs/gdscript-hazards.md.
+	# An Array, because a lambda captures a local by value (docs/gdscript-hazards.md).
 	var reset: Array[bool] = [false]
 
 	var watch := func(id: StringName, zone: DotTimerZone) -> void:
@@ -368,6 +365,8 @@ func _test_transfer_bonus() -> void:
 
 	game.timers.effect_requested.connect(watch)
 
+	# 2000 ticks is load-bearing: at 1200 the falling bot ended mid-air, above the
+	# respawn zone, and the reset check passed by asking about nothing.
 	for i in range(2000):
 		var c := DotFpsCommand.new()
 		var phase := (i / 90) % 2
@@ -381,68 +380,45 @@ func _test_transfer_bonus() -> void:
 			started = true
 
 		if bot.timer.track == transfer and not bot.timer.run.is_active() and started:
-			finished = true
 			break
 
 		if reset[0]:
 			break
 
-		# Read BEFORE the respawn zone fires, which is the whole point -- see below.
+		# Read BEFORE the respawn zone fires, which teleports the bot to the pad.
 		rode = bot.global_position
 		travelled = maxf(travelled, entry.z - rode.z)
 
 	game.timers.effect_requested.disconnect(watch)
 	game.config.air_accelerate = 1000.0
 	game.apply_movement()
+	return {"started": started, "reset": reset[0], "rode": rode, "travelled": travelled}
 
-	_check(started, "leaving its pad starts a run on the bonus's own track")
 
-	# [b]This check used to read `bot.global_position` AFTER the loop and it was
-	# reading the pad.[/b] It asserted that the bot ended "between its pad and its
-	# floor", which is the thing the geometry has to be right for -- and the loop
-	# breaks on `reset`, by which time the respawn zone has already teleported the bot
-	# back to the pad. So the position it read was the spawn, every time, and the check
-	# passed most loudly in exactly the case it was written to catch: a bot that fell
-	# off the route entirely. Driving it is what showed this -- the bot ends at the
-	# spawn to a tenth of a metre.
-	#
-	# What a crude bot alternating strafe every ninety ticks can actually prove is not
-	# that it cleared the route; it is not a surfer and never will be. It is that a
-	# player who loses the bank is PUT BACK rather than falling for ever, which is the
-	# bug the bonus tracks shipped with. So that is what is asserted, and how far it
-	# got is printed, because the distance is the number every question about this
-	# route is really about. See `[bonus-run-2]`: bonus 1 is a single bank and bonus 2
-	# needs a transfer in mid-air, and neither is completable by a bot that cannot
-	# air-strafe. `the fall line` is the route on this map that is, and it is driven to
-	# its finish in `_test_the_fall_line`.
-	var spawn_m := game.current_map_node().spawn_for(transfer)
-	# [b]2,000 ticks, not 1,200, and the number is load-bearing.[/b] At 1,200 the bot
-	# had fallen to y -48.6 m and the respawn zone -- whose roof is 1,536 units under
-	# the map's finish -- was ten units below it, so the loop ended with the bot in
-	# mid-air and `reset` still false. The check below then passed by being asked about
-	# nothing at all, which is the same failure in a different costume. A falling player
-	# has a long way to go before this map catches them, and the window has to cover it.
+func _transfer_verdict(bot: G2GPlayer, spawn: Vector3, ride: Dictionary) -> void:
+	var reset: bool = ride["reset"]
+	var rode: Vector3 = ride["rode"]
+
+	_check(ride["started"], "leaving its pad starts a run on the bonus's own track")
+
+	# A crude strafer cannot clear this route (see `[bonus-run-2]`); what it proves is
+	# that a player who loses the bank is put back rather than falling for ever.
 	print(
 		"        the transfer: rode %.1f m to y %.1f, %s"
 		% [
-			travelled, rode.y,
-			"put back on its pad" if reset[0]
+			ride["travelled"], rode.y,
+			"put back on its pad" if reset
 				else ("still on the route" if rode.y > G2GUnits.to_metres(START_Y - 1700.0)
 					else "below the route's floor and still falling"),
 		]
 	)
 
 	_check(
-		reset[0] and bot.global_position.distance_to(spawn_m) < 1.0,
+		reset and bot.global_position.distance_to(spawn) < 1.0,
 		"and a bot that loses the bank is put back on its pad rather than falling for ever",
-		"reset=%s, %.1f m from the pad" % [
-			reset[0], bot.global_position.distance_to(spawn_m)
-		]
+		"reset=%s, %.1f m from the pad" % [reset, bot.global_position.distance_to(spawn)]
 	)
 
-	# The respawn zone the bonus tracks did not have. With it, a bot that does fall is
-	# put back on the pad instead of falling for ever -- so "not reset" now means it
-	# stayed on the route rather than meaning nothing was watching.
 	var surf_zones := game.timers.zones
 	_check(
 		surf_zones != null and surf_zones.route_problems().is_empty(),
@@ -469,6 +445,13 @@ func _test_the_fall_line() -> void:
 
 	var bot: G2GPlayer = game.players[&"bot"]
 	var fall := DotTimerTrack.of_bonus(3)
+	await _fall_line_route_checks(bot, fall)
+	await _fall_line_run(bot)
+	game.timers.set_player_track(&"bot", DotTimerTrack.MAIN)
+	_done()
+
+
+func _fall_line_route_checks(bot: G2GPlayer, fall: int) -> void:
 	var zones := game.timers.zones
 
 	_check(
@@ -524,6 +507,8 @@ func _test_the_fall_line() -> void:
 		"%.1f m from the main spawn" % spawn.distance_to(game.current_map_node().spawn_for(0))
 	)
 
+
+func _fall_line_run(bot: G2GPlayer) -> void:
 	game.config.air_accelerate = 150.0
 	game.apply_movement()
 
@@ -593,7 +578,21 @@ func _test_the_fall_line() -> void:
 		]
 	)
 
-	_check(started[0], "leaving its pad starts a run on the fall line's own track")
+	_fall_line_verdict(bot, {
+		"started": started[0], "finished": finished[0], "reset": reset[0], "splits": splits,
+		"ticks": ticks, "top": top, "entry_y": entry_y,
+	})
+
+
+func _fall_line_verdict(bot: G2GPlayer, r: Dictionary) -> void:
+	var started: bool = r["started"]
+	var finished: bool = r["finished"]
+	var reset: bool = r["reset"]
+	var splits: Array = r["splits"]
+	var ticks: int = r["ticks"]
+	var top: float = r["top"]
+	var entry_y: float = r["entry_y"]
+	_check(started, "leaving its pad starts a run on the fall line's own track")
 	_check(
 		G2GUnits.to_units(top) > 1200.0,
 		"the bed makes the player fast, which this map's own ramps never do",
@@ -601,11 +600,11 @@ func _test_the_fall_line() -> void:
 	)
 	_check(splits == [1, 2], "it crosses both splits, in order", str(splits))
 	_check(
-		finished[0] and not reset[0],
+		finished and not reset,
 		"and reaches the finish holding nothing but forward",
 		"gave up at tick %d, y %.1f, z %.1f%s" % [
 			ticks, bot.global_position.y, bot.global_position.z,
-			", put back by the respawn zone" if reset[0] else "",
+			", put back by the respawn zone" if reset else "",
 		]
 	)
 	_check(not bot.timer.run.is_active(), "and the run is over rather than still running")
@@ -621,9 +620,6 @@ func _test_the_fall_line() -> void:
 			entry_y - bot.global_position.y, G2GUnits.to_metres(SurfIntro.fall_drop())
 		]
 	)
-
-	game.timers.set_player_track(&"bot", DotTimerTrack.MAIN)
-	_done()
 
 
 # --- The ghost -------------------------------------------------------------

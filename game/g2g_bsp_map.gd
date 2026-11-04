@@ -438,18 +438,51 @@ func _surface_arrays(blob: PackedByteArray, s: Dictionary) -> Array:
 
 func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
-	# [b]The manifest has carried `translucent` since the importer learned to read a
-	# VMT, and nothing had ever read it.[/b] Every surface got the one shader, and that
-	# shader wrote ALPHA, so every surface in every imported map was drawn in the
-	# transparent pass -- see the comment at the top of it. Opaque is the default and
-	# the twenty surfaces the maps actually declare translucent are the exception, which
-	# is the way round the .bsp itself says.
+	# Opaque is the default; only surfaces the manifest marks translucent use the
+	# transparent pass (everything drawn there was the bug).
 	mat.shader = load(G2GPaths.rebase("res://game/g2g_bsp_translucent.gdshader") if bool(s.get("translucent", false))
 		else G2GPaths.rebase("res://game/g2g_bsp_lightmapped.gdshader"))
 	mat.set_shader_parameter("lightmap_tex", lightmap)
 	mat.set_shader_parameter("light_boost", light_boost)
 	mat.set_shader_parameter("ambient", ambient)
 
+	var textured := _map_texture_material(mat, s, dir)
+	if textured != null:
+		return textured
+
+	# No texture shipped (it lived in the source game's own files): draw the prototype
+	# set, chosen by what the surface is FOR.
+	# [b]Water draws as water.[/b] The source game's water materials are never in a map, so
+	# a pool was the opaque grid: a floor the player sank through. See g2g_bsp_water.gdshader.
+	if is_water_material(str(s.get("material", ""))):
+		return _water_material(s, lightmap)
+
+	var role := _role(str(s.get("role", "FLOOR")))
+
+	# [b]The map's own colour, when the importer found it.[/b] vrad left each texture's
+	# average albedo in the .bsp, so a surface whose pixels could not ship still knows
+	# what colour it was: the greyscale grid is painted that colour, and the map reads as
+	# its own palette instead of four role greys. The grid stays for scale -- a flat fill
+	# at 3000 u/s gives no sense of speed or distance. See `surface_colour` in
+	# tools/bsp_import.py; a manifest written before it has no `colour` and falls through
+	# to the role colours below.
+	var colour: Variant = s.get("colour", null)
+
+	# A free stand-in from the table, tinted toward the map's measured colour; here
+	# rather than in the importer so published packs get it. See G2GStockSubstitutes.
+	var stand_in := G2GStockSubstitutes.for_material(str(s.get("material", "")))
+	if stand_in.is_empty() and s.has("base"):
+		# The material is the mapper's own VMT over a stock texture (a model's glass);
+		# the table knows the stock name. See `base` in tools/bsp_import.py.
+		stand_in = G2GStockSubstitutes.for_material(str(s["base"]))
+	var substituted := _stand_in_material(mat, stand_in, colour)
+	if substituted != null:
+		return substituted
+
+	return _prototype_material(mat, colour, role)
+
+
+func _map_texture_material(mat: ShaderMaterial, s: Dictionary, dir: String) -> ShaderMaterial:
 	var texture_name := str(s.get("texture", ""))
 	if not texture_name.is_empty():
 		var tex := _load_texture(dir.path_join("textures").path_join(texture_name))
@@ -474,40 +507,10 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 				mat.set_shader_parameter("albedo2_tex", tex2)
 				mat.set_shader_parameter("has_albedo2", true)
 			return mat
+	return null
 
-	# No texture the map carried: it lived in the game's own VPKs and was never inside
-	# this file, which on a surf map is most of the map -- 97% of surf_beginner2's
-	# triangles. This used to be painted a flat role colour and that is what the whole
-	# map looked like: one grey mass with the ride invisible in it. It gets the same
-	# prototype set the hand-built maps draw in instead, chosen by what the surface is
-	# FOR, which the importer worked out from its slope.
-	# [b]Water draws as water.[/b] The source game's water materials are never in a map, so
-	# a pool was the opaque grid: a floor the player sank through. See g2g_bsp_water.gdshader.
-	if is_water_material(str(s.get("material", ""))):
-		return _water_material(s, lightmap)
 
-	var role := _role(str(s.get("role", "FLOOR")))
-
-	# [b]The map's own colour, when the importer found it.[/b] vrad left each texture's
-	# average albedo in the .bsp, so a surface whose pixels could not ship still knows
-	# what colour it was: the greyscale grid is painted that colour, and the map reads as
-	# its own palette instead of four role greys. The grid stays for scale -- a flat fill
-	# at 3000 u/s gives no sense of speed or distance. See `surface_colour` in
-	# tools/bsp_import.py; a manifest written before it has no `colour` and falls through
-	# to the role colours below.
-	var colour: Variant = s.get("colour", null)
-
-	# [b]A stand-in, when the table has one for this material.[/b] Christian's rule: the
-	# map's own texture, else Kenney, else free CC0 art from elsewhere, else the grid --
-	# never the source game's. Pulled
-	# toward the mapper's measured colour so the map keeps its palette, drawn with nearest
-	# filtering because it is pixel art, at a tile size the table sets. Here rather than in
-	# the importer so the packs already published get it. See G2GStockSubstitutes.
-	var stand_in := G2GStockSubstitutes.for_material(str(s.get("material", "")))
-	if stand_in.is_empty() and s.has("base"):
-		# The material is the mapper's own VMT over a stock texture (a model's glass);
-		# the table knows the stock name. See `base` in tools/bsp_import.py.
-		stand_in = G2GStockSubstitutes.for_material(str(s["base"]))
+func _stand_in_material(mat: ShaderMaterial, stand_in: Dictionary, colour: Variant) -> ShaderMaterial:
 	if not stand_in.is_empty() and G2GStockSubstitutes.is_glass(stand_in):
 		# Glass: the grid in the map's colour, see-through, as the original was. A new
 		# material on the translucent twin, because the pass is the shader's, not a
@@ -549,7 +552,10 @@ func _material_for(s: Dictionary, dir: String, lightmap: Texture2D) -> ShaderMat
 			mat.set_shader_parameter("ambient", prototype_ambient)
 			mat.set_meta(&"stand_in", str(stand_in.get("texture", "")))
 			return mat
+	return null
 
+
+func _prototype_material(mat: ShaderMaterial, colour: Variant, role: G2GTextures.Role) -> ShaderMaterial:
 	if colour is Array and (colour as Array).size() >= 3:
 		mat.set_shader_parameter("albedo_tex", G2GTextures.grid_texture())
 		mat.set_shader_parameter("has_albedo", true)

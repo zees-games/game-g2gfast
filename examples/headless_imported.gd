@@ -421,7 +421,13 @@ func _test_geometry() -> void:
 	var listed: int = (node as G2GBspMap).manifest.get("surfaces", []).size()
 	_check(drawn == listed, "and every surface the manifest lists is drawn",
 		"%d of %d" % [drawn, listed])
+	_geometry_floors(node)
+	_geometry_props_and_sky(node)
+	_geometry_size(mi, mesh)
+	_done()
 
+
+func _geometry_floors(node: Node) -> void:
 	# A floor is drawn from above: on every PLATFORM surface most triangles must be front-facing from above.
 	# Wound inside out, a floor shows its slab's underside, every other check still passes (a culled triangle is still a triangle),
 	# and Godot's front face is clockwise from the viewer, a cross product pointing AWAY from them.
@@ -458,6 +464,8 @@ func _test_geometry() -> void:
 	_check(upside_down.is_empty(), "and a floor is drawn from the side a player stands on",
 		", ".join(upside_down))
 
+
+func _geometry_props_and_sky(node: Node) -> void:
 	# Static props are drawn: 17 of the 26 maps place them. The count DRAWN is from the models read,
 	# the count PLACED from the lump; props placed and none drawn is an importer that stopped reading them.
 	var manifest_props: Dictionary = (node as G2GBspMap).manifest.get("static_props", {})
@@ -517,6 +525,8 @@ func _test_geometry() -> void:
 			str(reach), str(drawn_scale), str((sky as Dictionary).get("scale"))]
 	_check(visible, "and its 3D skybox is drawn in front of the camera's far plane", reach_detail)
 
+
+func _geometry_size(mi: MeshInstance3D, mesh: Mesh) -> void:
 	var verts := 0
 	var has_uv2 := true
 	for i in range(mesh.get_surface_count()):
@@ -537,4 +547,3 @@ func _test_geometry() -> void:
 	var longest := maxf(units.x, maxf(units.y, units.z))
 	_check(longest > 1000.0 and longest < 40000.0,
 		"and is the size a Source map can be", "%.0f x %.0f x %.0f units" % [units.x, units.y, units.z])
-	_done()

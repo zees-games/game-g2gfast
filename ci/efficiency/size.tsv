@@ -9,7 +9,6 @@ examples/dedicated_votes.gd::_test_map_menu_permissions	100
 examples/dedicated_votes.gd::_test_vote	134
 examples/headless_client.gd::_test_the_stage_splits_panel	111
 examples/headless_feel.gd::_play_window	124
-examples/headless_imported.gd::_test_geometry	142
 examples/headless_imported.gd::_test_pits_land_at_their_destination	119
 examples/headless_imported_zones.gd::_test_stands_on_it	106
 examples/headless_imported_zones.gd::_test_stands_where_it_sends_you	89
@@ -26,11 +25,8 @@ examples/headless_presentation_chat.gd::_test_blind_and_beacon	128
 examples/headless_presentation_chat.gd::_test_chat_box	96
 examples/headless_presentation_chat.gd::_test_party_over_http	106
 examples/headless_presentation_menu.gd::_test_the_timer_is_the_players_layout	92
-examples/headless_run.gd::_test_progression	147
 examples/headless_run_bank.gd::_test_single_bank	131
 examples/headless_run_bank.gd::_test_surf_run	110
-examples/headless_run_bank.gd::_test_the_fall_line	163
-examples/headless_run_bank.gd::_test_transfer_bonus	142
 examples/headless_run_base.gd::_test_effects_and_the_run	102
 examples/headless_run_base.gd::_test_spectating	96
 examples/headless_run_bend.gd::_test_bend_bonus	135
@@ -42,7 +38,6 @@ examples/headless_run_reach.gd::_test_bhop_run	83
 examples/headless_run_reach.gd::_test_needle_bonus	116
 examples/headless_run_reach.gd::_test_ridge_bonus	124
 examples/headless_run_reach.gd::reach_sweep	102
-game/g2g_bsp_map.gd::_material_for	144
 game/g2g_client.gd::_ready	109
 game/g2g_client_netcode.gd::_build_netcode	91
 game/g2g_client_netcode.gd::_unhandled_input	137
@@ -59,7 +54,6 @@ tools/bhop_probe.gd::_ready	106
 tools/bsp_preview.gd::_ready	81
 tools/collision_probe.gd::_ready	89
 tools/load_probe.gd::_measure	131
-tools/ramp_bump_probe.gd::_ready	146
 tools/screenshot_menus.gd::_initialize	138
 tools/stage_ride.gd::_run	105
 tools/surf_plan.gd::_run	89

@@ -7,6 +7,8 @@ extends "headless_run_bank.gd"
 ## godot --headless --path . res://examples/headless_run.tscn
 ## [/codeblock]
 
+const G2GProgress := preload("../game/g2g_progress.gd")
+
 const CHECKS := 256
 
 ## Sections entered against sections that ran to their last line, and against this. A
@@ -108,8 +110,14 @@ func _test_progression() -> void:
 		", ".join(undeclared)
 	)
 
-	# --- What the runs above filed ---------------------------------------
+	_progression_stats(progress)
+	await _progression_achievements(progress)
+	var split: Array[String] = await ProgressKeysCheck.run(progress)
+	_check(split.is_empty(), "stats file under the stable key, records under the record key", str(split))
+	_done()
 
+
+func _progression_stats(progress: G2GProgress) -> void:
 	var values := progress.session_values(&"bot")
 
 	_check(
@@ -173,7 +181,10 @@ func _test_progression() -> void:
 		"%.0f m" % distance
 	)
 
-	# --- Achievements ----------------------------------------------------
+
+
+func _progression_achievements(progress: G2GProgress) -> void:
+	var values := progress.session_values(&"bot")
 
 	_check(
 		progress.achievements.is_unlocked("bot", &"g2g.first_finish"),
@@ -220,6 +231,3 @@ func _test_progression() -> void:
 		"a player who has never run has not finished a course in under thirty seconds"
 	)
 	await progress.leave(&"nobody")
-	var split: Array[String] = await ProgressKeysCheck.run(progress)
-	_check(split.is_empty(), "stats file under the stable key, records under the record key", str(split))
-	_done()
