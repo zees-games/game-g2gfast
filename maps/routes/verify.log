@@ -69,3 +69,5 @@ surf_the_flow NOROUTE FileNotFoundError: [Errno 2] No such file or directory: '.
 surf_vegetables NOROUTE no route to the finish within reach 280; 114 tops reached, the furthest at (-2840.0, 6307.0)
 surf_year3000 NOROUTE no route to the finish within reach 280; 98 tops reached, the furthest at (639.3747035435268, 2931.285714285714)
 bhop_ocean RIDE_FAILED bhop_ocean: 13819 tops, route of 173 points, 35719 u | SCRIPT ERROR: Compile Error: Failed to compile depended scripts. ERROR: Failed to load script "res://tools/stage_ride.gd" with error "Compilation failed". [ride] bhop_ocean after 1.63 s: PUT BACK by a pit at (4032.0, 144.0, 14856.0) u (last at (3872.0, 111.0, 14688.0) u, route point 3); 0 u from the arrival, 33 u lower at the deepest, top 251 u/s, 0 ticks surfing, 78 grounded
+bhop_ocean KEPT (planned --reach 280 --safety 1; route_verify.sh defaults to 0.85, set SAFETY=1 to reproduce) | ride FINISHED in 84.00 s, 2026-11-04
+bhop_frotinity2 NOROUTE plans in ~3 min now (was 45+); no route at reach 280 safety 0.85 or 1: 13317 tops reached, frontier at (-2800, 6992)

@@ -253,6 +253,8 @@ static func read_cache_at(legacy: String, dir: String) -> Dictionary:
 		if typeof(parsed) == TYPE_DICTIONARY and typeof(parsed.get("stages")) == TYPE_DICTIONARY:
 			stages = (parsed["stages"] as Dictionary).duplicate()
 	var dir_abs := ProjectSettings.globalize_path(dir)
+	if not DirAccess.dir_exists_absolute(dir_abs):
+		return {"id": dir.get_file().get_basename().get_basename(), "stages": stages}
 	for file in DirAccess.get_files_at(dir_abs):
 		if not file.ends_with(".json") or not file.get_basename().is_valid_int():
 			continue
