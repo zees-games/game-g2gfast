@@ -12,6 +12,9 @@ examples/headless_client.gd::_test_the_stage_splits_panel	111
 examples/headless_feel.gd::_play_window	124
 examples/headless_imported.gd::_test_geometry	142
 examples/headless_imported.gd::_test_pits_land_at_their_destination	119
+examples/headless_imported_base.gd::_test_lighting	232
+examples/headless_imported_zones.gd::_test_stands_on_it	106
+examples/headless_imported_zones.gd::_test_stands_where_it_sends_you	89
 examples/headless_mechanics.gd::_test_blocks	81
 examples/headless_net.gd	1261
 examples/headless_net.gd::_build	104
@@ -46,8 +49,12 @@ game/g2g_bsp_map.gd::_material_for	144
 game/g2g_client.gd::_ready	109
 game/g2g_client_netcode.gd::_build_netcode	91
 game/g2g_client_netcode.gd::_unhandled_input	137
+game/g2g_map_survey_grid.gd::_rasterise	116
 game/g2g_mod_tools.gd::handlers	100
+game/g2g_module_cvars.gd::_bind_rule_cvars	81
 game/g2g_module_load.gd::_build_vote	93
+game/g2g_presentation_schema.gd::schema	178
+game/g2g_presentation_schema.gd::sound_catalogue	119
 game/g2g_services.gd::_build_chat	88
 maps/bhop_g2g_intro.gd::_build	83
 maps/bhop_g2g_intro.gd::build_zones	181
