@@ -211,6 +211,37 @@ func _test_lighting() -> void:
 	_check(mat.get_shader_parameter("lightmap_tex") is Texture2D,
 		"and the atlas is bound to every one of them")
 
+	_light_prototype(node)
+	var tex_result := _light_textures(node)
+	var share: float = tex_result[0]
+	var floor_share: float = tex_result[1]
+	var slashed: PackedStringArray = tex_result[2]
+	_light_unlisted_and_water(node)
+	_check(slashed.is_empty() and share >= floor_share,
+		"and the textures its pakfile carried are drawn",
+		"%.0f%% of triangles in their own texture, %.0f%% expected; names with a leading '/': %s"
+			% [share * 100.0, floor_share * 100.0, slashed])
+
+	_light_blend_additive(node)
+	var world := node.get_node_or_null("Lighting") as WorldEnvironment
+	_light_sky(node, world)
+
+	# And what a player sees from the spawn is lit. No headless run can render, so this estimates the frame: rays from the eye
+	# through the drawn meshes, each hit what the shader would draw there (albedo, baked light, ambient), each miss the sky.
+	# See [constant DARK_SPAWNS]. An estimate cannot tell bhop_badges' dark spawn room from its lit black-walled sections, so its zones file names the start.
+	var view := _spawn_view_luminance(node as G2GBspMap, world)
+	var listed_dark := DARK_SPAWNS.has(String(_map_id))
+	print("  spawn view %s: %.3f (display %.0f of 255)" % [_map_id, view, pow(view, 1.0 / 2.2) * 255.0])
+	_check((view >= SPAWN_VIEW_FLOOR) != listed_dark,
+		"and the view from its spawn is lit" if not listed_dark
+			else "and the view from its spawn is dark, as DARK_SPAWNS says",
+		"estimated linear luminance %.3f, floor %.3f%s" % [view, SPAWN_VIEW_FLOOR,
+			"; listed: " + str(DARK_SPAWNS[String(_map_id)]) if listed_dark else ""])
+	_done()
+
+
+## Painted colours, and brush entities drawn.
+func _light_prototype(node: G2GBspMap) -> void:
 	# A texture the map did not carry is painted its own measured colour, not a role grey.
 	# Most of a map is such surfaces, so a regression turns every map back into four greys, which no other
 	# check sees (a grey surface is a correctly configured material). Most, not all: a light panel vrad measured as black keeps its role colour.
@@ -221,6 +252,7 @@ func _test_lighting() -> void:
 			prototype += 1
 			if entry.get("colour", null) is Array:
 				coloured += 1
+
 	# A jump map's blocks are brush entities, and for as long as there were imported maps
 	# only the world was drawn: every block was solid and invisible (47% of bhop_eazy).
 	var ents: Dictionary = node.manifest.get("brush_entities", {})
@@ -231,6 +263,9 @@ func _test_lighting() -> void:
 		"and a surface whose texture did not ship is painted the map's own colour for it",
 		"%d of %d prototype surfaces coloured" % [coloured, prototype])
 
+
+## Own textures and Kenney stand-ins; returns [share, floor_share, slashed].
+func _light_textures(node: G2GBspMap) -> Array:
 	# A texture the pakfile carried is drawn, not replaced by the prototype grid.
 	# Two spellings were unread (a leading `/`, and a `$basetexture` with a space) and nothing said so, since a prototype surface is a correctly configured material.
 	# A name with the slash still on it fails every map; the share is asserted for the maps in [constant OWN_TEXTURES].
@@ -264,6 +299,11 @@ func _test_lighting() -> void:
 	_check(drawn >= drawn_floor,
 		"and a stock texture it did not carry has its Kenney stand-in",
 		"%.1f%% drawn textured, %.0f%% expected" % [drawn * 100.0, drawn_floor * 100.0])
+	return [share, floor_share, slashed]
+
+
+## Nothing on the grid without a reason, and untextured water drawn as water.
+func _light_unlisted_and_water(node: G2GBspMap) -> void:
 	# And what is still on the grid is there for a written reason: every triangle with no texture, not water, no stand-in
 	# and no `none` entry in textures/stock/substitutes.json is a material nobody looked at, under
 	# [constant UNLISTED_LIMIT] of the map. A new unknown material family fails here, not on somebody's screen.
@@ -308,11 +348,10 @@ func _test_lighting() -> void:
 	_check(water_drawn == water_wanted,
 		"and its untextured water is drawn as water",
 		"%d water materials on the mesh, %d water surfaces in the manifest" % [water_drawn, water_wanted])
-	_check(slashed.is_empty() and share >= floor_share,
-		"and the textures its pakfile carried are drawn",
-		"%.0f%% of triangles in their own texture, %.0f%% expected; names with a leading '/': %s"
-			% [share * 100.0, floor_share * 100.0, slashed])
 
+
+## Blend and additive surfaces are drawn as such.
+func _light_blend_additive(node: G2GBspMap) -> void:
 	# A blend material draws both its textures: `WorldVertexTransition` paints a second texture by vertex alpha,
 	# which travels in its own block (`alpha_offset`) and reaches the shader as COLOR.a, so a drawn blend surface
 	# needs the texture and a varying colour array. [constant BLENDED] names maps that must have one.
@@ -363,10 +402,11 @@ func _test_lighting() -> void:
 		"%d drawn added, %d marked additive, listed in ADDITIVE: %s"
 			% [additive_drawn, additive_wanted, ADDITIVE.has(String(_map_id))])
 
-	# No sky is a blank white dome: the procedural sky's top is the map's `_ambient`, and four maps carry the editor's
-	# default 255 255 255 (surf_beginner2, bhop_aztec, bhop_platformer_fxd, bhop_evolve); G2GLighting looks those up by sky name.
+
+## The sky is not a blank dome, a packed sky is bound, a black sky is black.
+func _light_sky(node: G2GBspMap, world: WorldEnvironment) -> void:
+	# No blank white dome: the procedural sky's top is the map's `_ambient`; G2GLighting looks up the editor-default ones by sky name.
 	var top := Color(0, 0, 0)
-	var world := node.get_node_or_null("Lighting") as WorldEnvironment
 	if world != null and world.environment != null and world.environment.sky != null:
 		var sky_mat := world.environment.sky.sky_material as ProceduralSkyMaterial
 		if sky_mat != null:
@@ -410,19 +450,6 @@ func _test_lighting() -> void:
 			dark = dark and c.get_luminance() < 0.02
 	_check(dark, "and a sky named black is drawn black",
 		"sky name '%s': %s" % [lit.get("sky_name", ""), seen])
-
-	# And what a player sees from the spawn is lit. No headless run can render, so this estimates the frame: rays from the eye
-	# through the drawn meshes, each hit what the shader would draw there (albedo, baked light, ambient), each miss the sky.
-	# See [constant DARK_SPAWNS]. An estimate cannot tell bhop_badges' dark spawn room from its lit black-walled sections, so its zones file names the start.
-	var view := _spawn_view_luminance(node as G2GBspMap, world)
-	var listed_dark := DARK_SPAWNS.has(String(_map_id))
-	print("  spawn view %s: %.3f (display %.0f of 255)" % [_map_id, view, pow(view, 1.0 / 2.2) * 255.0])
-	_check((view >= SPAWN_VIEW_FLOOR) != listed_dark,
-		"and the view from its spawn is lit" if not listed_dark
-			else "and the view from its spawn is dark, as DARK_SPAWNS says",
-		"estimated linear luminance %.3f, floor %.3f%s" % [view, SPAWN_VIEW_FLOOR,
-			"; listed: " + str(DARK_SPAWNS[String(_map_id)]) if listed_dark else ""])
-	_done()
 
 
 ## The estimated linear luminance of the view from a map's main spawn: 8 headings by 3 pitches from eye height, through every drawn World and Props surface.

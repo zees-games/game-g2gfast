@@ -487,6 +487,16 @@ static func build_zones() -> DotTimerZoneSet:
 
 	zones.add(zone_spawn(main, Vector3(0.0, FLOOR_Y + 8.0, START_Z + 400.0), 0.0))
 
+	_zones_bonus(zones, finish_z)
+	_zones_needle(zones, finish_z)
+	_zones_hairpin(zones)
+	_zones_stutter(zones)
+
+	return zones
+
+
+## Bonus 1.
+static func _zones_bonus(zones: DotTimerZoneSet, finish_z: float) -> void:
 	# The bonus.
 	var bonus := DotTimerTrack.of_bonus(1)
 	zones.add(zone_box(DotTimerZone.Kind.START, bonus,
@@ -513,6 +523,12 @@ static func build_zones() -> DotTimerZoneSet:
 	var fall_high := Vector3(4096.0, FLOOR_Y - 192.0, START_Z + 4096.0)
 
 	zones.add(zone_box(DotTimerZone.Kind.RESPAWN, bonus, fall_low, fall_high))
+
+
+## Bonus 2, the needle.
+static func _zones_needle(zones: DotTimerZoneSet, finish_z: float) -> void:
+	var fall_low := Vector3(-4096.0, FLOOR_Y - 1024.0, finish_z - 4096.0)
+	var fall_high := Vector3(4096.0, FLOOR_Y - 192.0, START_Z + 4096.0)
 
 	# Bonus 2, `the needle`, with two stage splits on it.
 	#
@@ -552,6 +568,9 @@ static func build_zones() -> DotTimerZoneSet:
 	zones.add(zone_box(DotTimerZone.Kind.RESPAWN, needle, fall_low, fall_high))
 	zones.add(zone_spawn(needle, Vector3(NEEDLE_X, FLOOR_Y + 8.0, START_Z + 400.0), 0.0))
 
+
+## Bonus 3, the hairpin.
+static func _zones_hairpin(zones: DotTimerZoneSet) -> void:
 	# Bonus 3, the hairpin: a start, a split on each corner, a finish, a spawn and a pit,
 	# every one read off `hairpin_blocks()`.
 	var hairpin := DotTimerTrack.of_bonus(3)
@@ -588,6 +607,9 @@ static func build_zones() -> DotTimerZoneSet:
 		Vector3(-4096.0, FLOOR_Y - 1024.0, -4096.0),
 		Vector3(8192.0, pad.y - BLOCK_THICKNESS - 256.0, 4096.0)))
 
+
+## Bonus 4, the stutter.
+static func _zones_stutter(zones: DotTimerZoneSet) -> void:
 	# Bonus 4, the stutter: a start, a split on each runway that ends a section, a
 	# finish, a spawn and a pit, every one read off `stutter_blocks()`.
 	var stutter := DotTimerTrack.of_bonus(4)
@@ -620,5 +642,3 @@ static func build_zones() -> DotTimerZoneSet:
 	zones.add(zone_box(DotTimerZone.Kind.RESPAWN, stutter,
 		Vector3(-4096.0, FLOOR_Y - 1024.0, s_pad.z - 4096.0),
 		Vector3(4096.0, s_pad.y - BLOCK_THICKNESS - 256.0, START_Z + 4096.0)))
-
-	return zones

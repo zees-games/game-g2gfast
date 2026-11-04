@@ -465,9 +465,14 @@ func _test_handshake() -> void:
 	# record holder's timer showed no best and no record while Tab showed both.
 	_check(standings.has(SESSION), "and is sent its standing, which the join worked out before it had a peer",
 		str(standings))
+	_handshake_stage_ref()
+	await _handshake_tick_rate(local_at_hello)
+	await _handshake_map(loaded, added_locally)
+	_done()
 
-	# The splits panel's comparison: a client has no store, so the server says. The message
-	# is sent to the owner on the game's `stage_reference_changed`, and arrives intact.
+
+## A splits comparison survives the wire and reaches the owner.
+func _handshake_stage_ref() -> void:
 	var reference_in: Array[Dictionary] = []
 	_client_bridge.stage_reference_received.connect(func(id: int, ref: Dictionary) -> void:
 		if id == SESSION:
@@ -498,12 +503,10 @@ func _test_handshake() -> void:
 	_check(reference_in.size() == 1 and reference_in[0]["map"] == "bhop_x", "map id included", str(reference_in))
 	_check(G2GEvent.fits(), "and the new message kind still fits the kind field")
 
-	# HELLO has carried the server's tick rate since it was written and `read_hello`
-	# has always decoded it; until this was fixed, nothing read it back out. All three
-	# have to move: the game's rate is the step prediction replays with and the
-	# divisor every replicated run time is reconstituted through, the net config's is
-	# what input sanitising and the extrapolation budget read, and the CLOCK's is a
-	# copy taken at setup() that writing the config does not touch.
+
+## HELLO moves the client game, timers, clock and engine to the server's tick rate.
+func _handshake_tick_rate(local_at_hello: Array) -> void:
+	# Game, net config and the clock's setup() copy all have to move.
 	_check(
 		_client_game.tick_rate == _server_game.tick_rate,
 		"and the client adopts the server's tick rate from HELLO",
@@ -566,11 +569,9 @@ func _test_handshake() -> void:
 		str(local_at_hello)
 	)
 
-	# The map a joiner lands on, through the protocol rather than an id in HELLO. dot-map's
-	# host sent `load` only at the end of a change, so a joiner said ready and was never
-	# told to show anything; this check found it, the bridge answered the ready itself for
-	# a day, and dot-map's host answers it now (`admit_peer`). Armed against the bridge's
-	# answer and again against dot-map's: this check fired both times.
+
+## The joiner is told the map, mirrors itself as the local player and is predicted.
+func _handshake_map(loaded: Array[String], added_locally: Array[StringName]) -> void:
 	var announced := _client_bridge.map_client.announced
 	_check(announced != null and announced.id == _server_game.maps.current.id,
 		"the joiner is announced the map the server is on",
@@ -599,7 +600,6 @@ func _test_handshake() -> void:
 	_check(mine != null and mine.identity != null and mine.identity.is_predicted(), "the local player is predicted")
 	_check(mine != null and mine.identity.net_id == _server_bridge.behaviour_for(SESSION).identity.net_id,
 		"under the server's entity id")
-	_done()
 
 
 func _test_prediction_hopping() -> void:

@@ -41,7 +41,19 @@ static func schema() -> DotSettingsSchema:
 	s.add(DotSettingsDef.boolean(&"show_crosshair", true, &"running").with_scope(
 		DotSettingsDef.Scope.ACCOUNT
 	))
+	_schema_hud(s)
+	_schema_chat(s)
+	_schema_video(s)
+	_schema_accessibility(s)
+	G2GBindings.make().add_to_schema(s)
+	_schema_audio(s)
 
+	# Everything else a game has: volumes, the window, the frame rate, the mouse, the theme.
+	return DotMenuStock.declare(s)
+
+
+## The timer layout, status and dragged-HUD settings.
+static func _schema_hud(s: DotSettingsSchema) -> void:
 	# [b]The timer's layout, as the player's own.[/b] Timer plugins in this genre let a
 	# server pick one of a few layouts; here every line of the clock's block is a switch,
 	# the block goes where the player drags it, and all of it is ACCOUNT scope, because a
@@ -97,6 +109,9 @@ static func schema() -> DotSettingsSchema:
 		DotSettingsDef.Scope.ACCOUNT
 	).with_description("Hide every other player and the record's ghost, with their beacons."))
 
+
+## The chat keys and settings.
+static func _schema_chat(s: DotSettingsSchema) -> void:
 	# Chat. ACCOUNT scope for all three, for the reason the sensitivity above has it: a
 	# runner who found their key once should never have to find it again.
 	s.add(DotSettingsDef.choice(
@@ -115,6 +130,9 @@ static func schema() -> DotSettingsSchema:
 		DotSettingsDef.Scope.ACCOUNT
 	))
 
+
+## Field of view and the own body.
+static func _schema_video(s: DotSettingsSchema) -> void:
 	# [b]The genre's `fov_desired`: horizontal at 4:3, so 90 is what a player expects.[/b] It
 	# was declared as 110 over 70..130 and read by nothing, so the number never meant either
 	# thing; G2GCamera converts it through G2GUnits like the cvar it stands for.
@@ -140,6 +158,9 @@ static func schema() -> DotSettingsSchema:
 		+ "never drawn, because the camera is inside it."
 	))
 
+
+## Shake, flashes and reduced motion.
+static func _schema_accessibility(s: DotSettingsSchema) -> void:
 	# [b]Zero by default, which is the opposite of every other game here.[/b] A surf ramp
 	# is a precision input at speed; shaking the camera for a landing is taking the run
 	# away. It is still a setting because the same server runs a deathmatch layer.
@@ -152,10 +173,9 @@ static func schema() -> DotSettingsSchema:
 	s.add(DotSettingsDef.boolean(&"reduce_motion", false, &"accessibility").with_scope(DotSettingsDef.Scope.ACCOUNT)
 		.with_description("The end-of-match announcement appears at once, with nothing sliding, rising or bursting."))
 
-	# One binding per key the client reads, DEVICE scope, after the chat block above so the
-	# two chat keys keep the ACCOUNT declarations they had first. See G2GBindings.
-	G2GBindings.make().add_to_schema(s)
 
+## Sound levels declared before the stock set so these defaults win.
+static func _schema_audio(s: DotSettingsSchema) -> void:
 	# [b]Effects at 0.6, not the stock 1.0 (fgr-g2g-audio-1).[/b] The landing on every hop and
 	# the footsteps sat on top of the bed and the timer's cues at full level, which a runner
 	# hears hundreds of times a minute. Declared before the stock set so it is the one kept;
@@ -173,9 +193,6 @@ static func schema() -> DotSettingsSchema:
 		"Bed level at snd_wind_full_speed."))
 	s.add(DotSettingsDef.number(&"snd_wind_full_speed", 1500.0, 100.0, 5000.0, &"audio").with_description(
 		"Horizontal speed in units per second at which the bed reaches snd_wind_max."))
-
-	# Everything else a game has: volumes, the window, the frame rate, the mouse, the theme.
-	return DotMenuStock.declare(s)
 
 
 ## One step per schema version, keyed by the version migrated FROM.

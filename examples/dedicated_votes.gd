@@ -348,242 +348,239 @@ func _test_modes() -> void:
 		_check(runner != null, "a player joins")
 
 		if runner != null:
-			_check(
-				game.combat.health_of(&"u4242") != null,
-				"and is shootable in deathmatch"
-			)
-			_check(
-				runner.timer != null,
-				"and still has a timer, because the run is the point"
-			)
-
-			# The id round trip, in one assertion, because the two ends of one
-			# serialisation are exactly as capable of never meeting as the two ends
-			# of a wire -- and these two used to be a formula and its inverse.
-			var entity := game.combat.entity_for(&"u4242")
-
-			_check(entity != 0, "and an entity id from the table (%d)" % entity)
-			_check(
-				DotEntity.is_kind(entity, DotEntity.KIND_PLAYER),
-				"which says it names a player, without a range check",
-				DotEntity.describe_id(entity)
-			)
-			_check(
-				game.combat.player_id_for(entity) == &"u4242",
-				"and turns back into the player it came from"
-			)
-			# The conflation the table removed: the account number and the combat
-			# handle used to be the same integer, so a loadout's filename and a
-			# session lookup were quietly riding on a runtime id.
-			_check(
-				G2GCombat.userid_of(&"u4242") == 4242,
-				"the userid is still parsed out of the name, unchanged"
-			)
-			_check(
-				entity != 4242,
-				"and is no longer what the entity id happens to be"
-			)
-
-			# The shooter's hit feedback is what the authority applied, never a refusal.
-			# A second player, hit by the first: a refused hit (spawn protection) or one
-			# on yourself is no hit, and an applied one says who fired, at whom, how much.
-			var target := game.add_player(&"u4343", "Target")
-			var heard: Array = []
-			var on_hit := func(by: StringName, victim: int, amount: float, _point: Vector3, _killed: bool, _head: bool) -> void:
-				heard.append([by, victim, amount])
-			game.combat.hit_landed.connect(on_hit)
-			var bullet := game.combat.manager.damage_type(G2GArsenal.DAMAGE_BULLET)
-			var victim_entity := game.combat.entity_for(&"u4343")
-			game.combat.manager.apply_damage(DotDamage.make(entity, entity, 10.0, bullet))
-			var self_heard := heard.size()
-			var hit := DotDamage.make(entity, victim_entity, 25.0, bullet)
-			game.combat.manager.apply_damage(hit)
-			game.combat.hit_landed.disconnect(on_hit)
-			_check(self_heard == 0, "a hit on yourself is no hit marker", str(heard))
-			_check(
-				not hit.refused and heard.size() == 1 and heard[0][0] == &"u4242"
-					and heard[0][1] == victim_entity and absf(float(heard[0][2]) - hit.health_lost) < 0.01,
-				"and an applied hit on somebody else says who fired, at whom and how much",
-				"refused=%s heard=%s" % [hit.refused, str(heard)]
-			)
-
-			# --- How a dead body falls: picked here, from the server's own weights ---
-			#
-			# Armed by turning the cvar binding off in the module (the replicated check fails
-			# and the pick stays a draw over the stock weights) and by deciding nothing in
-			# `_on_entity_killed` (the death is null).
-			var weights := server.console.find_cvar("sv_ragdoll_reactions")
-			_check(weights != null and weights.has_flag(DotConVar.FLAG_REPLICATED)
-					and server.console.find_cvar("sv_ragdoll") != null,
-				"the sv_ragdoll* set is bound, replicated, because the clients draw the bodies")
-			var _only := _run_command("sv_ragdoll_reactions limp=0,crumple=0,face_plant=1")
-			var fatal := DotDamage.make(entity, victim_entity, 500.0, bullet)
-			fatal.tick = game.current_tick()
-			game.combat.manager.apply_damage(fatal)
-			var fallen: G2GPlayer = game.players.get(&"u4343")
-			var away := Vector3.ZERO
-			if fallen != null:
-				away = fallen.controller.state.position - runner.controller.state.position
-				away.y = 0.0
-			_check(fallen != null and fallen.death != null
-					and fallen.death.reaction == DotPlayerDeathReactions.FACE_PLANT,
-				"a kill picks the body's fall on the server, from sv_ragdoll_reactions",
-				str(fallen.death.describe()) if fallen != null and fallen.death != null else "no death")
-			_check(fallen != null and fallen.death != null
-					and (away.length() < 0.01 or fallen.death.direction.dot(away.normalized()) > 0.9),
-				"pushed away from the shooter")
-			var _stock := _run_command("sv_ragdoll_reactions limp=4,headshot_launch=6,power_launch=8,face_plant=1.5,crumple=2.5")
-			var back: Array[StringName] = []
-			var on_back := func(id: StringName) -> void: back.append(id)
-			game.combat.player_respawned.connect(on_back)
-			for _respawn in range(game.tick_rate + game.tick_rate / 4):
-				game.tick_once(game.current_tick() + 1)
-			game.combat.player_respawned.disconnect(on_back)
-			_check(back.has(&"u4343"), "and the dead player's return is announced, for the clients to draw them again", str(back))
-
-			if target != null:
-				game.remove_player(&"u4343")
-
-			# The server's own kill view clip names its killer by key, for a client that numbers no entity.
-			var kv_bridge: Object = server.modules.get_module("g2gfast").get("bridge")
-			var kv: Object = kv_bridge.get("killview") if kv_bridge != null else null
-			var prey := game.add_player(&"u4444", "Prey")
-			game.killview_rules.enabled = true
-			var kv_base: int = game.current_tick()
-			var kv_clips: Array = []
-			for kv_tick in range(kv_base - 60, kv_base + 60):
-				if kv_tick == kv_base:
-					game.combat.manager.apply_damage(DotDamage.make(entity, game.combat.entity_for(&"u4444"), 500.0, bullet))
-				if kv != null:
-					kv_clips.append_array(kv.tick(kv_tick))
-			var kv_info := {}
-			for clip: Dictionary in kv_clips:
-				var kv_read := DotKillViewClip.unpack(clip["body"])
-				if bool(kv_read["ok"]):
-					kv_info = kv_read["info"]
-			_check(prey != null and kv_clips.size() == 1 and kv_info.get("killer_key", "") == "u4242",
-				"a real kill's clip carries the killer's key, emitted by the server", str(kv_info))
-			game.killview_rules.enabled = false
-			game.remove_player(&"u4444")
-
-			# The ghost is deliberately not armed: it is a replay, it cannot be hurt,
-			# and registering it would put a name on the scoreboard that never dies
-			# and never leaves.
-			_check(
-				game.combat.health_of(G2GGame.GHOST_ID) == null,
-				"the record ghost is not on the scoreboard"
-			)
-
-			# --- The trigger, which nothing sent until it was looked for ---
-			#
-			# [b]`sv_deathmatch` was a mode nobody could shoot in.[/b] `G2GCombat`
-			# built the arsenals, the hitboxes and the match, and read a fire command
-			# that nothing ever set — found by the family's own detector, because
-			# `set_fire_command` occurred once in the repository.
-			#
-			# The trigger is a bit on `G2GNetCommand` rather than a request: a shot
-			# happens on a tick and has to be replayed with the movement of that tick,
-			# and a trigger arriving reliably-and-separately would be replayed against
-			# a different tick's position every time.
-			var arsenal_before := game.combat._kit[&"u4242"]["arsenal"] as DotWeaponArsenal
-			_check(
-				arsenal_before.slots().size() >= 1,
-				"an armed player has something to shoot with",
-				"%d slots" % arsenal_before.slots().size()
-			)
-
-			# A hand-out into a disabled arsenal (a freeze) still holds the sidearm, as a bot never presses a slot key.
-			arsenal_before.disabled = true
-			game.combat._give_default(arsenal_before)
-			_check(arsenal_before.current_slot() == 2, "a default kit given while disabled holds the sidearm, not the knife", str(arsenal_before.current_slot()))
-			arsenal_before.disabled = false
-
-			# [b]The trigger has to be released first, and that is not a workaround.[/b]
-			# The player spawns mid-switch — knife in hand, deagle coming up — and the
-			# deagle is semi-automatic. A semi-automatic weapon fires on the press, not
-			# on the button being down, so a trigger already held while the weapon was
-			# still deploying is not a press and must not fire: holding M1 through a
-			# weapon switch and having it go off the instant the gun arrives is the
-			# behaviour every shooter deliberately does not have.
-			#
-			# So: hold nothing until the switch has finished, then press.
-			#
-			# [b]Once a tick, as the wire delivers it.[/b] A command is consumed by the
-			# tick that reads it, so one set before a loop is one tick's input, not a
-			# second's — see the starved-tick check below.
-			var idle := DotWeaponCommand.new()
-
-			# [b]`tick_once`, not `combat.tick`.[/b] Every duration in dot-weapon is
-			# measured in ticks, so a loop that advances time without advancing
-			# `current_tick()` leaves the weapon switch frozen mid-deploy for ever —
-			# which is what this test used to do, and it got away with it only because
-			# the old arsenal measured its deploy differently.
-			for _deploy in range(game.tick_rate):
-				game.combat.set_fire_command(&"u4242", idle)
-				game.tick_once(game.current_tick() + 1)
-
-			var fire := DotWeaponCommand.new()
-			fire.set_button(DotWeaponCommand.BUTTON_ATTACK, true)
-
-			# [b]An Array, not an int.[/b] A GDScript lambda captures locals by
-			# VALUE, so a counter incremented inside a signal handler stays zero
-			# outside it — and the assertion then reports a failure for a signal that
-			# fired perfectly. This file's own family notes carry the warning and this
-			# check was written wrong anyway.
-			var shots: Array[DotShot] = []
-			game.combat.manager.shot_resolved.connect(
-				func(shot: DotShot) -> void: shots.append(shot)
-			)
-
-			# Enough ticks for the deagle's 160 rpm to come round. A weapon that fired
-			# on the first tick would be a weapon with no rate of fire.
-			for _step in range(game.tick_rate):
-				game.combat.set_fire_command(&"u4242", fire)
-				game.tick_once(game.current_tick() + 1)
-
-			_check(
-				shots.size() > 0,
-				"and holding the trigger fires it",
-				"%d shots" % shots.size()
-			)
-
-			# The rate of fire is real: 160 rpm over one second is under three shots,
-			# and a trigger read as "fire every tick" would be a hundred.
-			_check(
-				shots.size() < 10,
-				"at its rate of fire rather than once a tick",
-				"%d shots in a second" % shots.size()
-			)
-
-			# [b]A tick whose input never arrived is not the last trigger again.[/b]
-			# dot-net skips `_net_apply_input` for a starved tick, so a command left on
-			# the player would be replayed for as long as packets are lost — the held
-			# trigger `G2GPlayerNet.last_attack` says does not survive a hiccup.
-			game.combat.set_fire_command(&"u4242", fire)
-			game.tick_once(game.current_tick() + 1)
-			game.tick_once(game.current_tick() + 1)
-			var shooter: G2GPlayer = game.players.get(&"u4242")
-			_check(
-				shooter != null and not shooter.has_meta("g2g_fire"),
-				"and a trigger is read once, so a lost packet is not a held trigger"
-			)
-
-			# A hunter's kill is world damage through the same combat layer, so it is a death
-			# like any other: the body falls away from the hunter that swiped.
-			if game.hunters != null:
-				var at := runner.controller.state.position + Vector3(3.0, 0.0, 0.0)
-				var hunter := game.hunters.spawn_one(&"g2g_stalker", at)
-				if hunter != null:
-					game.hunters.hunter_attack(hunter, &"u4242", 1000.0)
-					game.hunters.spawner.remove(hunter.instance_id, DotNpcSpawner.REASON_ADMIN)
-				_check(hunter != null and runner.death != null and runner.death.direction.x < -0.9,
-					"a hunter's kill falls too, away from the hunter",
-					str(runner.death.describe()) if runner.death != null else "no death")
-
+			var entity := _modes_ids(runner)
+			_modes_hit_and_fall(runner, entity)
+			_modes_killview(entity)
+			_modes_fire()
+			_modes_hunter_kill(runner)
 			game.remove_player(&"u4242")
 
 	DedicatedWorld.new(self, game).run()
 	_done()
+
+
+## The id round trip and the combat handle of one joined player; returns the entity id.
+func _modes_ids(runner: G2GPlayer) -> int:
+	_check(
+		game.combat.health_of(&"u4242") != null,
+		"and is shootable in deathmatch"
+	)
+	_check(
+		runner.timer != null,
+		"and still has a timer, because the run is the point"
+	)
+
+	# The id round trip, in one assertion, because the two ends of one
+	# serialisation are exactly as capable of never meeting as the two ends
+	# of a wire -- and these two used to be a formula and its inverse.
+	var entity := game.combat.entity_for(&"u4242")
+
+	_check(entity != 0, "and an entity id from the table (%d)" % entity)
+	_check(
+		DotEntity.is_kind(entity, DotEntity.KIND_PLAYER),
+		"which says it names a player, without a range check",
+		DotEntity.describe_id(entity)
+	)
+	_check(
+		game.combat.player_id_for(entity) == &"u4242",
+		"and turns back into the player it came from"
+	)
+	# The conflation the table removed: the account number and the combat
+	# handle used to be the same integer, so a loadout's filename and a
+	# session lookup were quietly riding on a runtime id.
+	_check(
+		G2GCombat.userid_of(&"u4242") == 4242,
+		"the userid is still parsed out of the name, unchanged"
+	)
+	_check(
+		entity != 4242,
+		"and is no longer what the entity id happens to be"
+	)
+	return entity
+
+
+## A hit on yourself and on somebody else, then a kill: how the body falls and the return.
+func _modes_hit_and_fall(runner: G2GPlayer, entity: int) -> void:
+	# The shooter's hit feedback is what the authority applied, never a refusal.
+	# A second player, hit by the first: a refused hit (spawn protection) or one
+	# on yourself is no hit, and an applied one says who fired, at whom, how much.
+	var target := game.add_player(&"u4343", "Target")
+	var heard: Array = []
+	var on_hit := func(by: StringName, victim: int, amount: float, _point: Vector3, _killed: bool, _head: bool) -> void:
+		heard.append([by, victim, amount])
+	game.combat.hit_landed.connect(on_hit)
+	var bullet := game.combat.manager.damage_type(G2GArsenal.DAMAGE_BULLET)
+	var victim_entity := game.combat.entity_for(&"u4343")
+	game.combat.manager.apply_damage(DotDamage.make(entity, entity, 10.0, bullet))
+	var self_heard := heard.size()
+	var hit := DotDamage.make(entity, victim_entity, 25.0, bullet)
+	game.combat.manager.apply_damage(hit)
+	game.combat.hit_landed.disconnect(on_hit)
+	_check(self_heard == 0, "a hit on yourself is no hit marker", str(heard))
+	_check(
+		not hit.refused and heard.size() == 1 and heard[0][0] == &"u4242"
+			and heard[0][1] == victim_entity and absf(float(heard[0][2]) - hit.health_lost) < 0.01,
+		"and an applied hit on somebody else says who fired, at whom and how much",
+		"refused=%s heard=%s" % [hit.refused, str(heard)]
+	)
+
+	# --- How a dead body falls: picked here, from the server's own weights ---
+	#
+	# Armed by turning the cvar binding off in the module (the replicated check fails
+	# and the pick stays a draw over the stock weights) and by deciding nothing in
+	# `_on_entity_killed` (the death is null).
+	var weights := server.console.find_cvar("sv_ragdoll_reactions")
+	_check(weights != null and weights.has_flag(DotConVar.FLAG_REPLICATED)
+			and server.console.find_cvar("sv_ragdoll") != null,
+		"the sv_ragdoll* set is bound, replicated, because the clients draw the bodies")
+	var _only := _run_command("sv_ragdoll_reactions limp=0,crumple=0,face_plant=1")
+	var fatal := DotDamage.make(entity, victim_entity, 500.0, bullet)
+	fatal.tick = game.current_tick()
+	game.combat.manager.apply_damage(fatal)
+	var fallen: G2GPlayer = game.players.get(&"u4343")
+	var away := Vector3.ZERO
+	if fallen != null:
+		away = fallen.controller.state.position - runner.controller.state.position
+		away.y = 0.0
+	_check(fallen != null and fallen.death != null
+			and fallen.death.reaction == DotPlayerDeathReactions.FACE_PLANT,
+		"a kill picks the body's fall on the server, from sv_ragdoll_reactions",
+		str(fallen.death.describe()) if fallen != null and fallen.death != null else "no death")
+	_check(fallen != null and fallen.death != null
+			and (away.length() < 0.01 or fallen.death.direction.dot(away.normalized()) > 0.9),
+		"pushed away from the shooter")
+	var _stock := _run_command("sv_ragdoll_reactions limp=4,headshot_launch=6,power_launch=8,face_plant=1.5,crumple=2.5")
+	var back: Array[StringName] = []
+	var on_back := func(id: StringName) -> void: back.append(id)
+	game.combat.player_respawned.connect(on_back)
+	for _respawn in range(game.tick_rate + game.tick_rate / 4):
+		game.tick_once(game.current_tick() + 1)
+	game.combat.player_respawned.disconnect(on_back)
+	_check(back.has(&"u4343"), "and the dead player's return is announced, for the clients to draw them again", str(back))
+
+	if target != null:
+		game.remove_player(&"u4343")
+
+
+## The server kill view clip names its killer by key.
+func _modes_killview(entity: int) -> void:
+	var bullet := game.combat.manager.damage_type(G2GArsenal.DAMAGE_BULLET)
+	# The server's own kill view clip names its killer by key, for a client that numbers no entity.
+	var kv_bridge: Object = server.modules.get_module("g2gfast").get("bridge")
+	var kv: Object = kv_bridge.get("killview") if kv_bridge != null else null
+	var prey := game.add_player(&"u4444", "Prey")
+	game.killview_rules.enabled = true
+	var kv_base: int = game.current_tick()
+	var kv_clips: Array = []
+	for kv_tick in range(kv_base - 60, kv_base + 60):
+		if kv_tick == kv_base:
+			game.combat.manager.apply_damage(DotDamage.make(entity, game.combat.entity_for(&"u4444"), 500.0, bullet))
+		if kv != null:
+			kv_clips.append_array(kv.tick(kv_tick))
+	var kv_info := {}
+	for clip: Dictionary in kv_clips:
+		var kv_read := DotKillViewClip.unpack(clip["body"])
+		if bool(kv_read["ok"]):
+			kv_info = kv_read["info"]
+	_check(prey != null and kv_clips.size() == 1 and kv_info.get("killer_key", "") == "u4242",
+		"a real kill's clip carries the killer's key, emitted by the server", str(kv_info))
+	game.killview_rules.enabled = false
+	game.remove_player(&"u4444")
+
+
+## The ghost is unarmed, and holding the trigger fires at the weapon's rate.
+func _modes_fire() -> void:
+	# The ghost is deliberately not armed: it is a replay, it cannot be hurt,
+	# and registering it would put a name on the scoreboard that never dies
+	# and never leaves.
+	_check(
+		game.combat.health_of(G2GGame.GHOST_ID) == null,
+		"the record ghost is not on the scoreboard"
+	)
+
+	# The trigger is a bit on `G2GNetCommand`, replayed with that tick's movement, not a request.
+	var arsenal_before := game.combat._kit[&"u4242"]["arsenal"] as DotWeaponArsenal
+	_check(
+		arsenal_before.slots().size() >= 1,
+		"an armed player has something to shoot with",
+		"%d slots" % arsenal_before.slots().size()
+	)
+
+	# A hand-out into a disabled arsenal (a freeze) still holds the sidearm, as a bot never presses a slot key.
+	arsenal_before.disabled = true
+	game.combat._give_default(arsenal_before)
+	_check(arsenal_before.current_slot() == 2, "a default kit given while disabled holds the sidearm, not the knife", str(arsenal_before.current_slot()))
+	arsenal_before.disabled = false
+
+	# Release the trigger until the semi-automatic deagle has deployed: a press during
+	# a switch must not fire.
+	# Once a tick: a command is consumed by the tick that reads it.
+	var idle := DotWeaponCommand.new()
+
+	# `tick_once`, not `combat.tick`: dot-weapon durations are measured in ticks.
+	for _deploy in range(game.tick_rate):
+		game.combat.set_fire_command(&"u4242", idle)
+		game.tick_once(game.current_tick() + 1)
+
+	var fire := DotWeaponCommand.new()
+	fire.set_button(DotWeaponCommand.BUTTON_ATTACK, true)
+
+	# An Array: a lambda captures locals by value.
+	var shots: Array[DotShot] = []
+	game.combat.manager.shot_resolved.connect(
+		func(shot: DotShot) -> void: shots.append(shot)
+	)
+
+	# Enough ticks for the deagle's 160 rpm to come round. A weapon that fired
+	# on the first tick would be a weapon with no rate of fire.
+	for _step in range(game.tick_rate):
+		game.combat.set_fire_command(&"u4242", fire)
+		game.tick_once(game.current_tick() + 1)
+
+	_check(
+		shots.size() > 0,
+		"and holding the trigger fires it",
+		"%d shots" % shots.size()
+	)
+
+	# The rate of fire is real: 160 rpm over one second is under three shots,
+	# and a trigger read as "fire every tick" would be a hundred.
+	_check(
+		shots.size() < 10,
+		"at its rate of fire rather than once a tick",
+		"%d shots in a second" % shots.size()
+	)
+	_modes_fire_starved(fire)
+
+
+## A tick whose input never arrived is not the last trigger again.
+func _modes_fire_starved(fire: DotWeaponCommand) -> void:
+	# dot-net skips `_net_apply_input` for a starved tick, so a command left on
+	# the player would be replayed for as long as packets are lost — the held
+	# trigger `G2GPlayerNet.last_attack` says does not survive a hiccup.
+	game.combat.set_fire_command(&"u4242", fire)
+	game.tick_once(game.current_tick() + 1)
+	game.tick_once(game.current_tick() + 1)
+	var shooter: G2GPlayer = game.players.get(&"u4242")
+	_check(
+		shooter != null and not shooter.has_meta("g2g_fire"),
+		"and a trigger is read once, so a lost packet is not a held trigger"
+	)
+
+
+## A hunter's kill is a death like any other.
+func _modes_hunter_kill(runner: G2GPlayer) -> void:
+	# A hunter's kill is world damage through the same combat layer, so it is a death
+	# like any other: the body falls away from the hunter that swiped.
+	if game.hunters != null:
+		var at := runner.controller.state.position + Vector3(3.0, 0.0, 0.0)
+		var hunter := game.hunters.spawn_one(&"g2g_stalker", at)
+		if hunter != null:
+			game.hunters.hunter_attack(hunter, &"u4242", 1000.0)
+			game.hunters.spawner.remove(hunter.instance_id, DotNpcSpawner.REASON_ADMIN)
+		_check(hunter != null and runner.death != null and runner.death.direction.x < -0.9,
+			"a hunter's kill falls too, away from the hunter",
+			str(runner.death.describe()) if runner.death != null else "no death")
 
 
 ## dot-browser asking a real [DotServer] — which nothing in this family had done.

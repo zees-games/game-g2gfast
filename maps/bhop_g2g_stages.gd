@@ -258,6 +258,16 @@ static func build_zones() -> DotTimerZoneSet:
 
 	zones.add(zone_spawn(main, Vector3(0.0, FLOOR_Y + 8.0, START_Z + 128.0), 0.0))
 
+	var bonus_floor := _zones_bonus_surf(zones, lowest)
+	_zones_ridge(zones, bonus_floor)
+	_zones_weave(zones, bonus_floor)
+	_zones_bend(zones, bonus_floor)
+
+	return zones
+
+
+## Bonus 1, the surf descent, with its pit; returns the bonus pit floor.
+static func _zones_bonus_surf(zones: DotTimerZoneSet, lowest: float) -> float:
 	# The bonus: the surf descent.
 	var bonus := DotTimerTrack.of_bonus(1)
 
@@ -280,7 +290,11 @@ static func build_zones() -> DotTimerZoneSet:
 	zones.add(zone_box(DotTimerZone.Kind.RESPAWN, bonus,
 		Vector3(-16384.0, bonus_floor - 4096.0, -16384.0),
 		Vector3(16384.0, bonus_floor - 256.0, 16384.0)))
+	return bonus_floor
 
+
+## Bonus 2, the ridge.
+static func _zones_ridge(zones: DotTimerZoneSet, bonus_floor: float) -> void:
 	# Bonus 2, the ridge: a start, two stage splits, a finish, a spawn and a pit.
 	var ridge := DotTimerTrack.of_bonus(2)
 	var pad := ridge_pad()
@@ -312,6 +326,9 @@ static func build_zones() -> DotTimerZoneSet:
 		Vector3(-16384.0, bonus_floor - 4096.0, -16384.0),
 		Vector3(16384.0, pad.y - BLOCK_THICKNESS - 256.0, 16384.0)))
 
+
+## Bonus 3, the weave.
+static func _zones_weave(zones: DotTimerZoneSet, bonus_floor: float) -> void:
 	# Bonus 3, the weave: the ridge's shape of zone set, read off `weave_blocks`.
 	var weave := DotTimerTrack.of_bonus(3)
 	var weave_end := weave_pad()
@@ -341,6 +358,9 @@ static func build_zones() -> DotTimerZoneSet:
 		Vector3(-16384.0, bonus_floor - 4096.0, -16384.0),
 		Vector3(16384.0, weave_end.y - BLOCK_THICKNESS - 256.0, 16384.0)))
 
+
+## Bonus 4, the bend.
+static func _zones_bend(zones: DotTimerZoneSet, bonus_floor: float) -> void:
 	# Bonus 4, the bend: the weave's shape of zone set, read off `bend_blocks`. Its blocks
 	# are turned, and a zone is a box, so each stage line and the finish are boxes inside
 	# the block's footprint (the largest square any yaw keeps inside it), not around it.
@@ -373,5 +393,3 @@ static func build_zones() -> DotTimerZoneSet:
 	zones.add(zone_box(DotTimerZone.Kind.RESPAWN, bend,
 		Vector3(-16384.0, bonus_floor - 4096.0, -16384.0),
 		Vector3(16384.0, end_centre.y - BLOCK_THICKNESS - 256.0, 16384.0)))
-
-	return zones
