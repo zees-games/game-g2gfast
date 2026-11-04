@@ -57,9 +57,11 @@ func _run() -> void:
 		for l in a.describe_lines():
 			print(l)
 		var n := 0
+		nav.begin_batch()
 		for link in a.links:
 			nav.add_ride(link["from"], link["to"], n, float(link.get("cost", 1.0)))
 			n += 1
+		nav.end_batch()
 		for _k in range(3):
 			await get_tree().process_frame
 		var finish := Vector3.ZERO
