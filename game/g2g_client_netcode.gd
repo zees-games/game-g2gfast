@@ -445,10 +445,7 @@ func _touch_button(id: StringName, down: bool) -> void:
 		return
 	match id:
 		G2GTouch.JUMP, G2GTouch.DUCK:
-			var live := _active_sampler()
-			if live is DotFpsTouchSampler:
-				var bit := DotFpsCommand.BUTTON_JUMP if id == G2GTouch.JUMP else DotFpsCommand.BUTTON_CROUCH
-				(live as DotFpsTouchSampler).hold(bit, down)
+			G2GTouch.hold_button(id, down, _covered(), _active_sampler())
 		G2GTouch.BOARD:
 			if menu != null:
 				if down:

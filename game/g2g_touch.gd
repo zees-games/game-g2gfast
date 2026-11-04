@@ -45,3 +45,14 @@ static func make_sampler(tunables: DotFpsTunables) -> DotFpsSampler:
 
 static func _ignores(position: Vector2) -> bool:
 	return ignore_fn.is_valid() and bool(ignore_fn.call(position))
+
+
+## Jump or duck on a sampler: a press is refused while [param covered], a release always lands. Returns whether it reached a sampler; a null, freed or non-touch sampler is a no-op.
+static func hold_button(id: StringName, down: bool, covered: bool, sampler: Variant) -> bool:
+	if down and covered:
+		return false
+	if sampler == null or not is_instance_valid(sampler) or not sampler is DotFpsTouchSampler:
+		return false
+	var bit := DotFpsCommand.BUTTON_JUMP if id == JUMP else DotFpsCommand.BUTTON_CROUCH
+	(sampler as DotFpsTouchSampler).hold(bit, down)
+	return true

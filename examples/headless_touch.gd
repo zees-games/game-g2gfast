@@ -3,7 +3,7 @@ extends DotGameCheckSuite
 ## The touch layout: eight buttons that fit a phone without overlapping, the sampler a touch device gets, and a finger on a button kept off the look stick.
 ## Run: `godot --headless --path . res://examples/headless_touch.tscn`
 
-const CHECKS := 13
+const CHECKS := 21
 
 
 func _ready() -> void:
@@ -59,4 +59,23 @@ func _run() -> void:
 	_check(not off.visible, "no touch: the buttons are hidden")
 	off.free()
 	DotPlatform.touch_override = -1
+
+	var jump := DotFpsCommand.BUTTON_JUMP
+	var held := DotFpsTouchSampler.new(DotFpsTunables.new())
+	_check(G2GTouch.hold_button(G2GTouch.JUMP, true, false, held) and _bits(held) & jump != 0, "uncovered: a press holds jump")
+	_check(G2GTouch.hold_button(G2GTouch.JUMP, false, true, held) and _bits(held) & jump == 0, "covered: the release still lands")
+	_check(not G2GTouch.hold_button(G2GTouch.DUCK, true, true, held) and _bits(held) & DotFpsCommand.BUTTON_CROUCH == 0, "covered: a press is refused")
+	G2GTouch.hold_button(G2GTouch.DUCK, true, false, held)
+	_check(_bits(held) & DotFpsCommand.BUTTON_CROUCH != 0, "uncovered: a press holds duck")
+	G2GTouch.hold_button(G2GTouch.DUCK, false, false, held)
+	_check(_bits(held) & DotFpsCommand.BUTTON_CROUCH == 0, "the release lets go of duck")
+	_check(not G2GTouch.hold_button(G2GTouch.JUMP, false, false, null), "no sampler: a release is a no-op")
+	_check(not G2GTouch.hold_button(G2GTouch.JUMP, false, false, DotFpsSampler.new(DotFpsTunables.new())), "a plain sampler: a release is a no-op")
+	var gone := Node.new()
+	gone.free()
+	_check(not G2GTouch.hold_button(G2GTouch.JUMP, false, false, gone), "a freed sampler: no error, no hold")
 	_report(CHECKS)
+
+
+func _bits(sampler: DotFpsTouchSampler) -> int:
+	return sampler.sample(0.0).buttons
