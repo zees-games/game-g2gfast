@@ -194,6 +194,13 @@ func command(state: DotFpsState, tunables: DotFpsTunables, delta: float) -> DotF
 		c.move = Vector2(0.0, clampf(wish_speed / tunables.max_speed, 0.0, 1.0))
 		return c
 
+	return _air_command(c, state, tunables, delta, here, line_velocity, flat)
+
+
+## The air half of [method command]: pure pursuit of the recorded line.
+func _air_command(c: DotFpsCommand, state: DotFpsState, tunables: DotFpsTunables, delta: float,
+		here: DotTimerReplay.Frame, line_velocity: Vector3, flat: Vector3) -> DotFpsCommand:
+	var at := state.position
 	# Air: pure pursuit. The velocity wanted points at the recorded spot [constant
 	# AIR_LEAD_FRAMES] ahead, at the line's own speed there. A wish only adds speed
 	# along itself up to `sv_maxairwishspeed` (30 u/s) past what the velocity already

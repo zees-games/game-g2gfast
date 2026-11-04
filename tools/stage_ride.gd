@@ -153,10 +153,7 @@ func _run() -> void:
 		await get_tree().physics_frame
 
 		var at := bot.controller.state.position
-		if at.distance_to(_before) < G2GUnits.to_metres(200.0):
-			_last_good = _before
-		if at.distance_to(_before) >= G2GUnits.to_metres(200.0):
-			_last_good = _before
+		_last_good = _before
 		_before = at
 		_top = maxf(_top, bot.speed())
 		_lowest = minf(_lowest, at.y)
@@ -171,6 +168,12 @@ func _run() -> void:
 	var save_to := OS.get_environment("RIDE_SAVE_REPLAY")
 	if save_to != "" and not finished.is_empty():
 		_save_replay(id, save_to, finished_replay[0])
+	_print_summary(bot, id, events, reached, at_tick, start)
+	get_tree().quit(0 if reached.begins_with("REACHED") or reached.begins_with("FINISHED") else 2)
+
+
+func _print_summary(bot: G2GPlayer, id: StringName, events: Array[String], reached: String,
+		at_tick: int, start: Vector3) -> void:
 	for line in events:
 		print("[ride]   %s" % line)
 	var end := bot.controller.state.position
@@ -179,7 +182,6 @@ func _run() -> void:
 		reached if reached != "" else "nowhere, time ran out at %s u" % str(G2GUnits.vector_to_units(end).round()),
 		G2GUnits.to_units(end.distance_to(start)), G2GUnits.to_units(start.y - _lowest),
 		G2GUnits.to_units(_top), _surfed, _grounded])
-	get_tree().quit(0 if reached.begins_with("REACHED") or reached.begins_with("FINISHED") else 2)
 
 
 ## Builds the game on [param id] and waits for its map. False once the failure is reported.
