@@ -333,6 +333,7 @@ func _test_the_end_of_a_deathmatch() -> void:
 	var clock := [0.0]
 	var kc := _client.killcam
 	kc.now_fn = func() -> float: return clock[0]
+	kc.buffer.clear()  # frames stamped by the real clock would outlive or refuse the test clock's
 	kc.killcam.auto_process = false
 	_client.winner_reveal.auto_process = false
 	var step := 1.0 / 60.0
