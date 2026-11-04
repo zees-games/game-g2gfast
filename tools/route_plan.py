@@ -22,6 +22,9 @@ SLOPE_PIT_MARGIN = 4.0  # the margin over a pit for a terrain cell's lowest poin
 NARROW = 16.0     # narrower than this is trim, not a floor
 
 
+_warned = [False]
+
+
 def geometry(f):
     """A hull's outward face planes (nx, ny, nz, d) and its sloped walkable triangles, or (None, []):
     its box alone misjudges a slanted beam, and its highest vertices alone miss a ramp's floor."""
@@ -29,6 +32,8 @@ def geometry(f):
         from scipy.spatial import ConvexHull
         ch = ConvexHull([f[k:k + 3] for k in range(0, len(f), 3)])
     except Exception:  # no scipy, or a flat hull qhull refuses
+        if not _warned[0]:
+            _warned[0] = True; print('warning: scipy missing or a hull refused: sloped faces are skipped, the plan differs', file=sys.stderr)
         return None, []
     slopes = [[tuple(ch.points[v]) for v in s] for s, e in zip(ch.simplices, ch.equations) if WALKABLE <= e[1] < 0.999]
     return [tuple(e) for e in ch.equations], slopes
@@ -104,13 +109,20 @@ def inert_filters(mid, root, b):
     return out
 
 
+def spawnflags(e):
+    try:
+        return int(float(e.get('spawnflags') or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
 def teleports(mid, root, d):
     """Every teleport as (xz box, y range, destination): the map's own trigger_teleports when the
     .bsp is beside (stage gates, lane exits and pits are not in the manifest, only their arrivals
     are), else the manifest's TELEPORT zones. A staged map is a graph: a gate moves the player
     from one section to the next, a pit back to a lane start."""
     out = []
-    # beside the game, or beside the maps repo it links (a worktree has no inspirations beside it)
+    # needs inspirations/g2gfast/<id>.bsp directly under ~/godot (or the maps link target), or G2G_BSP
     linked = os.path.realpath(os.path.join(root, 'maps', 'imported', '..', '..'))
     bsp = os.environ.get('G2G_BSP') or next((p for p in (os.path.join(r, 'inspirations', 'g2gfast', mid + '.bsp') for r in (
         os.path.join(root, '..'), linked)) if os.path.isfile(p)), '')
@@ -126,7 +138,7 @@ def teleports(mid, root, d):
         for e in b.entities:
             if e.get('classname') != 'trigger_teleport' or not e.get('model', '').startswith('*'):
                 continue
-            if e.get('filtername', '').strip().lower() in skip or not int(float(e.get('spawnflags', '1') or 0)) & 1:
+            if e.get('filtername', '').strip().lower() in skip or not spawnflags(e) & 1:
                 continue
             t = dest.get(e.get('target', ''))
             if t is None or 'origin' not in t:
@@ -194,14 +206,27 @@ def main():
     d, hulls = load(a.map, a.root)
     region = [float(v) for v in a.region.split(',')] if a.region else None
     tops = []
+    # Only boxed hulls can shade a top; a grid over them replaces a scan of every terrain cell too.
+    SB = 512.0; shade_grid = {}
+    for j, o in enumerate(hulls):
+        if o['box'] is None:
+            continue
+        ob = o['box']
+        for gx in range(int(math.floor(ob[0] / SB)), int(math.floor(ob[1] / SB)) + 1):
+            for gz in range(int(math.floor(ob[2] / SB)), int(math.floor(ob[3] / SB)) + 1):
+                shade_grid.setdefault((gx, gz), []).append(j)
     for i, h in enumerate(hulls):
         f = h['face']
         if f is None or f[1] - f[0] < NARROW or f[3] - f[2] < NARROW:
             continue
         if region and not overlap(f, region):
             continue
-        over = [o['box'] for j, o in enumerate(hulls)
-                if j != i and o['box'] is not None and o['bottom'] < h['top'] + HEADROOM and o['top'] > h['top'] + 1 and overlap(f, o['box'])]
+        cand = set()
+        for gx in range(int(math.floor(f[0] / SB)), int(math.floor(f[1] / SB)) + 1):
+            for gz in range(int(math.floor(f[2] / SB)), int(math.floor(f[3] / SB)) + 1):
+                cand.update(shade_grid.get((gx, gz), ()))
+        over = [hulls[j]['box'] for j in sorted(cand)
+                if j != i and hulls[j]['bottom'] < h['top'] + HEADROOM and hulls[j]['top'] > h['top'] + 1 and overlap(f, hulls[j]['box'])]
         for t in tiles(f, h['top'], h.get('low')):
             tf = t['face']; shade = 0.0
             for b in over:
