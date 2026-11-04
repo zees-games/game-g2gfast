@@ -201,6 +201,8 @@ def main():
     ap.add_argument('--reach', type=float, default=200.0)
     ap.add_argument('--safety', type=float, default=0.85, help='fraction of the run-speed jump envelope the planner trusts the follower with')
     ap.add_argument('--speed', type=float, default=RUN_SPEED, help='take-off speed (u/s) trusted for a long gap; past run speed the bot hops into it to carry speed')
+    ap.add_argument('--carry', type=float, default=0.0, help='speed (u/s) a hop gains over the one before it; each edge then lands with the speed it carried, up to --vmax (0: every jump at --speed)')
+    ap.add_argument('--vmax', type=float, default=416.0, help='the most speed a chain of hops carries')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
@@ -410,9 +412,10 @@ def main():
     def frontier_edges(n=24):
         """The shortest refused edges out of the reached set, one per unreached top (--debug)."""
         best = {}
-        for i in dist:
+        seen_ = set(s % N for s in dist)
+        for i in seen_:
             for j in near(i):
-                if j in dist:
+                if j in seen_:
                     continue
                 g = gap(tops[i]['face'], tops[j]['face']); rise = tops[j]['top'] - tops[i]['top']
                 if rise > 400 or rise < -400 or (j in best and best[j][0] <= g):
@@ -422,58 +425,71 @@ def main():
                     best[j] = (g, rise, why_, i, j)
         return sorted(best.values(), key=lambda e: (e[2] == 'rise', e[0]))[:n]
     via = {}; boost_from = {}
+    N = len(tops)
+    levels = int(math.ceil(max(0.0, a.vmax - a.speed) / a.carry)) if a.carry > 0 else 0
+    cache = {}
+    def static_ok(i, j):
+        k = i * N + j
+        if k not in cache:
+            ci, cj = centre(tops[i]), centre(tops[j])
+            g = gap(tops[i]['face'], tops[j]['face']); rise = tops[j]['top'] - tops[i]['top']
+            cache[k] = not (g < 1.0 and abs(rise) > 18.0 and rise > 0) and clear(i, j) and not falls_into_trigger(i, j)
+        return cache[k]
     dist = {i: 0.0 for i in starts}; prev = {}; q = [(0.0, i) for i in starts]
     done = None
     while q:
-        c, i = heapq.heappop(q)
-        if c > dist.get(i, 1e18):
+        c, s_ = heapq.heappop(q)
+        if c > dist.get(s_, 1e18):
             continue
+        i, lv = s_ % N, s_ // N
         if i in goals:
-            done = i; break
+            done = s_; break
         for land, door in doors.get(i, []):
             w = 64.0
             if c + w < dist.get(land, 1e18):
-                dist[land] = c + w; prev[land] = i; via[land] = door; boost_from.pop(land, None); heapq.heappush(q, (c + w, land))
+                dist[land] = c + w; prev[land] = s_; via[land] = door; boost_from.pop(land, None); heapq.heappush(q, (c + w, land))
         if i in launch:
             for j in near(i, envelope(-600.0, a.safety, a.speed, launch[i])):
                 if boosted(i, j):
                     w = math.dist(centre(tops[i]), centre(tops[j])) + 64.0
                     if c + w < dist.get(j, 1e18):
-                        dist[j] = c + w; prev[j] = i; via.pop(j, None); boost_from[j] = i; heapq.heappush(q, (c + w, j))
-        for j in near(i):
+                        dist[j] = c + w; prev[j] = s_; via.pop(j, None); boost_from[j] = s_; heapq.heappush(q, (c + w, j))
+        for j in near(i, a.reach if not levels else max(a.reach, envelope(CLIMB, a.safety, a.vmax))):
             g = gap(tops[i]['face'], tops[j]['face'])
             rise = tops[j]['top'] - tops[i]['top']
-            if g > min(a.reach, envelope(rise, a.safety, a.speed)) or rise > CLIMB:
+            v = a.speed + lv * a.carry
+            if g > min(a.reach, envelope(rise, a.safety, v)) or rise > CLIMB:
                 continue
-            if g < 1.0 and abs(rise) > 18.0 and rise > 0:
-                continue  # a wall, not a step
-            if not clear(i, j) or falls_into_trigger(i, j):
+            if not static_ok(i, j):
                 continue
             ci, cj = centre(tops[i]), centre(tops[j])
             w = math.dist(ci, cj) + 2.0 * g + (g * g) / 100.0
-            if c + w < dist.get(j, 1e18):
-                dist[j] = c + w; prev[j] = i; via.pop(j, None); boost_from.pop(j, None); heapq.heappush(q, (c + w, j))
+            # a walked step keeps no speed; every other hop lands a level up
+            nl = 0 if (not levels or (g < 16.0 and abs(rise) < 1.0)) else min(levels, lv + 1)
+            n_ = j + nl * N
+            if c + w < dist.get(n_, 1e18):
+                dist[n_] = c + w; prev[n_] = s_; via.pop(n_, None); boost_from.pop(n_, None); heapq.heappush(q, (c + w, n_))
     if a.debug and os.environ.get('ROUTE_DUMP'):
-        json.dump({'reached': [[round(centre(tops[i])[0]), round(tops[i]['top']), round(centre(tops[i])[1])] for i in dist],
+        json.dump({'reached': [[round(centre(tops[i])[0]), round(tops[i]['top']), round(centre(tops[i])[1])] for i in set(s % N for s in dist)],
                    'all': [[round(centre(t)[0]), round(t['top']), round(centre(t)[1])] for t in tops]}, open(os.environ['ROUTE_DUMP'], 'w'))
     if done is None:
         if a.debug:
-            for i in dist:
+            for i in set(s % N for s in dist):
                 if i in doors: print('door top reached', centre(tops[i]), tops[i]['top'], [dd[0] for dd in doors[i]], file=sys.stderr)
-            print('reached door-less frontier; sample', sorted(centre(tops[i]) for i in dist)[:3], file=sys.stderr)
-            print('booster tops reached', sorted((round(centre(tops[i])[0]), round(tops[i]['top']), round(centre(tops[i])[1])) for i in dist if i in launch), file=sys.stderr)
+            print('reached door-less frontier; sample', sorted(centre(tops[i]) for i in set(s % N for s in dist))[:3], file=sys.stderr)
+            print('booster tops reached', sorted((round(centre(tops[i])[0]), round(tops[i]['top']), round(centre(tops[i])[1])) for i in set(s % N for s in dist) if i in launch), file=sys.stderr)
             for g, rise, why_, i, j in frontier_edges():
                 print('blocked %s gap %.0f rise %.0f from %s %.0f to %s %.0f' % (why_, g, rise, centre(tops[i]), tops[i]['top'], centre(tops[j]), tops[j]['top']), file=sys.stderr)
-        reached = max(dist, key=lambda i: dist[i])
+        reached = max(dist, key=lambda i: dist[i]) % N
         sys.exit('no route to the finish within reach %.0f; %d tops reached, the furthest at %s' % (
-            a.reach, len(dist), str(centre(tops[reached]))))
+            a.reach, len(set(s % N for s in dist)), str(centre(tops[reached]))))
     def walk(i, j):
-        return j not in via and j not in boost_from and gap(tops[i]['face'], tops[j]['face']) < 16.0 and abs(tops[i]['top'] - tops[j]['top']) < 1.0
+        return j not in via and j not in boost_from and gap(tops[i % N]['face'], tops[j % N]['face']) < 16.0 and abs(tops[i % N]['top'] - tops[j % N]['top']) < 1.0
     def walked_through(i, j, k):
         """j is a step on a floor the bot runs straight across: a point there makes it land, and so hop, on every tile."""
         if not (walk(i, j) and walk(j, k)):
             return False
-        (ax, az), (bx, bz), (cx, cz) = centre(tops[i]), centre(tops[j]), centre(tops[k])
+        (ax, az), (bx, bz), (cx, cz) = centre(tops[i % N]), centre(tops[j % N]), centre(tops[k % N])
         u, v = (bx - ax, bz - az), (cx - bx, cz - bz)
         nu, nv = math.hypot(*u), math.hypot(*v)
         return nu > 0 and nv > 0 and (u[0] * v[0] + u[1] * v[1]) / (nu * nv) > math.cos(math.radians(20.0))
@@ -487,18 +503,20 @@ def main():
         if i in via:
             x, y, z = via[i]
             pts.append({'at': [round(x), round(y), round(z)], 'radius': 16, 'door': True})
-        t = tops[i]; f = t['face']; cx, cz = centre(t)
+        h, pv, t = h % N, prev[i] % N, tops[i % N]; f = t['face']; cx, cz = centre(t)
         pts.append({'at': [round(cx), round(t['top']), round(cz)],
                     'radius': round(min(32.0, (f[1] - f[0]) / 2, (f[3] - f[2]) / 2))})
         if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0:
             pts[-1]['hop'] = True  # terrain has no lip to jump at: run on it and the bot walks down into the water
-        if i not in via and i not in boost_from and gap(tops[prev[i]]['face'], f) > envelope(t['top'] - tops[prev[i]]['top'], 1.0):
+        if i not in via and i not in boost_from and gap(tops[pv]['face'], f) > envelope(t['top'] - tops[pv]['top'], 1.0):
             pts[-1]['hop'] = True  # past a run-speed jump: only speed carried from hop to hop crosses it
+        if levels and i not in via and i not in boost_from and gap(tops[pv]['face'], f) >= 16.0:
+            pts[-1]['hop'] = True  # a chain of hops carries its speed only while it keeps jumping
         if k + 1 < len(path) and path[k + 1] in boost_from:
             pts[-1]['launch'] = True  # a booster: passed by jumping off it
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
     doc = {'id': a.map, 'units': 'manifest units and axes: Godot axes in genre units (x, up, z), what the tools print',
-           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --region %s' % a.region if a.region else ''),
+           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else ''),
            'points': pts}
     s = json.dumps(doc, indent=1) + '\n'
     if a.out:
