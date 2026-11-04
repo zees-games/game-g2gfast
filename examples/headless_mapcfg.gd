@@ -8,6 +8,10 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
 
 const CHECKS := 17
+const SECTIONS := 2
+
+var _entered := 0
+var _completed := 0
 
 
 func _ready() -> void:
@@ -17,6 +21,7 @@ func _ready() -> void:
 
 func _run() -> void:
 	print("game-g2gfast: per-map settings from cfg/game/game-g2gfast/dot_map/map")
+	_section("map files change the cvars")
 	var console := DotConsole.new()
 	add_child(console)
 	console.cvar("sv_airaccelerate", "1000", "", DotConVar.FLAG_ARCHIVE)
@@ -63,6 +68,8 @@ func _run() -> void:
 	_check(G2GMapConfig.KEYS.has("sv_airwishspeed") and G2GMapConfig.FIELDS["sv_airwishspeed"] == "air_wish_cap", "and sv_airwishspeed")
 	_check(not G2GMapConfig.KEYS.has("sv_autohop") and not G2GMapConfig.KEYS.has("sv_autobunnyhopping"), "but never either auto-hop spelling")
 
+	_done()
+	_section("the client follows the map")
 	var game := G2GGame.new()
 	game.config = G2GConfig.new()
 	var client := DotGameClient.new()
@@ -76,4 +83,14 @@ func _run() -> void:
 
 	client.free()
 	game.free()
-	_report(CHECKS)
+	_done()
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
+
+
+func _section(title: String) -> void:
+	_entered += 1
+	print("== %s" % title)
+
+
+func _done() -> void:
+	_completed += 1

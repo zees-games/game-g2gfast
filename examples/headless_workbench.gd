@@ -5,6 +5,10 @@ extends DotGameCheckSuite
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const CHECKS := 9
+const SECTIONS := 1
+
+var _entered := 0
+var _completed := 0
 
 
 
@@ -15,6 +19,7 @@ func _ready() -> void:
 
 func _run() -> void:
 	print("g2gfast: workbench")
+	_section("the workbench over the binder's set")
 	var config := G2GConfig.new()
 	var binder := G2GConfig.make_binder(config)
 	_check(binder.load_layers().ok, "defaults load")
@@ -42,4 +47,14 @@ func _run() -> void:
 	wb.permit_fn = func(actor: Variant, _flag: String) -> bool: return actor == "mod"
 	_check(wb.api.handle("mod", {"op": "set", "kind": kind, "id": binder.profile_id, "key": "score_limit", "value": 27}).ok, "a permitted actor edits")
 	wb.free()
-	_report(CHECKS)
+	_done()
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
+
+
+func _section(title: String) -> void:
+	_entered += 1
+	print("== %s" % title)
+
+
+func _done() -> void:
+	_completed += 1
