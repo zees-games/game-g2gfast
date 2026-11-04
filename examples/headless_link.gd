@@ -18,7 +18,7 @@ const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GNetLink := preload("../game/net/g2g_net_link.gd")
 
-const PORT := 28796
+var PORT := G2GTestPorts.free_port()
 const DATA := "user://g2g_link"
 const MODULE := "res://game/g2g_module.gd"
 const MAP := &"bhop_g2g_intro"

@@ -39,7 +39,7 @@ const Relay := preload("res://addons/dot_net/testing/dot_net_udp_relay.gd")
 ## timeline going back, and frames extrapolated. The numbers are this suite's output, not
 ## the docs': docs/netcode.md "What a connected player sees" says what each fix was for.
 
-const PORT := 28794
+var PORT := G2GTestPorts.free_port(2)
 const DATA := "user://g2g_feel"
 const MAP := &"bhop_g2g_intro"
 const BOT_SESSION := 900001

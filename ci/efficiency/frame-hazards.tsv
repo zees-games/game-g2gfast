@@ -4,7 +4,6 @@ examples/jitter_probe.gd::_next::string_build	4
 examples/jitter_probe.gd::_report::alloc_array	1
 examples/jitter_probe.gd::_report::string_build	3
 game/g2g_hud.gd::_process::string_build	2
-game/g2g_module.gd::_keep_bots::alloc_array	1
 tools/audio_probe.gd::_build::string_build	3
 tools/audio_probe.gd::_sound::string_build	2
 tools/gate_shot.gd::_process::string_build	2

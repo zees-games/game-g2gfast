@@ -100,11 +100,11 @@ func _boot() -> void:
 	var config := DotServerConfig.new()
 	config.startup_config = cfg_path
 	config.autoexec_config = ""
-	config.port = 28766
+	config.port = G2GTestPorts.free_port()
 	config.max_players = 16
 	config.hibernate_when_empty = false
 	config.query_enabled = true
-	config.query_port = 27099
+	config.query_port = G2GTestPorts.free_port()
 	config.admins_path = "%s/admins.json" % SERVER_DIR
 	config.bans_path = "%s/bans.json" % SERVER_DIR
 	config.audit_log_path = "%s/audit.jsonl" % SERVER_DIR

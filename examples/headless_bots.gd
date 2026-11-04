@@ -95,7 +95,7 @@ func _boot() -> void:
 	var config := DotServerConfig.new()
 	config.startup_config = cfg_path
 	config.autoexec_config = ""
-	config.port = 28786
+	config.port = G2GTestPorts.free_port()
 	config.max_players = 8
 	config.hibernate_when_empty = false
 	config.query_enabled = false

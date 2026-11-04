@@ -505,6 +505,10 @@ func _physics_process(delta: float) -> void:
 		vote.advance(delta)
 
 
+## Reused by [method _keep_bots] so a bot being added allocates no list.
+var _bot_names_taken: Array = []
+
+
 ## Adds or removes bots until there are as many as [DotBotQuota] wants for the people
 ## playing. Newest first out, so the bot that has been riding longest keeps riding.
 func _keep_bots() -> void:
@@ -519,10 +523,10 @@ func _keep_bots() -> void:
 	var wanted := _quota.wanted(humans, slots)
 	var ids: Array = game.bots.get("ids")
 	while ids.size() < wanted:
-		var taken: Array = []
+		_bot_names_taken.clear()
 		for id: StringName in game.players:
-			taken.append((game.players[id] as G2GPlayer).display_name)
-		if game.bots.call("add_bot", DotBotNames.pick(taken, game.players.size())) == null:
+			_bot_names_taken.append((game.players[id] as G2GPlayer).display_name)
+		if game.bots.call("add_bot", DotBotNames.pick(_bot_names_taken, game.players.size())) == null:
 			break
 	while ids.size() > wanted:
 		game.bots.call("remove_bot", ids[ids.size() - 1])
