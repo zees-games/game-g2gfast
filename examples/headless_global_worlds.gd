@@ -9,6 +9,9 @@ const G2GUnits := preload("../game/g2g_units.gd")
 
 const PILOT := ["bhop_training_fun", "bhop_eazy", "bhop_aztec", "bunnyhop_pro", "bhop_amor", "bhop_eazy_v2", "bhop_grove", "surf_eclipse", "surf_year3000", "surf_greensway", "surf_beginner", "surf_kitsune"]
 const CHECKS := 108
+const SECTIONS := 12
+var _entered := 0
+var _completed := 0
 ## A drawn share below this is a map that went back to flat colours; water and foliage cards are generated on purpose (aztec and beginner are a quarter water).
 const MIN_PHOTO_SHARE := 0.7
 
@@ -27,15 +30,18 @@ func _run() -> void:
 		return
 	var catalogue := G2GMapCatalogue.discover()
 	for id: String in PILOT:
+		_section(id)
 		var def := catalogue.get_map(StringName(id))
 		_check(def != null, "%s is in the catalogue" % id)
 		if def == null:
+			_done()
 			continue
 		var legacy := _build(def, false)
 		var global := _build(def, true)
 		_check(legacy.global_world == null, "%s: the switch off draws nothing from the world document" % id)
 		_check(global.global_world != null, "%s: the switch on builds the world document" % id)
 		if global.global_world == null:
+			_done()
 			continue
 		var spawns: Array = global.global_world.spawn_points()
 		var old: Array = global.manifest.get("spawns", [])
@@ -77,8 +83,8 @@ func _run() -> void:
 		_check(share >= MIN_PHOTO_SHARE, "%s: %d%% of the drawn area is a library photo set (not a flat colour)" % [id, roundi(share * 100.0)])
 		legacy.free()
 		global.free()
-	print("")
-	_report(CHECKS)
+		_done()
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 func _build(def: DotMapDef, on: bool) -> G2GBspMap:
@@ -101,3 +107,12 @@ func _photo_share(path: String) -> float:
 			photo += area
 	return photo / all if all > 0.0 else 0.0
 
+
+func _section(title: String) -> void:
+	_entered += 1
+	print("")
+	print("== %s" % title)
+
+
+func _done() -> void:
+	_completed += 1

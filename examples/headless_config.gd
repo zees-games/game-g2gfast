@@ -10,6 +10,10 @@ const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
 const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
 const CHECKS := 28
+const SECTIONS := 4
+
+var _entered := 0
+var _completed := 0
 
 
 func _ready() -> void:
@@ -22,6 +26,7 @@ func _run() -> void:
 		_probe()
 		return
 	print("g2gfast: config binder")
+	_section("fields, cvars and rules")
 	var config := G2GConfig.new()
 	var binder := G2GConfig.make_binder(config)
 	binder.strict = true
@@ -64,8 +69,14 @@ func _run() -> void:
 	console.set_cvar("mp_friendlyfire", "0")
 	_check(not ff_rules.friendly_fire, "the cvar drives the damage rules")
 	manager.free()
+	_done()
+	_section("layers")
 	_layers()
+	_done()
+	_section("shipped templates")
 	_templates(binder)
+	_done()
+	_section("workbench")
 	var wb := DotGameWorkbench.new()
 	wb.panel_mode = 1
 	wb.config = {"enabled": false}
@@ -85,11 +96,8 @@ func _run() -> void:
 			missing.append(e["key"])
 	_check(missing.is_empty() and binder.profile_sets().size() == 4, "the workbench lists every key over 4 files: " + ",".join(missing))
 	wb.free()
-	print("%d passed, %d failed" % [_passed, _failed])
-	if _passed + _failed != CHECKS:
-		_failed += 1
-		print("FAIL: expected %d checks" % CHECKS)
-	get_tree().quit(1 if _failed > 0 else 0)
+	_done()
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 ## Child process: loads the layers strictly over the test root and prints what the live config holds.
@@ -148,3 +156,13 @@ func _templates(binder: DotGameConfigBinder) -> void:
 		if not FileAccess.file_exists("res://" + path) or FileAccess.get_file_as_string("res://" + path) != files[path]:
 			stale.append(path)
 	_check(stale.is_empty(), "the shipped files match the config (run addons/dot_game/qa/dot_game_cfg_templates.gd): " + ",".join(stale))
+
+
+func _section(title: String) -> void:
+	_entered += 1
+	print("")
+	print("== %s" % title)
+
+
+func _done() -> void:
+	_completed += 1

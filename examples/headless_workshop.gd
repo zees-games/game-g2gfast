@@ -45,17 +45,7 @@ func _run() -> void:
 	_test_online()
 	DotRegistry.unregister(DotContentIndex.SERVICE)
 
-	print("")
-	_check(_completed == _entered and _entered == SECTIONS,
-		"every section ran to its last line (%d of %d, %d expected)" % [_completed, _entered, SECTIONS])
-	print("")
-	print("%d passed, %d failed" % [_passed, _failed])
-	for line in _failures:
-		print("  FAIL  %s" % line)
-	var total_ok := _passed + _failed == CHECKS + 1
-	if not total_ok:
-		print("ERROR: %d checks ran, %d expected. A section aborted part-way." % [_passed + _failed, CHECKS + 1])
-	get_tree().quit(1 if _failed > 0 or _completed != SECTIONS or not total_ok else 0)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS)
 
 
 ## A pack with a surf map, a sandbox map the game does not accept, and a map that claims the

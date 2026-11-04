@@ -28,7 +28,8 @@ const G2GClient := preload("../game/g2g_client.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 224
+const CHECKS := 223
+const SECTIONS := 25
 
 ## Checks a section declined to run, counted so the total still adds up to [constant CHECKS].
 var _skipped := 0
@@ -74,15 +75,8 @@ func _run() -> void:
 	await _test_a_confirmed_hit_is_drawn()
 	await _test_the_weapon_in_hand_is_named()
 
-	print("")
-	_check(
-		_completed == _entered,
-		"every section ran to its last line (%d of %d)" % [_completed, _entered],
-		"a section that aborted stops adding checks and the total cannot show it"
-	)
-	print("")
 	print("%d checks skipped" % _skipped)
-	_report(CHECKS - _skipped)
+	_report_sections(_entered, _completed, SECTIONS, CHECKS - _skipped)
 
 
 func _make() -> G2GPresentation:
