@@ -33,6 +33,7 @@ extends RefCounted
 ##               because a block flown over is not a block reached. A surf route sets
 ##               it false for the whole route at the top level.
 ##   `"door"`    true: a door (a TELEPORT zone) to walk into; passed when it teleports
+##   `"launch"`  true: a booster pad; once landed on it, the bot jumps while still on it
 ##   `"note"`    why the point is there; ignored
 ## A point also counts as passed once the bot is beyond it along the leg it is on, so a
 ## point the bot flies past at speed is not chased back.
@@ -111,6 +112,7 @@ static func load_points(id: StringName, why: Array = []) -> Array[Dictionary]:
 			"hop": bool(p.get("hop", parsed.get("hop", false))),
 			"land": bool(p.get("land", parsed.get("land", true))),
 			"door": bool(p.get("door", false)),
+			"launch": bool(p.get("launch", false)),
 		})
 	return out
 
@@ -176,11 +178,20 @@ func command(state: DotFpsState, space: PhysicsDirectSpaceState3D, tunables: Dot
 		var jump := false
 		if not bool(point.get("walk", false)):
 			var dir := flat.normalized() if speed > 30.0 else to.normalized()
-			jump = (hop and speed > JUMP_FROM) or ledge_ahead(space, at, dir, speed) or wall_ahead(space, at, dir)
+			jump = (hop and speed > JUMP_FROM) or ledge_ahead(space, at, dir, speed) or wall_ahead(space, at, dir) \
+					or _on_launch(at)
 		c.set_button(DotFpsCommand.BUTTON_JUMP, jump)
 	else:
 		c = _air(state, goal, flat, cap, tunables, delta)
 	return c
+
+
+## Whether the point just passed is a booster pad the bot still stands on: its push is given on leaving, so jump.
+func _on_launch(at: Vector3) -> bool:
+	if index == 0 or index > points.size() or not bool(points[index - 1].get("launch", false)):
+		return false
+	var p: Vector3 = points[index - 1]["at"]
+	return Vector2(at.x - p.x, at.z - p.z).length() < 2.0 * float(points[index - 1]["radius"])
 
 
 ## Whether the bot is off the line to hop free right now; counts how long it has gone nowhere.
