@@ -72,7 +72,7 @@ const NAV_BUDGET_USEC := 2000
 ## (`g2g_bot_nav.gd`) instead of aimed straight at the finish. The `bot_nav` cvar. Off by itself
 ## when dot-npc-ai is not in the project (a delivered shell may not carry it).
 var use_nav: bool = true
-## Where annotations are cached, by their own key.
+## Where annotations (by their own key) and the baked meshes (by map id, in `mesh/`) are cached.
 var nav_cache_dir := "user://g2g_nav"
 
 var game: G2GGame = null
@@ -265,7 +265,7 @@ func _start_nav() -> void:
 		return
 	nav = script.new()
 	nav.begin(map, map.get_world_3d(), player.controller.tunables, course.start, course.goal_centre,
-		PackedVector3Array([course.start]), nav_cache_dir, _in_a_pit)
+		PackedVector3Array([course.start]), nav_cache_dir, _in_a_pit, String(game.maps.current.id))
 
 
 ## Whether a bot at [param at] would be put back by the course: in a pit, or under the floor.

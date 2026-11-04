@@ -15,8 +15,8 @@ extends RefCounted
 ## few items at a time; the graph, the search and the thinning are cursors over arrays. Every
 ## [method step] takes a budget in microseconds and returns when it is spent, so a server calls
 ## it once a tick with a millisecond and carries on. The annotations are cached by their own key
-## ([method DotNpcAiNavAnnotator.cache_key]), so a map the server has seen skips that phase; the
-## bake is not cached (a mesh is not worth the disk, and it is off the main thread).
+## ([method DotNpcAiNavAnnotator.cache_key]), and the baked mesh by the map id and a digest of its
+## geometry (dot-bot's [DotBotNav] cache), so a round change on a map the server has seen skips both.
 ##
 ## [b]A walk through polygons, a link through a node of its own.[/b] Each polygon of the mesh is
 ## a node of an [AStar3D] at its centre, joined to its neighbours. A link is a node midway
@@ -78,6 +78,8 @@ var phase_ms: Dictionary = {}
 var worst_step_ms := 0.0
 var worst_by_phase: Dictionary = {}
 var from_cache := false
+## Whether the walkable mesh came from the bake cache.
+var mesh_from_cache := false
 var reached_goal := false
 ## Polygons the spawn can walk or jump to, for [method describe].
 var reachable_count := 0
@@ -85,6 +87,7 @@ var link_edges := 0
 var failure := ""
 
 var _mesh: NavigationMesh = null
+var _baker: DotBotNav = null
 var _world: World3D = null
 var _body: DotFpsTunables = null
 var _start := Vector3.ZERO
@@ -117,9 +120,10 @@ var _linked: Array[Dictionary] = []
 
 ## Starts the work for the map under [param root], whose physics are in [param world]: a body as
 ## [param body] moves, from [param start] to [param goal] (metres). Spawns are the seeds that
-## decide which floors count. [param cache_dir] is where annotations are kept by key.
+## decide which floors count. [param cache_dir] is where annotations are kept by key and the baked
+## mesh beside them under [param map_id] (empty is no mesh cache).
 func begin(root: Node3D, world: World3D, body: DotFpsTunables, start: Vector3, goal: Vector3,
-		seeds: PackedVector3Array, cache_dir: String, avoid: Callable = Callable()) -> void:
+		seeds: PackedVector3Array, cache_dir: String, avoid: Callable = Callable(), map_id: String = "") -> void:
 	cancel()
 	_generation += 1
 	_world = world
@@ -132,26 +136,17 @@ func begin(root: Node3D, world: World3D, body: DotFpsTunables, start: Vector3, g
 	_started_us = Time.get_ticks_usec()
 	_phase_started_us = _started_us
 
-	_mesh = NavigationMesh.new()
-	_mesh.cell_size = CELL
-	_mesh.cell_height = CELL_HEIGHT
-	# Whole cells, rounded the safe way, as DotBotNav does (the baker would do it and warn).
-	_mesh.agent_radius = ceilf(body.radius / CELL - 0.001) * CELL
-	_mesh.agent_height = ceilf(body.stand_height / CELL_HEIGHT - 0.001) * CELL_HEIGHT
-	_mesh.agent_max_climb = floorf(body.step_height / CELL_HEIGHT + 0.001) * CELL_HEIGHT
-	_mesh.agent_max_slope = body.max_slope_angle
-	_mesh.region_min_size = 2.0
-	_mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
-	_mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_ROOT_NODE_CHILDREN
-	var source := NavigationMeshSourceGeometryData3D.new()
-	NavigationServer3D.parse_source_geometry_data(_mesh, source, root)
-	phase_ms["parse"] = _lap()
+	# DotBotNav parses, bakes and keeps the mesh by map id and geometry digest; its cells are CELL and CELL_HEIGHT.
+	_baker = DotBotNav.new()
+	_baker.cache_dir = cache_dir.path_join("mesh")
+	_baker.cache_id = map_id
+	var agent := {"radius": body.radius, "height": body.stand_height, "climb": body.step_height, "slope": body.max_slope_angle}
+	# Set first: a cache hit calls _on_baked before bake_in_background returns.
 	state = State.BAKING
-	if DotPlatform.has_threads():
-		NavigationServer3D.bake_from_source_geometry_data_async(_mesh, source, _on_baked.bind(_generation))
-	else:
-		NavigationServer3D.bake_from_source_geometry_data(_mesh, source)
-		_baked = true
+	var started := _baker.bake_in_background(root, agent, 0, [], _on_baked.bind(_generation))
+	phase_ms["parse"] = _lap()
+	if not started.ok and state != State.FAILED:
+		_fail("bake: %s" % started.error.message)
 
 
 ## Abandons the work (a map change). A bake still on its thread lands on nothing.
@@ -162,7 +157,9 @@ func cancel() -> void:
 	annotations = null
 	_job = null
 	_mesh = null
+	_baker = null
 	_baked = false
+	mesh_from_cache = false
 	_graph = AStar3D.new()
 	_adj = []
 	_grid = {}
@@ -182,9 +179,15 @@ func is_working() -> bool:
 	return state != State.IDLE and state != State.READY and state != State.FAILED
 
 
-func _on_baked(generation: int) -> void:
-	if generation == _generation:
-		_baked = true
+func _on_baked(res: DotResult, generation: int) -> void:
+	if generation != _generation:
+		return
+	if not res.ok:
+		_fail("bake: %s" % res.error.message)
+		return
+	_mesh = _baker.mesh
+	mesh_from_cache = _baker.last_bake_cached
+	_baked = true
 
 
 ## Works until [param budget_usec] is spent or there is nothing left. True while there is more.
