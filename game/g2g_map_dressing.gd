@@ -17,6 +17,7 @@ extends RefCounted
 ##   "sky":  {"tint": [r,g,b], "overcast": 0.7, "grey": [r,g,b]},   # instead of top/horizon/ground: corrects the PACKED sky
 ##   "fog":  {"colour": [r,g,b], "density": 0.8, "start": 20, "end": 90, "sky_affect": 0.0},   # metres; any key optional
 ##   "bloom": true,
+##   "light": {"ambient": 0.03, "boost": 1.0},   # the flat ambient and lightmap gain: a dark map drops them, the defaults (0.10, 1.35) lift a night room to dusk
 ##   "materials": [{"match": "neons/*", "glow": 1.2, "tint": [r,g,b], "fog": 0}],   # first match wins; "fog": 0 draws the surface unfogged
 ##   "props": [{"model": "nature/plant_bushLarge", "at": [x,y,z], "yaw": 0, "scale": 1},
 ##             {"model": "holiday/lantern", "at": [x,y,z], "light": {"colour": [r,g,b], "energy": 2, "range": 12, "height": 1}},
@@ -54,6 +55,7 @@ static func apply(map: Node3D, map_id: String) -> int:
 		return 0
 	_sky(map, data.get("sky", {}), bool(data.get("bloom", false)))
 	_fog(map, data.get("fog", {}))
+	_light(map, data.get("light", {}))
 	_materials(map, data.get("materials", []))
 	var placed := _props(map, data.get("props", []))
 	DotLog.debug(CHANNEL, "map dressed", {"map": map_id, "props": placed})
@@ -126,6 +128,25 @@ static func _fog(map: Node3D, fog: Variant) -> void:
 		if d.has("sky_affect"):
 			env.fog_sky_affect = clampf(float(d["sky_affect"]), 0.0, 1.0)
 		return
+
+
+## Replaces the shader's flat `ambient` and the lightmap `light_boost` on every surface.
+## The shader is unshaded, so that flat add is the floor of the whole map's brightness.
+static func _light(map: Node3D, light: Variant) -> void:
+	if not (light is Dictionary) or (light as Dictionary).is_empty():
+		return
+	for node in map.get_children():
+		var mi := node as MeshInstance3D
+		if mi == null or mi.mesh == null:
+			continue
+		for at in range(mi.mesh.get_surface_count()):
+			var mat := mi.get_surface_override_material(at) as ShaderMaterial
+			if mat == null:
+				continue
+			if light.has("ambient"):
+				mat.set_shader_parameter("ambient", float(light["ambient"]))
+			if light.has("boost"):
+				mat.set_shader_parameter("light_boost", float(light["boost"]))
 
 
 ## A surface's override material is its own [ShaderMaterial] (one per surface), so
