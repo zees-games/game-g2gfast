@@ -313,25 +313,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if player == null:
 		return
 
-	# The zone editor takes its own keys and the left button while it is open; mouse look
-	# and movement carry on, because aiming IS how a corner is placed.
-	if zone_editor != null and zone_editor.is_open():
-		if event is InputEventKey and zone_editor.handle_key(event as InputEventKey):
-			get_viewport().set_input_as_handled()
-			return
-		if event is InputEventMouseButton and zone_editor.handle_click(event as InputEventMouseButton):
-			get_viewport().set_input_as_handled()
-			return
-
-	# Spectating: the two buttons cycle whom. Pressed only — a release is not a second
-	# click — and only once the pointer is the view's, so the click that captures it in a
-	# browser is not also a change of target.
-	if is_spectating() and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
-		var button := (event as InputEventMouseButton).button_index
-		if button == MOUSE_BUTTON_LEFT or button == MOUSE_BUTTON_RIGHT:
-			cycle_spectate(button == MOUSE_BUTTON_RIGHT)
-			get_viewport().set_input_as_handled()
-			return
+	if _editor_or_spectate_input(event):
+		return
 
 	if event is InputEventMouseMotion:
 		if not mouse_drives_view():
@@ -365,7 +348,35 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():
 		return
 
-	# Actions rather than keycodes, so each is the player's own key (a mouse button too).
+	_press_action(event)
+
+
+## True when the zone editor or spectating took the event.
+func _editor_or_spectate_input(event: InputEvent) -> bool:
+	# The zone editor takes its own keys and the left button while it is open; mouse look
+	# and movement carry on, because aiming IS how a corner is placed.
+	if zone_editor != null and zone_editor.is_open():
+		if event is InputEventKey and zone_editor.handle_key(event as InputEventKey):
+			get_viewport().set_input_as_handled()
+			return true
+		if event is InputEventMouseButton and zone_editor.handle_click(event as InputEventMouseButton):
+			get_viewport().set_input_as_handled()
+			return true
+
+	# Spectating: the two buttons cycle whom. Pressed only — a release is not a second
+	# click — and only once the pointer is the view's, so the click that captures it in a
+	# browser is not also a change of target.
+	if is_spectating() and event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		var button := (event as InputEventMouseButton).button_index
+		if button == MOUSE_BUTTON_LEFT or button == MOUSE_BUTTON_RIGHT:
+			cycle_spectate(button == MOUSE_BUTTON_RIGHT)
+			get_viewport().set_input_as_handled()
+			return true
+	return false
+
+
+## Actions rather than keycodes, so each is the player's own key (a mouse button too).
+func _press_action(event: InputEvent) -> void:
 	if event.is_action_pressed(&"g2g_servers"):
 		show_servers()
 	elif event.is_action_pressed(&"g2g_roam"):

@@ -72,7 +72,12 @@ func _initialize() -> void:
 	_client.force_offline = true
 	root.add_child(_client)
 
-	_steps = [
+	_steps.append_array(_world_steps())
+	_steps.append_array(_menu_steps())
+
+
+func _world_steps() -> Array[Callable]:
+	return [
 		# Settings stay in memory: the frames below flip the theme and drag the HUD.
 		func() -> void:
 			_client.presentation.settings.local_store = DotSettingsStoreMemory.new()
@@ -112,6 +117,11 @@ func _initialize() -> void:
 		func() -> void:
 			_client.menu.picker.turn(1),
 		func() -> void: _capture("menus_maplist_page2"),
+	]
+
+
+func _menu_steps() -> Array[Callable]:
+	return [
 		func() -> void:
 			_client.menu.picker.close()
 			_client.open_menu(&"general"),
@@ -162,19 +172,7 @@ func _initialize() -> void:
 		func() -> void:
 			_client.menu.help.close()
 			_client.menu.close()
-			# What a runner holding Tab on a busy server sees. Offline the board is this
-			# client's own world, so the rows are a sample in the server's shape.
-			_client.menu.scoreboard.source = func() -> Dictionary:
-				return {"server": {"name": "TMC Surf & Bhop #1", "game": "g2gfast", "map": "surf_mesa", "players": 6, "max": 24},
-					"header": {"": "Time left 23:41"}, "you": 3,
-					"players": [
-						{"id": 1, "name": "Ada", "style": "Normal", "best": 72.418, "rank": 1, "of": 41, "seconds": 3912, "ping": 24},
-						{"id": 2, "name": "Bea", "style": "Sideways", "best": 95.002, "rank": 3, "of": 12, "seconds": 1260, "ping": 61},
-						{"id": 3, "name": "Cy", "style": "Normal", "best": 80.115, "rank": 6, "of": 41, "seconds": 432, "ping": 38},
-						{"id": 4, "name": "Dot", "style": "W only", "best": -1.0, "rank": 0, "seconds": 75, "ping": 142},
-						{"id": 5, "name": "Eli", "style": "Normal", "best": 88.731, "rank": 14, "of": 41, "seconds": 2207, "ping": 215},
-						{"id": 6, "name": "Fin", "style": "Half-sideways", "best": -1.0, "rank": 0, "seconds": 18, "ping": -1},
-					]}
+			_sample_scoreboard()
 			_client.menu.scoreboard.open(),
 		func() -> void: _capture("menus_scoreboard"),
 		func() -> void:
@@ -190,6 +188,23 @@ func _initialize() -> void:
 			_client.open_menu(&"gameplay"),
 		func() -> void: _capture("menus_small"),
 	]
+
+
+## What a runner holding Tab on a busy server sees. Offline the board is this client's own
+## world, so the rows are a sample in the server's shape.
+func _sample_scoreboard() -> void:
+	_client.menu.scoreboard.source = func() -> Dictionary:
+		return {"server": {"name": "TMC Surf & Bhop #1", "game": "g2gfast", "map": "surf_mesa", "players": 6, "max": 24},
+			"header": {"": "Time left 23:41"}, "you": 3,
+			"players": [
+				{"id": 1, "name": "Ada", "style": "Normal", "best": 72.418, "rank": 1, "of": 41, "seconds": 3912, "ping": 24},
+				{"id": 2, "name": "Bea", "style": "Sideways", "best": 95.002, "rank": 3, "of": 12, "seconds": 1260, "ping": 61},
+				{"id": 3, "name": "Cy", "style": "Normal", "best": 80.115, "rank": 6, "of": 41, "seconds": 432, "ping": 38},
+				{"id": 4, "name": "Dot", "style": "W only", "best": -1.0, "rank": 0, "seconds": 75, "ping": 142},
+				{"id": 5, "name": "Eli", "style": "Normal", "best": 88.731, "rank": 14, "of": 41, "seconds": 2207, "ping": 215},
+				{"id": 6, "name": "Fin", "style": "Half-sideways", "best": -1.0, "rank": 0, "seconds": 18, "ping": -1},
+			]}
+
 
 
 ## Frame sequence after each still (DOT_SHOT_FRAMES); see DotShotSeq.

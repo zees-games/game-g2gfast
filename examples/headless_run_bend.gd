@@ -419,6 +419,65 @@ static func _rect_exit(rect: Rect2, at: Vector2, direction: Vector2) -> float:
 	return best
 
 
+## The route's length along its centre line: pad edge, block to block, into the pad.
+func _hairpin_route_length(blocks: Array, pad: Vector3) -> float:
+	var route_length := 0.0
+	var last := Vector2(BhopIntro.HAIRPIN_X, BhopIntro.START_Z)
+	for block: Dictionary in blocks:
+		var middle := Vector2((block["centre"] as Vector3).x, (block["centre"] as Vector3).z)
+		route_length += last.distance_to(middle)
+		last = middle
+	return route_length + last.distance_to(Vector2(pad.x, pad.z))
+
+
+## The command that steers the bot from `at` on `piece` of the hairpin.
+func _hairpin_command(blocks: Array, pad: Vector3, piece: int, at: Vector2) -> DotFpsCommand:
+	var exit := Vector2(BhopIntro.HAIRPIN_X, BhopIntro.START_Z)
+	var heading := Vector2(0.0, -1.0)
+	if piece >= 0:
+		exit = blocks[piece]["exit"]
+		heading = blocks[piece]["heading"]
+
+	# Aim through the middle of the edge the route leaves by, and past it, so the bot
+	# arrives at the lip square to the gap rather than sliding along it. Once past
+	# the lip it is in the air over the gap, and aims at the far edge of the next
+	# piece instead: a point it has already reached is a point it hovers over.
+	var to_lip := (exit - at).dot(heading)
+	var aim := exit + heading * 96.0 - at
+	if to_lip < 0.0:
+		aim = ((blocks[piece + 1]["exit"] as Vector2) if piece + 1 < blocks.size()
+			else Vector2(pad.x, pad.z)) - at
+	var c := DotFpsCommand.new()
+	c.move = Vector2(0.0, 1.0)
+	c.yaw = rad_to_deg(atan2(-aim.x, -aim.y))
+	c.set_button(DotFpsCommand.BUTTON_JUMP, to_lip >= 0.0 and to_lip <= 20.0)
+	return c
+
+
+## What the hairpin run must have done.
+func _check_hairpin_run(started: bool, furthest: int, block_count: int, highest: float,
+		splits: Array[int], resets: int, finished: Array[DotTimerRun]) -> void:
+	_check(started, "leaving its pad starts a run on the hairpin's own track")
+	_check(furthest == block_count - 1, "the bot reaches the last block, both corners behind it",
+		"block %d of %d" % [furthest + 1, block_count])
+	_check(highest >= 112.0, "and climbs to the top corner", "highest %.0f u" % highest)
+	_check(splits == [1, 2], "crossing both of its stage lines, in order", str(splits))
+	_check(resets == 0, "without ever being put back", "%d resets" % resets)
+	_check(
+		finished.size() == 1 and finished[0].track == DotTimerTrack.of_bonus(3),
+		"and the finish line ends the run, on the bonus's own track",
+		"%d finished, ended at %s u" % [finished.size(), str(G2GUnits.vector_to_units((game.players[&"bot"] as G2GPlayer).global_position).round())]
+	)
+
+
+func _print_hairpin(covered: float, route_length: float, top: float, highest: float, furthest: int,
+		block_count: int, resets: int, finished: Array[DotTimerRun]) -> void:
+	print("  ..    hairpin: covered %.0f u of a %.0f u route, top %.0f u/s, highest %.0f u, block %d of %d, %d resets, %s" % [
+		covered, route_length, top, highest, furthest + 1, block_count, resets,
+		"finished in %.2f s" % finished[0].time() if not finished.is_empty() else "not finished"
+	])
+
+
 ## `the hairpin`, `bhop_g2g_intro` bonus 3, run end to end by a bot that cannot strafe:
 ## out, a right turn onto a climb, a right turn at the top, and back down a stair of
 ## drops, through both corner splits into the finish without once being put back.
@@ -450,15 +509,7 @@ func _test_hairpin_bonus() -> void:
 
 	var blocks: Array = BhopIntro.hairpin_blocks()
 	var pad := BhopIntro.hairpin_pad()
-
-	# The route's length along its centre line: pad edge, block to block, into the pad.
-	var route_length := 0.0
-	var last := Vector2(BhopIntro.HAIRPIN_X, BhopIntro.START_Z)
-	for block: Dictionary in blocks:
-		var middle := Vector2((block["centre"] as Vector3).x, (block["centre"] as Vector3).z)
-		route_length += last.distance_to(middle)
-		last = middle
-	route_length += last.distance_to(Vector2(pad.x, pad.z))
+	var route_length := _hairpin_route_length(blocks, pad)
 
 	var splits: Array[int] = []
 	var finished: Array[DotTimerRun] = []
@@ -475,7 +526,6 @@ func _test_hairpin_bonus() -> void:
 			reset[0] = true
 
 	var on_finished := func(run: DotTimerRun) -> void: finished.append(run)
-
 	game.timers.player_staged.connect(on_split)
 	game.timers.effect_requested.connect(on_effect)
 	bot.timer.run_finished.connect(on_finished)
@@ -494,25 +544,7 @@ func _test_hairpin_bonus() -> void:
 		var at := Vector2(here.x, here.z)
 		piece = _hairpin_piece(blocks, piece, at)
 
-		var exit := Vector2(BhopIntro.HAIRPIN_X, BhopIntro.START_Z)
-		var heading := Vector2(0.0, -1.0)
-		if piece >= 0:
-			exit = blocks[piece]["exit"]
-			heading = blocks[piece]["heading"]
-
-		# Aim through the middle of the edge the route leaves by, and past it, so the bot
-		# arrives at the lip square to the gap rather than sliding along it. Once past
-		# the lip it is in the air over the gap, and aims at the far edge of the next
-		# piece instead: a point it has already reached is a point it hovers over.
-		var to_lip := (exit - at).dot(heading)
-		var aim := exit + heading * 96.0 - at
-		if to_lip < 0.0:
-			aim = ((blocks[piece + 1]["exit"] as Vector2) if piece + 1 < blocks.size()
-				else Vector2(pad.x, pad.z)) - at
-		var c := DotFpsCommand.new()
-		c.move = Vector2(0.0, 1.0)
-		c.yaw = rad_to_deg(atan2(-aim.x, -aim.y))
-		c.set_button(DotFpsCommand.BUTTON_JUMP, to_lip >= 0.0 and to_lip <= 20.0)
+		var c := _hairpin_command(blocks, pad, piece, at)
 		bot.controller.apply_command(c)
 		await get_tree().physics_frame
 
@@ -531,26 +563,13 @@ func _test_hairpin_bonus() -> void:
 		if not finished.is_empty():
 			break
 
-	print("  ..    hairpin: covered %.0f u of a %.0f u route, top %.0f u/s, highest %.0f u, block %d of %d, %d resets, %s" % [
-		covered, route_length, top, highest, furthest + 1, blocks.size(), resets,
-		"finished in %.2f s" % finished[0].time() if not finished.is_empty() else "not finished"
-	])
+	_print_hairpin(covered, route_length, top, highest, furthest, blocks.size(), resets, finished)
 
 	game.timers.player_staged.disconnect(on_split)
 	game.timers.effect_requested.disconnect(on_effect)
 	bot.timer.run_finished.disconnect(on_finished)
 
-	_check(started, "leaving its pad starts a run on the hairpin's own track")
-	_check(furthest == blocks.size() - 1, "the bot reaches the last block, both corners behind it",
-		"block %d of %d" % [furthest + 1, blocks.size()])
-	_check(highest >= 112.0, "and climbs to the top corner", "highest %.0f u" % highest)
-	_check(splits == [1, 2], "crossing both of its stage lines, in order", str(splits))
-	_check(resets == 0, "without ever being put back", "%d resets" % resets)
-	_check(
-		finished.size() == 1 and finished[0].track == hairpin,
-		"and the finish line ends the run, on the bonus's own track",
-		"%d finished, ended at %s u" % [finished.size(), str(G2GUnits.vector_to_units(bot.global_position).round())]
-	)
+	_check_hairpin_run(started, furthest, blocks.size(), highest, splits, resets, finished)
 
 	game.timers.set_player_track(&"bot", DotTimerTrack.MAIN)
 	game.spawn_player(&"bot")

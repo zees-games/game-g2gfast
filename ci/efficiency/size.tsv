@@ -30,7 +30,7 @@ examples/headless_run_bank.gd::_test_surf_run	110
 examples/headless_run_base.gd::_test_effects_and_the_run	102
 examples/headless_run_base.gd::_test_spectating	96
 examples/headless_run_bend.gd::_test_bend_bonus	135
-examples/headless_run_bend.gd::_test_hairpin_bonus	139
+examples/headless_run_bend.gd::_test_hairpin_bonus	99
 examples/headless_run_bend.gd::_test_stages_descent	103
 examples/headless_run_bend.gd::_test_stutter_bonus	129
 examples/headless_run_bend.gd::_test_weave_bonus	136
@@ -40,7 +40,7 @@ examples/headless_run_reach.gd::_test_ridge_bonus	124
 examples/headless_run_reach.gd::reach_sweep	102
 game/g2g_client.gd::_ready	109
 game/g2g_client_netcode.gd::_build_netcode	91
-game/g2g_client_netcode.gd::_unhandled_input	137
+game/g2g_client_netcode.gd::_unhandled_input	82
 game/g2g_map_survey_grid.gd::_rasterise	116
 game/g2g_mod_tools.gd::handlers	100
 game/g2g_module_cvars.gd::_bind_rule_cvars	81
@@ -54,7 +54,6 @@ tools/bhop_probe.gd::_ready	106
 tools/bsp_preview.gd::_ready	81
 tools/collision_probe.gd::_ready	89
 tools/load_probe.gd::_measure	131
-tools/screenshot_menus.gd::_initialize	138
 tools/stage_ride.gd::_run	105
 tools/surf_plan.gd::_run	89
 tools/surf_probe.gd::_ready	119

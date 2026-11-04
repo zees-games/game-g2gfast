@@ -8,8 +8,8 @@ examples/dedicated_base.gd::long_block	4
 examples/dedicated_checks.gd::banner	2
 examples/dedicated_checks.gd::history	1
 examples/dedicated_checks.gd::long_block	2
-examples/dedicated_votes.gd::history	5
-examples/dedicated_votes.gd::long_block	11
+examples/dedicated_votes.gd::history	3
+examples/dedicated_votes.gd::long_block	6
 examples/headless_bots.gd::long_block	2
 examples/headless_client.gd::long_block	3
 examples/headless_feel.gd::long_block	5
@@ -22,7 +22,7 @@ examples/headless_maps.gd::long_block	10
 examples/headless_mechanics.gd::history	3
 examples/headless_mechanics.gd::long_block	6
 examples/headless_net.gd::banner	1
-examples/headless_net.gd::long_block	16
+examples/headless_net.gd::long_block	14
 examples/headless_net_maps.gd::banner	2
 examples/headless_net_maps.gd::history	2
 examples/headless_net_maps.gd::long_block	8
@@ -33,11 +33,10 @@ examples/headless_presentation_base.gd::banner	1
 examples/headless_presentation_chat.gd::banner	5
 examples/headless_presentation_chat.gd::long_block	7
 examples/headless_presentation_menu.gd::long_block	1
-examples/headless_run.gd::banner	2
 examples/headless_run.gd::long_block	4
 examples/headless_run_bank.gd::banner	2
-examples/headless_run_bank.gd::history	2
-examples/headless_run_bank.gd::long_block	14
+examples/headless_run_bank.gd::history	1
+examples/headless_run_bank.gd::long_block	11
 examples/headless_run_base.gd::banner	6
 examples/headless_run_base.gd::history	1
 examples/headless_run_base.gd::long_block	7
@@ -63,8 +62,7 @@ game/g2g_bot_nav.gd::long_block	2
 game/g2g_bots.gd::long_block	2
 game/g2g_browser.gd::history	1
 game/g2g_browser.gd::long_block	7
-game/g2g_bsp_map.gd::history	1
-game/g2g_bsp_map.gd::long_block	18
+game/g2g_bsp_map.gd::long_block	16
 game/g2g_camera.gd::long_block	2
 game/g2g_client.gd::long_block	1
 game/g2g_client_boot.gd::history	1
