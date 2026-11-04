@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Plan a route for imported maps, ride each with tools/stage_ride, keep only the ones that finish.
 #
-#   tools/route_verify.sh bhop_ocean [more ids]      # RIDE_SECONDS=240 REACH=280 to change
+#   tools/route_verify.sh bhop_ocean [more ids]      # RIDE_SECONDS=240 REACH=280 SAFETY=0.85 to change
 #
 # One line per map to maps/routes/verify.log: `<id> <status> <detail>`; status is KEPT, RIDE_FAILED,
 # NOROUTE (planner found none) or ERROR. A route that does not finish is deleted, never left on disk.
@@ -11,7 +11,7 @@ GODOT="${GODOT:-godot}"
 for id in "$@"; do
     out="maps/routes/$id.json"
     [ -f "$out" ] && { echo "$id HAVE already has a route" | tee -a maps/routes/verify.log; continue; }
-    plan="$(python3 tools/route_plan.py "$id" --reach "${REACH:-280}" --out "$out.try" 2>&1 | tail -1)"
+    plan="$(python3 tools/route_plan.py "$id" --reach "${REACH:-280}" --safety "${SAFETY:-0.85}" --out "$out.try" 2>&1 | tail -1)"
     if [ ! -f "$out.try" ]; then
         echo "$id NOROUTE ${plan//$'\n'/ }" | tee -a maps/routes/verify.log; continue
     fi
