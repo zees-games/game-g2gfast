@@ -317,14 +317,7 @@ static func _count_from_zero(rider: Dictionary) -> void:
 
 ## The cache's first stage for map [param id], setting [member stage]; empty with no cache.
 func _stage_data(id: StringName) -> Dictionary:
-	var path := G2GSurfCourse.cache_path(id)
-	if not FileAccess.file_exists(path):
-		return {}
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(parsed) != TYPE_DICTIONARY or typeof(parsed.get("stages")) != TYPE_DICTIONARY:
-		DotLog.warn(CHANNEL, "a surf cache that does not read", {"path": path})
-		return {}
-	var stages: Dictionary = parsed["stages"]
+	var stages: Dictionary = G2GSurfCourse.read_cache(id).get("stages", {})
 	var numbers: Array = stages.keys().map(func(k: Variant) -> int: return int(str(k)))
 	numbers.sort()
 	if numbers.is_empty():

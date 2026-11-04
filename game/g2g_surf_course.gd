@@ -103,13 +103,7 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 ## the same course, reads them back from the same place.
 static func guide_from_cache(id: StringName, number: int, start: Vector3) -> PackedVector3Array:
 	var out := PackedVector3Array()
-	var path := ProjectSettings.globalize_path(cache_path(id))
-	if not FileAccess.file_exists(path):
-		return out
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return out
-	var data: Dictionary = (parsed as Dictionary).get("stages", {}).get(str(number), {})
+	var data: Dictionary = read_stage(id, number)
 	var points: Array = data.get("guide", [])
 	if points.size() < 1:
 		return out
@@ -224,6 +218,67 @@ func simulator_for(controller: DotFpsController, mechanics: G2GMapMechanics) -> 
 	return sim
 
 
-## The path a course's cache is saved at.
+## The legacy single-file cache of a map (every stage in one file); still read, no longer written.
 static func cache_path(id: StringName) -> String:
 	return "res://maps/routes/%s.surf.json" % id
+
+
+## The directory holding one `<stage>.json` per stage.
+static func cache_dir(id: StringName) -> String:
+	return "res://maps/routes/%s.surf" % id
+
+
+## The file one stage is saved at.
+static func stage_path(id: StringName, number: int) -> String:
+	return "%s/%d.json" % [cache_dir(id), number]
+
+
+## True when the map has a cache in either layout.
+static func has_cache(id: StringName) -> bool:
+	return not read_cache(id).get("stages", {}).is_empty()
+
+
+## A map's whole cache as `{"id", "stages": {"<n>": stage}}`, from either layout. A stage file
+## wins over the legacy file's entry for the same stage.
+static func read_cache(id: StringName) -> Dictionary:
+	return read_cache_at(cache_path(id), cache_dir(id))
+
+
+## [method read_cache] over explicit paths, so a check can read a layout it wrote elsewhere.
+static func read_cache_at(legacy: String, dir: String) -> Dictionary:
+	var stages := {}
+	var legacy_abs := ProjectSettings.globalize_path(legacy)
+	if FileAccess.file_exists(legacy_abs):
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(legacy_abs))
+		if typeof(parsed) == TYPE_DICTIONARY and typeof(parsed.get("stages")) == TYPE_DICTIONARY:
+			stages = (parsed["stages"] as Dictionary).duplicate()
+	var dir_abs := ProjectSettings.globalize_path(dir)
+	for file in DirAccess.get_files_at(dir_abs):
+		if not file.ends_with(".json") or not file.get_basename().is_valid_int():
+			continue
+		var one: Variant = JSON.parse_string(FileAccess.get_file_as_string(dir_abs.path_join(file)))
+		if typeof(one) == TYPE_DICTIONARY:
+			stages[file.get_basename()] = one
+	return {"id": dir.get_file().get_basename().get_basename(), "stages": stages}
+
+
+## One stage of a map's cache, empty when it has none.
+static func read_stage(id: StringName, number: int) -> Dictionary:
+	return read_cache(id).get("stages", {}).get(str(number), {})
+
+
+## Writes every stage of the legacy file at [param legacy] as its own file in [param dir];
+## returns the number of stages written.
+static func split_cache(legacy: String, dir: String) -> int:
+	var stages: Dictionary = read_cache_at(legacy, "").get("stages", {})
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir))
+	for key: String in stages:
+		write_stage_file("%s/%s.json" % [dir, key], stages[key])
+	return stages.size()
+
+
+## Writes one stage's dictionary to [param path].
+static func write_stage_file(path: String, stage: Dictionary) -> void:
+	var f := FileAccess.open(ProjectSettings.globalize_path(path), FileAccess.WRITE)
+	f.store_string(JSON.stringify(stage, "", false))
+	f.close()

@@ -1505,18 +1505,18 @@ const SURF_PERTURBED := 4
 const SURF_PERTURBED_ARRIVING := 3
 
 
-## A surf bot rides the first stage in the map's surf cache (`maps/routes/<id>.surf.json`, from `tools/surf_plan.gd`) from the stage's own arrival and [constant SURF_PERTURBED] perturbed starts
+## A surf bot rides the first stage in the map's surf cache (`maps/routes/<id>.surf/<stage>.json`, from `tools/surf_plan.gd`) from the stage's own arrival and [constant SURF_PERTURBED] perturbed starts
 ## (`fpt-arena-surf-bots-1`). First the simulator is checked to be the motor: a simulated ride leaves the live player untouched, repeats exactly, and ends where the live player does.
 ## A map with no cache passes both; a failure after a movement or collision change is a stale cache: re-run `tools/surf_plan.gd`.
 func _test_surfs_from_its_cache() -> void:
 	_section("surf bot")
-	var path := G2GSurfCourse.cache_path(_map_id)
-	if not FileAccess.file_exists(path):
+	var path := G2GSurfCourse.cache_dir(_map_id)
+	if not G2GSurfCourse.has_cache(_map_id):
 		_check(true, "the surf simulator is the motor", "no surf cache")
 		_check(true, "a surf bot rides a stage from its cache into the next", "no surf cache")
 		_done()
 		return
-	var stages: Dictionary = SurfPlan._read(ProjectSettings.globalize_path(path)).get("stages", {})
+	var stages: Dictionary = G2GSurfCourse.read_cache(_map_id).get("stages", {})
 	var numbers: Array = stages.keys().map(func(k: String) -> int: return int(k))
 	numbers.sort()
 	if numbers.is_empty():

@@ -3,6 +3,7 @@ extends DotGameCheckSuite
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
+const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 
 ## The server's bots on a live server: a real `DotServer` with `G2GModule` at 128 ticks, the
 ## bots asked for through `bot_quota`, and what each map gives them to ride (`g2g_bots.gd`).
@@ -22,8 +23,8 @@ const G2GPlayer := preload("../game/g2g_player.gd")
 ## wedges on the first ramp's ridge and never arrives) and by dropping `bots.drive` from
 ## `G2GGame._simulate_tick` (every bot stands still and nothing arrives).
 
-const SECTIONS := 5
-const CHECKS := 21
+const SECTIONS := 6
+const CHECKS := 25
 
 ## Checks the navigation section did not make because the maps were absent; the count above
 ## holds for a checkout with g2gfast-maps linked.
@@ -71,6 +72,7 @@ func _run() -> void:
 
 	await _boot()
 	if game != null:
+		_test_surf_cache_layouts()
 		await _test_a_bot_without_a_cache()
 		await _test_a_bot_rides_the_surf_stage()
 		await _test_nav_routes_get_further()
@@ -161,6 +163,44 @@ func _test_a_bot_without_a_cache() -> void:
 		print("        %s" % line)
 	_check(bot.controller.state.position.distance_to(from) > 1.0, "and it moves",
 		"%.2f m in a second" % bot.controller.state.position.distance_to(from))
+	_done()
+
+
+## The split per-stage layout reads back as exactly the data the single-file layout holds,
+## and a stage file wins over the legacy file's entry.
+func _test_surf_cache_layouts() -> void:
+	_section("the surf cache reads the same in either layout")
+	var legacy := G2GSurfCourse.cache_path(SURF_MAP)
+	if not FileAccess.file_exists(ProjectSettings.globalize_path(legacy)) and not G2GSurfCourse.has_cache(SURF_MAP):
+		for what in ["the cache splits into one file per stage", "the split cache reads identically to the single file",
+				"a stage file wins over the single file's entry", "the shipped cache holds stage 1"]:
+			_check(true, what, "no surf cache for %s" % SURF_MAP)
+		_done()
+		return
+	var shipped: Dictionary = G2GSurfCourse.read_cache(SURF_MAP)
+	var tmp := "user://g2g_surf_layouts"
+	DotPaths.remove_tree(tmp)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(tmp))
+	# The single-file layout, written from what is shipped, then split.
+	var single := tmp + "/x.surf.json"
+	var f := FileAccess.open(ProjectSettings.globalize_path(single), FileAccess.WRITE)
+	f.store_string(JSON.stringify({"id": "x", "stages": shipped["stages"]}, "", false))
+	f.close()
+	var count := G2GSurfCourse.split_cache(single, tmp + "/x.surf")
+	_check(count == shipped["stages"].size() and count > 0, "the cache splits into one file per stage", "%d of %d" % [count, shipped["stages"].size()])
+	var from_single := G2GSurfCourse.read_cache_at(single, tmp + "/none.surf")
+	var from_split := G2GSurfCourse.read_cache_at(tmp + "/none.json", tmp + "/x.surf")
+	_check(from_single["stages"] == shipped["stages"] and from_split["stages"] == shipped["stages"],
+		"the split cache reads identically to the single file")
+	var first := String(shipped["stages"].keys()[0])
+	var changed: Dictionary = (shipped["stages"][first] as Dictionary).duplicate()
+	changed["reference_yaw"] = 123.0
+	G2GSurfCourse.write_stage_file(tmp + "/x.surf/%s.json" % first, changed)
+	var both := G2GSurfCourse.read_cache_at(single, tmp + "/x.surf")
+	_check(both["stages"][first]["reference_yaw"] == 123.0 and both["stages"].size() == shipped["stages"].size(),
+		"a stage file wins over the single file's entry")
+	_check(shipped["stages"].has("1") and not (shipped["stages"]["1"].get("entries", []) as Array).is_empty(), "the shipped cache holds stage 1")
+	DotPaths.remove_tree(tmp)
 	_done()
 
 

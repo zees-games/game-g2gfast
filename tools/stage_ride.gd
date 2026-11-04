@@ -361,13 +361,7 @@ func _ramp_under(bot: G2GPlayer, flat: Vector3, limit: float) -> Vector3:
 
 ## The pilot over this stage's cached line, or null when the map has no cache for it.
 func _pilot_for(id: StringName, number: int, bot: G2GPlayer) -> DotBotSurfPilot:
-	var path := G2GSurfCourse.cache_path(id)
-	if not FileAccess.file_exists(path):
-		return null
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(parsed) != TYPE_DICTIONARY or typeof(parsed.get("stages")) != TYPE_DICTIONARY:
-		return null
-	var data: Dictionary = parsed["stages"].get(str(number), {})
+	var data: Dictionary = G2GSurfCourse.read_stage(id, number)
 	if data.is_empty():
 		return null
 	var why: Array = []

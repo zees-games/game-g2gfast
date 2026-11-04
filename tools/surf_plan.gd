@@ -23,7 +23,7 @@ const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 ##    arrival (sideways and along by up to [constant SIDE_UNITS] and
 ##    [constant ALONG_UNITS], an initial velocity of up to [constant SPEED_UNITS] in any
 ##    direction), each with [DotBotSurfPlanner], and writes every ride found to
-##    `maps/routes/<id>.surf.json` under the stage's number. `--no-plan` keeps the file.
+##    `maps/routes/<id>.surf/<stage>.json`. `--no-plan` keeps the file.
 ##    Then up to `--rounds R` (default 4) rounds of repair: the pilot rides from
 ##    `--repairs K` (default 24) further perturbed starts, and every ride that fails is
 ##    searched again from a second before it failed (see `DotBotSurfPlanner.build`).
@@ -83,14 +83,14 @@ func _run() -> void:
 		str(G2GUnits.vector_to_units(course.goal_centre).round())])
 
 	var checks: Array = await simulator_checks(game, bot, sim, base, course.reference_yaw(),
-		first_ride_actions(_read(ProjectSettings.globalize_path(G2GSurfCourse.cache_path(id))).get("stages", {}).get(str(number), {})))
+		first_ride_actions(G2GSurfCourse.read_stage(id, number)))
 	var failed := 0
 	for c: Array in checks:
 		print("[surf]   %s  %s%s" % ["ok  " if c[0] else "FAIL", c[1], "" if c[2] == "" else "  (%s)" % c[2]])
 		if not c[0]:
 			failed += 1
 
-	var path := ProjectSettings.globalize_path(G2GSurfCourse.cache_path(id))
+	var path := ProjectSettings.globalize_path(G2GSurfCourse.stage_path(id, number))
 	if args.has("--trace"):
 		_trace(args, base, course, sim)
 		get_tree().quit(0)
@@ -107,7 +107,7 @@ func _run() -> void:
 		get_tree().quit(1)
 		return
 
-	var data: Dictionary = _read(path).get("stages", {}).get(str(number), {})
+	var data: Dictionary = G2GSurfCourse.read_stage(id, number)
 	if data.is_empty():
 		print("[surf] no cache for stage %d at %s" % [number, path])
 		get_tree().quit(1)
@@ -219,12 +219,12 @@ func _plan_stage(args: PackedStringArray, id: StringName, number: int, starts: i
 	var repair_pilot := DotBotSurfPilot.new()
 	repair_pilot.rolling = not args.has("--no-rolling")
 	var resume := args.has("--resume")
-	var keep: Dictionary = _read(path).get("stages", {}).get(str(number), {}) if resume else {}
+	var keep: Dictionary = G2GSurfCourse.read_stage(id, number) if resume else {}
 	var built: Dictionary = _build_saving(planner, from_starts, repair_starts, rounds, course, sim, repair_sim,
 		func(line: String) -> void: print("[surf]   " + line), repair_pilot, keep,
 		func(snapshot: Dictionary) -> void:
 			_save_stage(path, id, number, course, snapshot, guide_units if guide_at >= 0 else
-				_read(path).get("stages", {}).get(str(number), {}).get("guide", []),
+				G2GSurfCourse.read_stage(id, number).get("guide", []),
 				{"starts": starts, "repairs": repairs, "rounds": snapshot["rounds"], "searches": snapshot["searches"],
 				"seconds": snappedf((Time.get_ticks_msec() - started) / 1000.0, 0.1)}))
 	var rides: PackedFloat32Array = built["rides"]
@@ -236,7 +236,7 @@ func _plan_stage(args: PackedStringArray, id: StringName, number: int, starts: i
 		float(sim.usec + repair_sim.usec) / maxf(1.0, float(sim.steps + repair_sim.steps)), planner.expanded])
 	if seconds.is_empty():
 		return false
-	print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.cache_path(id)])
+	print("[surf]   saved %d entries to %s" % [rides.size() / DotBotSurfPilot.STRIDE, G2GSurfCourse.stage_path(id, number)])
 	return true
 
 
@@ -334,7 +334,7 @@ func _chain(args: PackedStringArray, box_arg: String, course: DotBotSurfCourse, 
 	_save_stage(path, id, number, course, {"seconds": [snappedf(total * sim.delta, 0.01)],
 		"lengths": PackedInt32Array([total]), "rides": entries, "rounds": [], "searches": 2}, whole,
 		{"starts": 1, "chain": box_arg, "seconds": 0.0})
-	print("[surf]   saved the chained ride to %s" % G2GSurfCourse.cache_path(id))
+	print("[surf]   saved the chained ride to %s" % G2GSurfCourse.stage_path(id, number))
 	return 0
 
 
@@ -422,12 +422,10 @@ func _build_saving(planner: DotBotSurfPlanner, starts: Array, repairs: Array, ro
 	return snapshot.call()
 
 
-## Writes [param snapshot] ([method _build_saving]'s) as stage [param number] of the map's cache.
-static func _save_stage(path: String, id: StringName, number: int, course: DotBotSurfCourse, snapshot: Dictionary,
+## Writes [param snapshot] ([method _build_saving]'s) as stage [param number]'s own cache file.
+static func _save_stage(_path: String, id: StringName, number: int, course: DotBotSurfCourse, snapshot: Dictionary,
 		guide_units: Array, planned: Dictionary) -> void:
-	var cache := _read(path)
-	var stages: Dictionary = cache.get("stages", {})
-	stages[str(number)] = {
+	G2GSurfCourse.write_stage_file(G2GSurfCourse.stage_path(id, number), {
 		"reference_yaw": snappedf(course.reference_yaw(), 0.01),
 		"start": _units(course.start),
 		"rides": snapshot["seconds"],
@@ -435,13 +433,7 @@ static func _save_stage(path: String, id: StringName, number: int, course: DotBo
 		"planned": planned,
 		"guide": guide_units,
 		"entries": DotBotSurfPilot.entries_to_rows(snapshot["rides"], G2GUnits.METRES_PER_UNIT),
-	}
-	cache["id"] = String(id)
-	cache["note"] = "Written by tools/surf_plan.gd: per stage, every tick of every ride the planner found on the real motor, as [x, y, z, vx, vy, vz, action] in genre units (Godot axes). The pilot (dot-bot's DotBotSurfPilot) takes the action of the nearest entry. Regenerate after a movement or collision change."
-	cache["stages"] = stages
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	f.store_string(JSON.stringify(cache, "", false))
-	f.close()
+	})
 
 
 ## The checks the simulator stands on. Each is `[ok, what, detail]`.
@@ -581,13 +573,6 @@ static func _spread(times: Array) -> String:
 static func _units(v: Vector3) -> Array:
 	var u := G2GUnits.vector_to_units(v)
 	return [snappedf(u.x, 0.1), snappedf(u.y, 0.1), snappedf(u.z, 0.1)]
-
-
-static func _read(path: String) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		return {}
-	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 
 
 static func _opt(args: PackedStringArray, flag: String, fallback: int) -> int:
