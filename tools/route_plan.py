@@ -3,7 +3,9 @@
 import json, struct, sys, heapq, math, argparse, os
 
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
-CELL = 64.0         # terrain is binned into cells this wide
+CELL = 32.0         # terrain is binned into cells this wide
+WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
+CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
 
 
@@ -15,44 +17,92 @@ def envelope(rise, safety):
 
 CLIMB = 54.0         # the most a jump lands on above take-off (57 apex, less margin)
 
-PIT_MARGIN = 2.0  # the hull stands a little above the box top it is caught by
+PIT_MARGIN = 2.0
+SLOPE_PIT_MARGIN = 4.0  # the margin over a pit for a terrain cell's lowest point
+NARROW = 16.0     # narrower than this is trim, not a floor
+
+
+def geometry(f):
+    """A hull's outward face planes (nx, ny, nz, d) and its sloped walkable triangles, or (None, []):
+    its box alone misjudges a slanted beam, and its highest vertices alone miss a ramp's floor."""
+    try:
+        from scipy.spatial import ConvexHull
+        ch = ConvexHull([f[k:k + 3] for k in range(0, len(f), 3)])
+    except Exception:  # no scipy, or a flat hull qhull refuses
+        return None, []
+    slopes = [[tuple(ch.points[v]) for v in s] for s, e in zip(ch.simplices, ch.equations) if WALKABLE <= e[1] < 0.999]
+    return [tuple(e) for e in ch.equations], slopes
+
+
+def inside(h, x, y, z, inset=0.0):
+    """Whether (x, y, z) is inside hull h, at least `inset` from its faces where its planes are known."""
+    return h['planes'] is None or all(a * x + b * y + c * z + d < -inset for a, b, c, d in h['planes'])
 
 
 def load(mid, root):
     base = '%s/maps/imported/%s/%s' % (root, mid, mid)
     d = json.load(open(base + '.json')); blob = open(base + '.bin', 'rb').read()
-    c = d['collision']; off = c['hull_offset']; hulls = []
+    c = d['collision']; off = c['hull_offset']; hulls = []; slopes = []
     for _ in range(c['hull_count']):
         n = struct.unpack_from('<I', blob, off)[0]; off += 4
         f = struct.unpack_from('<%df' % (n * 3), blob, off); off += n * 12
         xs, ys, zs = f[0::3], f[1::3], f[2::3]
         ty = max(ys)
         top = [(xs[i], zs[i]) for i in range(n) if ys[i] > ty - 1]
-        hulls.append({'box': (min(xs), max(xs), min(zs), max(zs)), 'bottom': min(ys), 'top': ty,
+        pl, sl = geometry(f); slopes += sl
+        hulls.append({'box': (min(xs), max(xs), min(zs), max(zs)), 'bottom': min(ys), 'top': ty, 'planes': pl,
                       'face': (min(p[0] for p in top), max(p[0] for p in top),
                                min(p[1] for p in top), max(p[1] for p in top)) if len(top) >= 3 else None})
-    # Terrain (displacements) is triangles, not hulls: every walkable triangle is binned
-    # into a 64-unit cell per height band, and each cell is a top of its own.
-    cells = {}
+    # Terrain (displacements) and sloped hull faces are triangles: every walkable one is sampled
+    # every few units, the samples binned into cells per height band, each cell a top of its own.
+    tris = slopes
     vc = c.get('displacement_vertex_count', 0); ic = c.get('displacement_index_count', 0)
     if vc and ic:
         v = struct.unpack_from('<%df' % (vc * 3), blob, c['displacement_vertex_offset'])
         ix = struct.unpack_from('<%di' % ic, blob, c['displacement_index_offset'])
-        for k in range(0, ic - 2, 3):
-            p = [v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)]
-            ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
-            bx, by, bz = [p[2][q] - p[0][q] for q in range(3)]
-            nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
-            ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
-            if abs(ny) / ln < 0.8:  # a steeper sliver of cliff base is not ground to land on
-                continue
-            cx = sum(q[0] for q in p) / 3; cz = sum(q[2] for q in p) / 3; cy = max(q[1] for q in p)
-            key = (int(math.floor(cx / CELL)), int(math.floor(cz / CELL)), int(math.floor(cy / 96.0)))
-            cells[key] = max(cells.get(key, -1e18), cy)
-    for (gx, gz, _), y in cells.items():
-        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y,
+        tris = tris + [[v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)] for k in range(0, ic - 2, 3)]
+    cells = {}
+    for p in tris:
+        ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
+        bx, by, bz = [p[2][q] - p[0][q] for q in range(3)]
+        nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
+        ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+        if abs(ny) / ln < WALKABLE:  # a steeper sliver of cliff base is not ground to land on
+            continue
+        # a vertex outside the cell would put its height (a lower shore) on the cell
+        n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
+        for s_ in range(n + 1):
+            for t_ in range(n + 1 - s_):
+                x, y, z = [p[0][q] + (p[1][q] - p[0][q]) * s_ / n + (p[2][q] - p[0][q]) * t_ / n for q in range(3)]
+                key = (int(math.floor(x / CELL)), int(math.floor(z / CELL)), int(math.floor(y / 96.0)))
+                lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
+                cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
+    for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
+        if y - lo_ > CELL_SPREAD:
+            continue  # a cell on a slope: its highest vertex is a lip over lower ground, not a floor to land on
+        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None,
                       'face': (gx * CELL, (gx + 1) * CELL, gz * CELL, (gz + 1) * CELL)})
     return d, hulls
+
+def inert_filters(mid, root, b):
+    """The filter names whose teleports the importer drops, so the game never fires them: the zones
+    file's `conditional_teleports` (and the filters passing those names) and class filters on a non-player."""
+    zf = os.path.join(root, 'maps', 'zones', mid + '.json')
+    names = set()
+    if os.path.isfile(zf):
+        names = set(str(n).strip().lower() for n in json.load(open(zf)).get('conditional_teleports', {}).get('filters', []))
+    out = set(names)
+    for e in b.entities:
+        cls = e.get('classname', '')
+        own = e.get('targetname', '').strip().lower()
+        if cls.startswith('filter_') and e.get('filtername', '').strip().lower() in names:
+            out.add(own)
+        if cls == 'filter_activator_class' and e.get('filterclass', '').strip().lower() != 'player' and \
+                e.get('Negated', '0').strip().lower() not in ('1', 'filter out entities that match criteria'):
+            out.add(own)
+    out.discard('')
+    return out
+
 
 def teleports(mid, root, d):
     """Every teleport as (xz box, y range, destination): the map's own trigger_teleports when the
@@ -60,7 +110,10 @@ def teleports(mid, root, d):
     are), else the manifest's TELEPORT zones. A staged map is a graph: a gate moves the player
     from one section to the next, a pit back to a lane start."""
     out = []
-    bsp = os.environ.get('G2G_BSP') or os.path.join(root, '..', 'inspirations', 'g2gfast', mid + '.bsp')
+    # beside the game, or beside the maps repo it links (a worktree has no inspirations beside it)
+    linked = os.path.realpath(os.path.join(root, 'maps', 'imported', '..', '..'))
+    bsp = os.environ.get('G2G_BSP') or next((p for p in (os.path.join(r, 'inspirations', 'g2gfast', mid + '.bsp') for r in (
+        os.path.join(root, '..'), linked)) if os.path.isfile(p)), '')
     if os.path.isfile(bsp):
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from bsp_read import Bsp, to_godot
@@ -69,8 +122,11 @@ def teleports(mid, root, d):
         for e in b.entities:
             if e.get('targetname') and e.get('classname') in ('info_teleport_destination', 'info_target', 'info_landmark', 'point_teleport'):
                 dest.setdefault(e['targetname'], e)
+        skip = inert_filters(mid, root, b)
         for e in b.entities:
             if e.get('classname') != 'trigger_teleport' or not e.get('model', '').startswith('*'):
+                continue
+            if e.get('filtername', '').strip().lower() in skip or not int(float(e.get('spawnflags', '1') or 0)) & 1:
                 continue
             t = dest.get(e.get('target', ''))
             if t is None or 'origin' not in t:
@@ -92,18 +148,18 @@ def teleports(mid, root, d):
 
 TILE = 96.0          # a long top is cut into nodes this wide: a line between two centres crosses walls a hop never would
 
-def tiles(f, top):
+def tiles(f, top, low=None):
     """A top as itself, or as a row of tiles when it is long enough that its centre is nowhere near its ends."""
     area = (f[1] - f[0]) * (f[3] - f[2])
     tile = max(TILE, math.sqrt(area / 2500.0))   # a floor the size of the map still gets tiles, only coarser
     nx = max(1, int(math.ceil((f[1] - f[0]) / tile))); nz = max(1, int(math.ceil((f[3] - f[2]) / tile)))
     if nx == 1 and nz == 1:
-        return [{'face': f, 'top': top}]
+        return [{'face': f, 'top': top, 'low': top if low is None else low, 'terrain': low is not None}]
     out = []
     for ix in range(nx):
         for iz in range(nz):
             out.append({'face': (f[0] + (f[1] - f[0]) * ix / nx, f[0] + (f[1] - f[0]) * (ix + 1) / nx,
-                                 f[2] + (f[3] - f[2]) * iz / nz, f[2] + (f[3] - f[2]) * (iz + 1) / nz), 'top': top})
+                                 f[2] + (f[3] - f[2]) * iz / nz, f[2] + (f[3] - f[2]) * (iz + 1) / nz), 'top': top, 'low': top, 'terrain': False})
     return out
 
 def overlap(a, b, m=0.0):
@@ -133,19 +189,20 @@ def main():
     ap.add_argument('--reach', type=float, default=200.0)
     ap.add_argument('--safety', type=float, default=0.85, help='fraction of the run-speed jump envelope the planner trusts the follower with')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
+    ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
     d, hulls = load(a.map, a.root)
     region = [float(v) for v in a.region.split(',')] if a.region else None
     tops = []
     for i, h in enumerate(hulls):
         f = h['face']
-        if f is None or f[1] - f[0] < 16 or f[3] - f[2] < 16:
+        if f is None or f[1] - f[0] < NARROW or f[3] - f[2] < NARROW:
             continue
         if region and not overlap(f, region):
             continue
         over = [o['box'] for j, o in enumerate(hulls)
-                if j != i and o['box'] is not None and h['top'] - 1 < o['bottom'] < h['top'] + HEADROOM and overlap(f, o['box'])]
-        for t in tiles(f, h['top']):
+                if j != i and o['box'] is not None and o['bottom'] < h['top'] + HEADROOM and o['top'] > h['top'] + 1 and overlap(f, o['box'])]
+        for t in tiles(f, h['top'], h.get('low')):
             tf = t['face']; shade = 0.0
             for b in over:
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
@@ -158,7 +215,7 @@ def main():
         # a RESPAWN box reaches up to the floor it catches: anything at or under its top is a fall
         if any(min(z['min'][0], z['max'][0]) <= cx <= max(z['min'][0], z['max'][0]) and
                min(z['min'][2], z['max'][2]) <= cz <= max(z['min'][2], z['max'][2]) and
-               min(z['min'][1], z['max'][1]) - 8 <= t['top'] <= max(z["min"][1], z["max"][1]) + PIT_MARGIN for z in pits):
+               min(z['min'][1], z['max'][1]) - 8 <= t['top'] and t['low'] <= max(z["min"][1], z["max"][1]) + (SLOPE_PIT_MARGIN if t['terrain'] else PIT_MARGIN) for z in pits):
             return True
         # a floor a little under a teleport trigger is a pit's bottom, not a place to stand
         return tps_from_bsp and any(zb[0] <= cx <= zb[1] and zb[2] <= cz <= zb[3] and 8 < zy[0] - t['top'] <= 96 for zb, zy, _ in tps)
@@ -259,7 +316,7 @@ def main():
                 b = hulls[k]['box']; h = hulls[k]
                 if b[0] + inset < x < b[1] - inset and b[2] + inset < z < b[3] - inset:
                     for y in heights:
-                        if h['bottom'] < y < h['top'] - 1:
+                        if h['bottom'] < y < h['top'] - 1 and inside(h, x, y, z, inset):
                             return False
         return True
     def falls_into_trigger(i, j):
@@ -275,6 +332,13 @@ def main():
                 if any(zb[0] <= x <= zb[1] and zb[2] <= z <= zb[3] for x, z in pts_):
                     return True
         return False
+    if a.why:
+        ends = [[float(v) for v in e.split(',')] for e in a.why.split(';')]
+        i, j = [min(range(len(tops)), key=lambda k: math.dist((centre(tops[k])[0], tops[k]['top'], centre(tops[k])[1]), (e[0], e[1], e[2]))) for e in ends]
+        g = gap(tops[i]['face'], tops[j]['face']); rise = tops[j]['top'] - tops[i]['top']
+        print('from', tops[i], '\nto', tops[j], '\ngap %.0f rise %.0f envelope %.0f clear %s trigger %s' % (
+            g, rise, min(a.reach, envelope(rise, a.safety)), clear(i, j), falls_into_trigger(i, j)), file=sys.stderr)
+        sys.exit(0)
     via = {}
     dist = {i: 0.0 for i in starts}; prev = {}; q = [(0.0, i) for i in starts]
     done = None
@@ -312,21 +376,34 @@ def main():
         reached = max(dist, key=lambda i: dist[i])
         sys.exit('no route to the finish within reach %.0f; %d tops reached, the furthest at %s' % (
             a.reach, len(dist), str(centre(tops[reached]))))
+    def walk(i, j):
+        return j not in via and gap(tops[i]['face'], tops[j]['face']) < 16.0 and abs(tops[i]['top'] - tops[j]['top']) < 1.0
+    def walked_through(i, j, k):
+        """j is a step on a floor the bot runs straight across: a point there makes it land, and so hop, on every tile."""
+        if not (walk(i, j) and walk(j, k)):
+            return False
+        (ax, az), (bx, bz), (cx, cz) = centre(tops[i]), centre(tops[j]), centre(tops[k])
+        u, v = (bx - ax, bz - az), (cx - bx, cz - bz)
+        nu, nv = math.hypot(*u), math.hypot(*v)
+        return nu > 0 and nv > 0 and (u[0] * v[0] + u[1] * v[1]) / (nu * nv) > math.cos(math.radians(20.0))
     path = [done]
     while path[-1] in prev:
         path.append(prev[path[-1]])
     path.reverse()
+    path = [path[0]] + [i for k, i in enumerate(path[1:-1], 1) if not walked_through(path[k - 1], i, path[k + 1])] + path[-1:]
     pts = []
-    for i in path[1:]:
+    for h, i in zip(path, path[1:]):
         if i in via:
             x, y, z = via[i]
             pts.append({'at': [round(x), round(y), round(z)], 'radius': 16, 'door': True})
         t = tops[i]; f = t['face']; cx, cz = centre(t)
         pts.append({'at': [round(cx), round(t['top']), round(cz)],
                     'radius': round(min(32.0, (f[1] - f[0]) / 2, (f[3] - f[2]) / 2))})
+        if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0:
+            pts[-1]['hop'] = True  # terrain has no lip to jump at: run on it and the bot walks down into the water
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
     doc = {'id': a.map, 'units': 'manifest units and axes: Godot axes in genre units (x, up, z), what the tools print',
-           'how': 'tools/route_plan.py %s --reach %.0f' % (a.map, a.reach) + (' --region %s' % a.region if a.region else ''),
+           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --region %s' % a.region if a.region else ''),
            'points': pts}
     s = json.dumps(doc, indent=1) + '\n'
     if a.out:
@@ -334,4 +411,5 @@ def main():
     else:
         print(s)
 
-main()
+if __name__ == '__main__':
+    main()
