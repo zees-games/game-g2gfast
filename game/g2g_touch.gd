@@ -16,17 +16,17 @@ const CHAT := &"chat"
 ## Asked with a screen position by every touch sampler; set by the client that builds the buttons.
 static var ignore_fn: Callable = Callable()
 
-## Offsets are from the bottom-right corner towards the middle; small enough for a 375 px tall screen.
+## Offsets are from the bottom-right corner towards the middle; two columns so the clock keeps the left, small enough for a 375 px tall screen.
 static func layout() -> Array[Dictionary]:
 	return [
-		{"id": JUMP, "label": "JUMP", "offset": Vector2(80, 84), "radius": 44.0},
-		{"id": DUCK, "label": "DUCK", "offset": Vector2(190, 60), "radius": 30.0},
-		{"id": RESTART, "label": "R", "offset": Vector2(80, 172), "radius": 32.0},
-		{"id": SAVE, "label": "SAVE", "offset": Vector2(190, 150), "radius": 28.0},
-		{"id": LOAD, "label": "LOAD", "offset": Vector2(262, 60), "radius": 28.0},
-		{"id": STYLE, "label": "STYLE", "offset": Vector2(138, 246), "radius": 22.0},
-		{"id": BOARD, "label": "TAB", "offset": Vector2(80, 246), "radius": 22.0},
-		{"id": CHAT, "label": "CHAT", "offset": Vector2(196, 246), "radius": 22.0},
+		{"id": JUMP, "label": "JUMP", "offset": Vector2(56, 56), "radius": 44.0},
+		{"id": RESTART, "label": "R", "offset": Vector2(56, 142), "radius": 28.0},
+		{"id": CHAT, "label": "CHAT", "offset": Vector2(56, 200), "radius": 24.0},
+		{"id": BOARD, "label": "TAB", "offset": Vector2(56, 252), "radius": 24.0},
+		{"id": DUCK, "label": "DUCK", "offset": Vector2(134, 46), "radius": 30.0},
+		{"id": LOAD, "label": "LOAD", "offset": Vector2(134, 112), "radius": 28.0},
+		{"id": SAVE, "label": "SAVE", "offset": Vector2(134, 176), "radius": 28.0},
+		{"id": STYLE, "label": "STYLE", "offset": Vector2(134, 232), "radius": 24.0},
 	]
 
 

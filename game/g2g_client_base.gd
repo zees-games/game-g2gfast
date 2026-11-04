@@ -100,6 +100,7 @@ var _sampler: DotFpsSampler = null
 
 ## The phone's on-screen buttons; null off a touch device.
 var _touch: DotTouchButtons = null
+var _last_touch_sampler: DotFpsSampler = null
 var _transit_text := ""
 
 ## Whether the cursor is waiting for a click before it can be captured. Web only.

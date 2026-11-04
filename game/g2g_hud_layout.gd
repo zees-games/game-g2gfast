@@ -9,7 +9,7 @@ func apply_visibility(show_speed: bool, show_splits: bool, show_keys: bool, show
 		timer_hud.show_split = show_splits
 	_show_keys = show_keys
 	if _keys != null:
-		_keys.visible = show_keys
+		_keys.visible = show_keys and not DotPlatform.has_touch()
 	if _crosshair != null:
 		_crosshair.visible = show_crosshair
 
@@ -133,13 +133,14 @@ func set_spectating(target: StringName, target_name: String = "", roam_hint: Str
 	if _spectating == null:
 		return
 	_spectating.visible = target != &"" or roaming
+	var touch := DotPlatform.has_touch()
 	if roaming:
-		_spectating.text = "Free camera    WASD move   ·   Space / Ctrl up and down   ·   Shift fast   ·   Alt slow    %s to go back to the players" % (
+		_spectating.text = "Free camera" if touch else "Free camera    WASD move   ·   Space / Ctrl up and down   ·   Shift fast   ·   Alt slow    %s to go back to the players" % (
 			roam_hint if roam_hint != "" else "R or !spec off")
 	elif target != &"":
-		_spectating.text = "Spectating %s    ◀ left click   ·   right click ▶%s    R or !spec off to stop" % [
-			target_name if target_name != "" else String(target),
-			("   ·   %s free camera" % roam_hint) if roam_hint != "" else ""]
+		var who := target_name if target_name != "" else String(target)
+		_spectating.text = "Spectating %s" % who if touch else "Spectating %s    ◀ left click   ·   right click ▶%s    R or !spec off to stop" % [
+			who, ("   ·   %s free camera" % roam_hint) if roam_hint != "" else ""]
 	refresh_stage_reference()
 
 
@@ -183,6 +184,10 @@ func place() -> void:
 	else:
 		timer_hud.corner = PLACEMENTS.get(_timer_placement, DotTimerHud.Placement.BOTTOM_CENTRE)
 		timer_hud.margin = TIMER_MARGIN_TOP if String(_timer_placement).begins_with("top") else TIMER_MARGIN
+		if DotPlatform.has_touch() and _timer_placement == &"bottom_centre":
+			# The buttons own the right edge of a phone; the clock moves to the free bottom-left corner.
+			timer_hud.corner = DotTimerHud.Placement.BOTTOM_LEFT
+			timer_hud.margin = Vector2(16.0, 16.0)
 
 	# The keys: under the clock wherever the clock is, and over it only when the clock sits
 	# so low there is no room beneath.
@@ -199,7 +204,7 @@ func place() -> void:
 		var x := clock.get_center().x - keys_size.x * 0.5 if clock.size != Vector2.ZERO \
 			else (area.x - keys_size.x) * 0.5
 		_put(_keys, _clamp_into(Vector2(x, y), keys_size, area), keys_size)
-	_keys.visible = _show_keys
+	_keys.visible = _show_keys and not DotPlatform.has_touch()
 
 	# The status line: the whole top edge, or its own width where it was dragged.
 	_status.visible = _show_status

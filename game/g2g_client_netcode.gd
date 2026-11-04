@@ -426,7 +426,7 @@ func _press_action(event: InputEvent) -> void:
 ## The phone's buttons over the HUD, on a touch device only. Jump and duck are held on the sampler; the rest press
 ## the keyboard's own action, so a checkpoint or a restart is the same code path as its key.
 func _build_touch() -> void:
-	if not DotPlatform.has_touch() or hud == null or _touch != null:
+	if not DotPlatform.has_touch() or hud == null or is_instance_valid(_touch):
 		return
 	_touch = DotTouchButtons.new()
 	_touch.name = "TouchButtons"
@@ -440,7 +440,8 @@ func _build_touch() -> void:
 
 
 func _touch_button(id: StringName, down: bool) -> void:
-	if _covered() or player == null:
+	# A release always lands: a menu opening over a held jump must not leave the bit set.
+	if player == null or (down and _covered()):
 		return
 	match id:
 		G2GTouch.JUMP, G2GTouch.DUCK:
@@ -472,10 +473,27 @@ func _touch_button(id: StringName, down: bool) -> void:
 ## A finger on the look or move half goes to the touch sampler; with a menu open it is the menu's.
 func _on_screen_touch(event: InputEvent) -> void:
 	var sampler := _active_sampler()
+	if _last_touch_sampler != null and _last_touch_sampler != sampler:
+		_release_touch_sampler(_last_touch_sampler)
+	_last_touch_sampler = sampler
 	if sampler is DotFpsTouchSampler:
 		(sampler as DotFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
 	if sampler != null:
 		sampler.handle_event(event)
+
+
+## The sampler that stopped being live keeps no finger or held button: lifts every finger, lets go of both buttons.
+func _release_touch_sampler(old: DotFpsSampler) -> void:
+	if not old is DotFpsTouchSampler:
+		return
+	var touch := old as DotFpsTouchSampler
+	touch.hold(DotFpsCommand.BUTTON_JUMP, false)
+	touch.hold(DotFpsCommand.BUTTON_CROUCH, false)
+	for index in 10:
+		var lift := InputEventScreenTouch.new()
+		lift.index = index
+		lift.pressed = false
+		touch.handle_event(lift)
 
 
 func apply_theme(palette: DotMenuPalette) -> void:

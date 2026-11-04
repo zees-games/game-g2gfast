@@ -18,6 +18,8 @@ func _run() -> void:
 	for b: Dictionary in layout:
 		ids.append(b["id"])
 	var wanted: Array[StringName] = [G2GTouch.JUMP, G2GTouch.DUCK, G2GTouch.RESTART, G2GTouch.SAVE, G2GTouch.LOAD, G2GTouch.STYLE, G2GTouch.BOARD, G2GTouch.CHAT]
+	ids.sort()
+	wanted.sort()
 	_check(ids == wanted, "jump, duck, restart, checkpoints, style, board and chat are on the layout")
 
 	DotPlatform.touch_override = 0
