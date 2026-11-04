@@ -70,8 +70,7 @@ func _build_netcode() -> DotResult:
 	_wire_bridge_feedback()
 	_wire_bridge_world()
 
-	_sampler = DotFpsSampler.new(game.tunables)
-	DotFpsSampler.register_default_actions(_sampler)
+	_sampler = G2GTouch.make_sampler(game.tunables)
 
 	if link.has_method("is_playing") and bool(link.call("is_playing")):
 		_say_ready()
@@ -316,6 +315,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _editor_or_spectate_input(event):
 		return
 
+	if event is InputEventScreenTouch or event is InputEventScreenDrag:
+		_on_screen_touch(event)
+		return
+
 	if event is InputEventMouseMotion:
 		if not mouse_drives_view():
 			return
@@ -418,6 +421,61 @@ func _press_action(event: InputEvent) -> void:
 				player.teleport(cp.position, cp.yaw)
 				player.controller.state.velocity = cp.velocity
 				player.controller.state.pitch = cp.pitch
+
+
+## The phone's buttons over the HUD, on a touch device only. Jump and duck are held on the sampler; the rest press
+## the keyboard's own action, so a checkpoint or a restart is the same code path as its key.
+func _build_touch() -> void:
+	if not DotPlatform.has_touch() or hud == null or _touch != null:
+		return
+	_touch = DotTouchButtons.new()
+	_touch.name = "TouchButtons"
+	_touch.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_touch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_touch.set_buttons(G2GTouch.layout())
+	hud.add_child(_touch)
+	G2GTouch.ignore_fn = _touch.contains_point
+	_touch.button_down.connect(_touch_button.bind(true))
+	_touch.button_up.connect(_touch_button.bind(false))
+
+
+func _touch_button(id: StringName, down: bool) -> void:
+	if _covered() or player == null:
+		return
+	match id:
+		G2GTouch.JUMP, G2GTouch.DUCK:
+			var live := _active_sampler()
+			if live is DotFpsTouchSampler:
+				var bit := DotFpsCommand.BUTTON_JUMP if id == G2GTouch.JUMP else DotFpsCommand.BUTTON_CROUCH
+				(live as DotFpsTouchSampler).hold(bit, down)
+		G2GTouch.BOARD:
+			if menu != null:
+				if down:
+					menu.scoreboard.open()
+				else:
+					menu.scoreboard.close()
+		G2GTouch.CHAT:
+			var window: DotChatWindow = presentation.chat_window if presentation != null else null
+			if down and window != null and not overlay_open():
+				window.open()
+		_:
+			if down and not overlay_open():
+				var action := {G2GTouch.RESTART: &"g2g_restart", G2GTouch.SAVE: &"g2g_checkpoint_save",
+					G2GTouch.LOAD: &"g2g_checkpoint_load", G2GTouch.STYLE: &"g2g_style_next"}.get(id, &"") as StringName
+				if action != &"":
+					var ev := InputEventAction.new()
+					ev.action = action
+					ev.pressed = true
+					_press_action(ev)
+
+
+## A finger on the look or move half goes to the touch sampler; with a menu open it is the menu's.
+func _on_screen_touch(event: InputEvent) -> void:
+	var sampler := _active_sampler()
+	if sampler is DotFpsTouchSampler:
+		(sampler as DotFpsTouchSampler).set_screen_width(get_viewport().get_visible_rect().size.x)
+	if sampler != null:
+		sampler.handle_event(event)
 
 
 func apply_theme(palette: DotMenuPalette) -> void:
@@ -523,6 +581,9 @@ func _build_overlays() -> void:
 	config.brand_mark = "g2g"
 	config.brand_name = "fast"
 	config.leave_text = "Quit game"
+	# By name: an older dot-menu has no such property. Top left keeps it off the thumbs' corner.
+	if &"menu_button_corner" in config:
+		config.set(&"menu_button_corner", &"top_left")
 	var _layered := config.load_layered()
 	menu.config = config
 	menu.help_action = &"g2g_help"

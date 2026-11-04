@@ -97,6 +97,9 @@ var rules: Dictionary = {"flashlight": true, "thirdperson": true, "commands": []
 var _offline := true
 var _style_index := 0
 var _sampler: DotFpsSampler = null
+
+## The phone's on-screen buttons; null off a touch device.
+var _touch: DotTouchButtons = null
 var _transit_text := ""
 
 ## Whether the cursor is waiting for a click before it can be captured. Web only.

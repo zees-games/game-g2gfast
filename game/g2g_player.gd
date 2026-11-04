@@ -204,8 +204,7 @@ func _ready() -> void:
 		_apply_own_body()
 
 	if samples_input:
-		sampler = DotFpsSampler.new(controller.tunables)
-		DotFpsSampler.register_default_actions(sampler)
+		sampler = G2GTouch.make_sampler(controller.tunables)
 
 
 # --- Movement and style ----------------------------------------------------

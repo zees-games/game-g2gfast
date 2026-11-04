@@ -364,6 +364,7 @@ func _watch(id: StringName) -> void:
 		hud.name = "Hud"
 		add_child(hud)
 		_follow_hud()
+		call(&"_build_touch")
 	hud.bind(game, id)
 	# The server's time left, which may well have arrived before there was a HUD: HELLO
 	# and the admit's CLOCK come together, and JOIN is what makes the player watched.
