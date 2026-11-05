@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Plan a bhop route over an imported map's collision, and write maps/routes/<id>.json."""
 import json, struct, sys, heapq, math, argparse, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import booster_flight
 
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 32.0         # terrain is binned into cells this wide
@@ -203,6 +205,7 @@ def main():
     ap.add_argument('--speed', type=float, default=RUN_SPEED, help='take-off speed (u/s) trusted for a long gap; past run speed the bot hops into it to carry speed')
     ap.add_argument('--carry', type=float, default=0.0, help='speed (u/s) a hop gains over the one before it; each edge then lands with the speed it carried, up to --vmax (0: every jump at --speed)')
     ap.add_argument('--vmax', type=float, default=416.0, help='the most speed a chain of hops carries')
+    ap.add_argument('--no-strafe', action='store_true', help='a booster flight keeps its launch speed (the old envelope) instead of strafing for more (tools/booster_flight.py)')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
@@ -372,10 +375,12 @@ def main():
             cx, cz = centre(t)
             if pb[0] <= cx <= pb[1] and pb[2] <= cz <= pb[3] and py[0] - 8.0 <= t['top'] <= py[1] + 2.0:
                 launch[i] = max(launch.get(i, 0.0), JUMP_V + pv[1])
+    def flight_reach(v, rise):
+        return booster_flight.reach(v, a.speed, rise, a.safety, GRAVITY, not a.no_strafe)
     def boosted(i, j):
         """Whether the launch off booster top i lands on j: within the flight's reach, under its apex, the column over the pad open."""
         v = launch[i]; rise = tops[j]['top'] - tops[i]['top']
-        if rise > 0.9 * v * v / (2.0 * GRAVITY) or rise < -600.0 or gap(tops[i]['face'], tops[j]['face']) > envelope(rise, a.safety, a.speed, v):
+        if rise > 0.9 * v * v / (2.0 * GRAVITY) or rise < -600.0 or gap(tops[i]['face'], tops[j]['face']) > flight_reach(v, rise):
             return False
         cx, cz = centre(tops[i])
         for k in hgrid.get((int(math.floor(cx / B)), int(math.floor(cz / B))), []):
@@ -449,7 +454,7 @@ def main():
             if c + w < dist.get(land, 1e18):
                 dist[land] = c + w; prev[land] = s_; via[land] = door; boost_from.pop(land, None); heapq.heappush(q, (c + w, land))
         if i in launch:
-            for j in near(i, envelope(-600.0, a.safety, a.speed, launch[i])):
+            for j in near(i, flight_reach(launch[i], -600.0)):
                 if boosted(i, j):
                     w = math.dist(centre(tops[i]), centre(tops[j])) + 64.0
                     if c + w < dist.get(j, 1e18):
