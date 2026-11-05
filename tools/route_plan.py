@@ -71,7 +71,7 @@ def load(mid, root, slopes_walked=False):
         v = struct.unpack_from('<%df' % (vc * 3), blob, c['displacement_vertex_offset'])
         ix = struct.unpack_from('<%di' % ic, blob, c['displacement_index_offset'])
         tris = tris + [[v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)] for k in range(0, ic - 2, 3)]
-    cells = {}
+    cells = {}; steep = d['steep'] = {}  # cell -> height spans of faces too steep to stand on
     walkable = math.cos(math.radians(d.get('max_slope', 45.57))) if slopes_walked else WALKABLE
     for p in tris:
         ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
@@ -79,6 +79,10 @@ def load(mid, root, slopes_walked=False):
         nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
         ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
         if abs(ny) / ln < walkable:  # a steeper sliver of cliff base is not ground to land on
+            if p[0][1] != p[1][1] or p[0][1] != p[2][1]:
+                for gx in range(int(math.floor(min(q[0] for q in p) / CELL)), int(math.floor(max(q[0] for q in p) / CELL)) + 1):
+                    for gz in range(int(math.floor(min(q[2] for q in p) / CELL)), int(math.floor(max(q[2] for q in p) / CELL)) + 1):
+                        steep.setdefault((gx, gz), []).append((min(q[1] for q in p), max(q[1] for q in p)))
             continue
         # a vertex outside the cell would put its height (a lower shore) on the cell
         n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
@@ -372,6 +376,8 @@ def main():
             if b[0] < x < b[1] and b[2] < z < b[3] and h['bottom'] < hi and h['top'] > lo and \
                     any(h['bottom'] < y < h['top'] and inside(h, x, y, z) for y in (lo + 8.0 + 32.0 * n for n in range(int((hi - lo) / 32.0) + 1))):
                 return False
+        if any(a_ < hi - 40.0 and b_ > lo for a_, b_ in d['steep'].get((int(math.floor(x / CELL)), int(math.floor(z / CELL))), [])):
+            return False  # a displacement face too steep to be a top still stops a fall
         return not any(lo < tops[j]['top'] < hi - 40.0 and tops[j]['face'][0] <= x <= tops[j]['face'][1] and tops[j]['face'][2] <= z <= tops[j]['face'][3]
                        for j in grid.get((int(math.floor(x / B)), int(math.floor(z / B))), []))
     # Fall doors: a teleport box with no floor inside it (a stage's catch box over the void) is
@@ -394,7 +400,8 @@ def main():
                     continue
                 f = t['face']; cx, cz = centre(t)
                 for x, z in ((f[0] - 24.0, cz), (f[1] + 24.0, cz), (cx, f[2] - 24.0), (cx, f[3] + 24.0)):
-                    if zb[0] < x < zb[1] and zb[2] < z < zb[3] and open_column(x, z, zy[1], t['top'] + 48.0):
+                    if zb[0] < x < zb[1] and zb[2] < z < zb[3] and all(open_column(x + dx, z + dz, zy[1], t['top'] + 48.0)
+                                                                 for dx, dz in ((0, 0), (-16, -16), (16, -16), (-16, 16), (16, 16))):
                         doors.setdefault(i, []).append((land, (x, zy[1] - 8.0, z))); nf += 1
                         break
         if a.debug:
@@ -578,12 +585,19 @@ def main():
         h, pv, t = h % N, prev[i] % N, tops[i % N]; f = t['face']; cx, cz = centre(t)
         pts.append({'at': [round(cx), round(t['top']), round(cz)],
                     'radius': round(min(32.0, (f[1] - f[0]) / 2, (f[3] - f[2]) / 2))})
-        if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0 and not (a.slopes and walk(prev[i], i)):
+        if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0 and \
+                not (a.slopes and walk(prev[i], i) and gap(tops[h]['face'], f) < 256.0):
             pts[-1]['hop'] = True  # terrain has no lip to jump at: run on it and the bot walks down into the water
         if i not in via and i not in boost_from and gap(tops[pv]['face'], f) > envelope(t['top'] - tops[pv]['top'], 1.0):
             pts[-1]['hop'] = True  # past a run-speed jump: only speed carried from hop to hop crosses it
         if levels and i not in via and i not in boost_from and gap(tops[pv]['face'], f) >= 16.0:
             pts[-1]['hop'] = True  # a chain of hops carries its speed only while it keeps jumping
+        drop = tops[pv]['top'] - t['top']
+        if a.slopes and i not in via and i not in boost_from and drop > 2.0 * STEP and \
+                gap(tops[pv]['face'], f) <= 0.8 * RUN_SPEED * math.sqrt(2.0 * drop / GRAVITY):
+            pts[-1].pop('hop', None); pts[-1]['slide'] = True  # walked off, or slid down a face too steep to stand on
+        if a.slopes and t['slope']:
+            pts[-1]['land'] = False  # a slope cell's top is its lip: passed walking over it, never by landing
         if k + 1 < len(path) and path[k + 1] in boost_from:
             pts[-1]['launch'] = True  # a booster: passed by jumping off it
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
