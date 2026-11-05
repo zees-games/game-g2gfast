@@ -8,6 +8,7 @@ HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 32.0         # terrain is binned into cells this wide
 WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
+STEP = 18.0         # the motor's step: walking up a slope, a cell's low edge may stand this far over the last one's top
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
 
 
@@ -46,7 +47,8 @@ def inside(h, x, y, z, inset=0.0):
     return h['planes'] is None or all(a * x + b * y + c * z + d < -inset for a, b, c, d in h['planes'])
 
 
-def load(mid, root):
+def load(mid, root, slopes_walked=False):
+    """The manifest and its hulls; with `slopes_walked`, terrain up to the map's max_slope is kept and a cell on a slope is a top marked 'slope'."""
     base = '%s/maps/imported/%s/%s' % (root, mid, mid)
     d = json.load(open(base + '.json')); blob = open(base + '.bin', 'rb').read()
     c = d['collision']; off = c['hull_offset']; hulls = []; slopes = []
@@ -69,12 +71,13 @@ def load(mid, root):
         ix = struct.unpack_from('<%di' % ic, blob, c['displacement_index_offset'])
         tris = tris + [[v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)] for k in range(0, ic - 2, 3)]
     cells = {}
+    walkable = math.cos(math.radians(d.get('max_slope', 45.57))) if slopes_walked else WALKABLE
     for p in tris:
         ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
         bx, by, bz = [p[2][q] - p[0][q] for q in range(3)]
         nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
         ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
-        if abs(ny) / ln < WALKABLE:  # a steeper sliver of cliff base is not ground to land on
+        if abs(ny) / ln < walkable:  # a steeper sliver of cliff base is not ground to land on
             continue
         # a vertex outside the cell would put its height (a lower shore) on the cell
         n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
@@ -85,9 +88,10 @@ def load(mid, root):
                 lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
                 cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
     for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
-        if y - lo_ > CELL_SPREAD:
+        slope = y - lo_ > CELL_SPREAD
+        if slope and not slopes_walked:
             continue  # a cell on a slope: its highest vertex is a lip over lower ground, not a floor to land on
-        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None,
+        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None, 'slope': slope,
                       'face': (gx * CELL, (gx + 1) * CELL, gz * CELL, (gz + 1) * CELL)})
     return d, hulls
 
@@ -162,18 +166,18 @@ def teleports(mid, root, d):
 
 TILE = 96.0          # a long top is cut into nodes this wide: a line between two centres crosses walls a hop never would
 
-def tiles(f, top, low=None):
+def tiles(f, top, low=None, slope=False):
     """A top as itself, or as a row of tiles when it is long enough that its centre is nowhere near its ends."""
     area = (f[1] - f[0]) * (f[3] - f[2])
     tile = max(TILE, math.sqrt(area / 2500.0))   # a floor the size of the map still gets tiles, only coarser
     nx = max(1, int(math.ceil((f[1] - f[0]) / tile))); nz = max(1, int(math.ceil((f[3] - f[2]) / tile)))
     if nx == 1 and nz == 1:
-        return [{'face': f, 'top': top, 'low': top if low is None else low, 'terrain': low is not None}]
+        return [{'face': f, 'top': top, 'low': top if low is None else low, 'terrain': low is not None, 'slope': slope}]
     out = []
     for ix in range(nx):
         for iz in range(nz):
             out.append({'face': (f[0] + (f[1] - f[0]) * ix / nx, f[0] + (f[1] - f[0]) * (ix + 1) / nx,
-                                 f[2] + (f[3] - f[2]) * iz / nz, f[2] + (f[3] - f[2]) * (iz + 1) / nz), 'top': top, 'low': top, 'terrain': False})
+                                 f[2] + (f[3] - f[2]) * iz / nz, f[2] + (f[3] - f[2]) * (iz + 1) / nz), 'top': top, 'low': top, 'terrain': False, 'slope': False})
     return out
 
 def overlap(a, b, m=0.0):
@@ -206,10 +210,12 @@ def main():
     ap.add_argument('--carry', type=float, default=0.0, help='speed (u/s) a hop gains over the one before it; each edge then lands with the speed it carried, up to --vmax (0: every jump at --speed)')
     ap.add_argument('--vmax', type=float, default=416.0, help='the most speed a chain of hops carries')
     ap.add_argument('--no-strafe', action='store_true', help='a booster flight keeps its launch speed (the old envelope) instead of strafing for more (tools/booster_flight.py)')
+    ap.add_argument('--slopes', action='store_true', help='walk terrain up to the map\'s max_slope: a cell on a slope is reached only by walking from the cell beside it')
+    ap.add_argument('--to', help='x,up,z: plan to the tops within 64 u of this point instead of the END, to ride a section (never kept as the map\'s route)')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
-    d, hulls = load(a.map, a.root)
+    d, hulls = load(a.map, a.root, a.slopes)
     region = [float(v) for v in a.region.split(',')] if a.region else None
     tops = []
     # Only boxed hulls can shade a top; a grid over them replaces a scan of every terrain cell too.
@@ -233,12 +239,13 @@ def main():
                 cand.update(shade_grid.get((gx, gz), ()))
         over = [hulls[j]['box'] for j in sorted(cand)
                 if j != i and hulls[j]['bottom'] < h['top'] + HEADROOM and hulls[j]['top'] > h['top'] + 1 and overlap(f, hulls[j]['box'])]
-        for t in tiles(f, h['top'], h.get('low')):
+        for t in tiles(f, h['top'], h.get('low'), h.get('slope', False)):
             tf = t['face']; shade = 0.0
             for b in over:
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
             if shade <= 0.5 * (tf[1] - tf[0]) * (tf[3] - tf[2]):
                 tops.append(t)
+    hulls = [h if h['box'] is not None else None for h in hulls]  # terrain cells are tops now; only boxed hulls block a line
     tps, tps_from_bsp = teleports(a.map, a.root, d)
     pits = [z for z in d['zones'] if z['kind'] == 'RESPAWN' and z.get('track', 0) == 0]
     def in_pit(t):
@@ -277,6 +284,9 @@ def main():
     s0 = under(sp[0], sp[2], sp[1], 3000.0)
     starts = [s0] if s0 is not None else []
     goals = set(i for i, t in enumerate(tops) if overlap(t['face'], ebox) and ey[0] - 300 <= t['top'] <= ey[1])
+    if a.to:
+        tx, ty, tz = [float(v) for v in a.to.split(',')]
+        goals = set(i for i, t in enumerate(tops) if math.dist(centre(t), (tx, tz)) < 64.0 and abs(t['top'] - ty) < 64.0)
     # Doors: a TELEPORT zone keeps the run and moves the player to its destination, so a
     # top the door stands on (or over) is joined to the top under the destination.
     doors = {}
@@ -309,7 +319,7 @@ def main():
     # Hull boxes in a grid, for "is the way from one top to the next clear at body height".
     hgrid = {}
     for k, h in enumerate(hulls):
-        b = h['box']
+        b = h and h['box']
         if b is None:
             continue
         if (b[1] - b[0]) * (b[3] - b[2]) > 4.0e6:
@@ -399,10 +409,22 @@ def main():
         if i in launch:
             print('booster %.0f u/s: lands %s' % (launch[i], boosted(i, j)), file=sys.stderr)
         sys.exit(0)
+    def slope_walk(i, j):
+        """Whether j is the terrain cell beside i up or down a walkable slope: its low edge meets i's top within a step."""
+        ti, tj = tops[i], tops[j]
+        return a.slopes and ti['terrain'] and tj['terrain'] and gap(ti['face'], tj['face']) < 1.0 and \
+            tj['low'] - ti['top'] <= STEP and ti['low'] - tj['top'] <= STEP
+    def slope_jump(i, j):
+        """A jump onto or off a slope cell: its top is its highest sample, a lip, not where a jump lands or leaves."""
+        return (tops[i]['slope'] or tops[j]['slope']) and not slope_walk(i, j)
     def blocked(i, j):
         """Why the edge i -> j is not taken, or None when it is."""
         g = gap(tops[i]['face'], tops[j]['face'])
         rise = tops[j]['top'] - tops[i]['top']
+        if slope_walk(i, j):
+            return None if clear(i, j) else 'not clear'
+        if slope_jump(i, j):
+            return 'slope'
         if rise > CLIMB:
             return 'rise'
         if g > min(a.reach, envelope(rise, a.safety, a.speed)):
@@ -435,6 +457,8 @@ def main():
     cache = {}
     def static_ok(i, j):
         k = i * N + j
+        if len(cache) > 2000000:
+            cache.clear()  # a slope-walked map reaches millions of pairs; a bounded cache only costs recomputation
         if k not in cache:
             ci, cj = centre(tops[i]), centre(tops[j])
             g = gap(tops[i]['face'], tops[j]['face']); rise = tops[j]['top'] - tops[i]['top']
@@ -459,18 +483,21 @@ def main():
                     w = math.dist(centre(tops[i]), centre(tops[j])) + 64.0
                     if c + w < dist.get(j, 1e18):
                         dist[j] = c + w; prev[j] = s_; via.pop(j, None); boost_from[j] = s_; heapq.heappush(q, (c + w, j))
-        for j in near(i, a.reach if not levels else max(a.reach, envelope(CLIMB, a.safety, a.vmax))):
+        for j in near(i, 1.0 if tops[i]['slope'] else a.reach if not levels else max(a.reach, envelope(CLIMB, a.safety, a.vmax))):
             g = gap(tops[i]['face'], tops[j]['face'])
+            if tops[j]['slope'] and g >= 1.0:
+                continue  # a slope cell is only walked onto from the cell beside it
             rise = tops[j]['top'] - tops[i]['top']
             v = a.speed + lv * a.carry
-            if g > min(a.reach, envelope(rise, a.safety, v)) or rise > CLIMB:
+            sw = slope_walk(i, j)
+            if not sw and (g > min(a.reach, envelope(rise, a.safety, v)) or rise > CLIMB or slope_jump(i, j)):
                 continue
-            if not static_ok(i, j):
+            if not (clear(i, j) if sw else static_ok(i, j)):
                 continue
             ci, cj = centre(tops[i]), centre(tops[j])
             w = math.dist(ci, cj) + 2.0 * g + (g * g) / 100.0
             # a walked step keeps no speed; every other hop lands a level up
-            nl = 0 if (not levels or (g < 16.0 and abs(rise) < 1.0)) else min(levels, lv + 1)
+            nl = 0 if (not levels or sw or (g < 16.0 and abs(rise) < 1.0)) else min(levels, lv + 1)
             n_ = j + nl * N
             if c + w < dist.get(n_, 1e18):
                 dist[n_] = c + w; prev[n_] = s_; via.pop(n_, None); boost_from.pop(n_, None); heapq.heappush(q, (c + w, n_))
@@ -489,7 +516,8 @@ def main():
         sys.exit('no route to the finish within reach %.0f; %d tops reached, the furthest at %s' % (
             a.reach, len(set(s % N for s in dist)), str(centre(tops[reached]))))
     def walk(i, j):
-        return j not in via and j not in boost_from and gap(tops[i % N]['face'], tops[j % N]['face']) < 16.0 and abs(tops[i % N]['top'] - tops[j % N]['top']) < 1.0
+        return j not in via and j not in boost_from and gap(tops[i % N]['face'], tops[j % N]['face']) < 16.0 and (
+            abs(tops[i % N]['top'] - tops[j % N]['top']) < 1.0 or slope_walk(i % N, j % N))
     def walked_through(i, j, k):
         """j is a step on a floor the bot runs straight across: a point there makes it land, and so hop, on every tile."""
         if not (walk(i, j) and walk(j, k)):
@@ -521,7 +549,7 @@ def main():
             pts[-1]['launch'] = True  # a booster: passed by jumping off it
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
     doc = {'id': a.map, 'units': 'manifest units and axes: Godot axes in genre units (x, up, z), what the tools print',
-           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else ''),
+           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else '') + (' --slopes' if a.slopes else '') + (' --to %s' % a.to if a.to else ''),
            'points': pts}
     s = json.dumps(doc, indent=1) + '\n'
     if a.out:
