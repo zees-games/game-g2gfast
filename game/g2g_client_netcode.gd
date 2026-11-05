@@ -434,6 +434,8 @@ func _build_touch() -> void:
 	_touch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_touch.set_buttons(G2GTouch.layout())
 	hud.add_child(_touch)
+	if platform != null:
+		platform.fit_touch_buttons(_touch, G2GTouch.layout())
 	G2GTouch.ignore_fn = _touch.contains_point
 	_touch.button_down.connect(_touch_button.bind(true))
 	_touch.button_up.connect(_touch_button.bind(false))

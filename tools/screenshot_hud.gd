@@ -63,6 +63,7 @@ var _fx_only := false
 var _splits_only := false
 ## Set by `--touch`: the phone layout, with the on-screen buttons built as `G2GClient` builds them.
 var _touch_mode := false
+var _fit: DotGameScreenFit = null
 var _presentation: G2GPresentation = null
 
 ## How far into its own life each effect is captured, in seconds of the effect's time, and
@@ -109,6 +110,9 @@ func _initialize() -> void:
 		buttons.set_buttons(G2GTouch.layout())
 		_hud.add_child(buttons)
 		buttons.visible = true
+		# What DotGameClient does on a touch screen: no pillarbox, buttons sized in millimetres.
+		_fit = DotGameScreenFit.install(root, 1)
+		_fit.fit_buttons(buttons, G2GTouch.layout())
 
 
 func _process(delta: float) -> bool:
