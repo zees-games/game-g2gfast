@@ -9,6 +9,7 @@ SURF_MIN, SURF_MAX = 0.1, 0.7  # a face with this normal-y is surfed, not stood 
 SURF_CELL = 64.0    # a surf face is binned into cells this wide
 SURF_STEP = 100.0   # the furthest apart two surf cells' centres are and still one ride
 SURF_CLIMB = 16.0   # the most a ride climbs between two cells (momentum, not a jump)
+SURF_DROP = 3.0     # the steepest a ride may fall per unit of travel: past it the rider is dropped, not carried
 SURF_SPEED = 500.0  # take-off speed (u/s) trusted for a jump off a ramp
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
@@ -382,7 +383,9 @@ def main():
         (px, pz), (qx, qz) = centre(tops[i]), centre(tops[j])
         n = max(2, int(math.dist((px, pz), (qx, qz)) / 32.0))
         pts_ = [(px + (qx - px) * k / n, pz + (qz - pz) * k / n) for k in range(n + 1)]
-        for zb, zy, _ in tps + [((w[0], w[1], w[2], w[3]), (w[4], w[5]), None) for w in waters]:
+        catch = [((min(z['min'][0], z['max'][0]), max(z['min'][0], z['max'][0]), min(z['min'][2], z['max'][2]), max(z['min'][2], z['max'][2])),
+                 (min(z['min'][1], z['max'][1]), max(z['min'][1], z['max'][1])), None) for z in pits] if a.surf else []  # a ridden fall crosses a RESPAWN box too
+        for zb, zy, _ in tps + [((w[0], w[1], w[2], w[3]), (w[4], w[5]), None) for w in waters] + catch:
             if zy[0] < tt - 8.0 and zy[1] > lt + 24.0 and not (zy[0] - 24.0 <= lt <= zy[1]):
                 if any(zb[0] <= x <= zb[1] and zb[2] <= z <= zb[3] for x, z in pts_):
                     return True
@@ -488,7 +491,7 @@ def main():
                 if not tops[j].get('surf', False):
                     continue
                 rise = tops[j]['top'] - tops[i]['top']; dd = math.dist(centre(tops[i]), centre(tops[j]))
-                if dd > SURF_STEP or rise > SURF_CLIMB or rise < -8.0 * dd:
+                if dd > SURF_STEP or rise > SURF_CLIMB or rise < -SURF_DROP * dd:
                     continue
                 w = dd
                 n_ = j + lv * N
@@ -541,20 +544,7 @@ def main():
     while path[-1] in prev:
         path.append(prev[path[-1]])
     path.reverse()
-    path = [path[0]] + [i for k, i in enumerate(path[1:-1], 1) if not walked_through(path[k - 1], i, path[k + 1])] + path[-1:]
-    def sf(i):
-        return tops[i % N].get('surf', False)
-    kept = [path[0]]; run_ = 0.0
-    for k in range(1, len(path) - 1):
-        i = path[k]
-        if sf(i) and sf(path[k - 1]) and sf(path[k + 1]):
-            u = (centre(tops[i % N])[0] - centre(tops[kept[-1] % N])[0], centre(tops[i % N])[1] - centre(tops[kept[-1] % N])[1])
-            v_ = (centre(tops[path[k + 1] % N])[0] - centre(tops[i % N])[0], centre(tops[path[k + 1] % N])[1] - centre(tops[i % N])[1])
-            nu, nv = math.hypot(*u), math.hypot(*v_)
-            if nu > 0 and nv > 0 and nu < 384.0 and (u[0] * v_[0] + u[1] * v_[1]) / (nu * nv) > math.cos(math.radians(25.0)):
-                continue  # a ride straight on: the next point is far enough to steer by
-        kept.append(i)
-    path = kept + path[-1:]
+    path = [path[0]] + [i for k, i in enumerate(path[1:-1], 1) if a.surf or not walked_through(path[k - 1], i, path[k + 1])] + path[-1:]
     pts = []
     for k, (h, i) in enumerate(zip(path, path[1:]), 1):
         if i in via:
