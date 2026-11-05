@@ -1,0 +1,32 @@
+[
+  {
+    "paths": [
+      ""
+    ],
+    "licence": "MIT",
+    "author": "TMC",
+    "url": "https://github.com/zees-games/game-g2gfast",
+    "title": "game-g2gfast (original content; bundled addons carry their own licences in their repositories)"
+  },
+  {
+    "paths": [
+      "textures/prototype/",
+      "props/kenney/",
+      "avatars/",
+      "textures/stock/"
+    ],
+    "licence": "CC0-1.0",
+    "author": "Kenney",
+    "url": "https://kenney.nl",
+    "title": "Kenney assets (Prototype Textures, Food, Holiday and Nature Kits, character kit skins and avatar parts, Retro Textures Fantasy)"
+  },
+  {
+    "paths": [
+      "textures/stock/cc0_"
+    ],
+    "licence": "CC0-1.0",
+    "author": "Lennart Demes (ambientCG)",
+    "url": "https://ambientcg.com",
+    "title": "ambientCG Concrete034, Metal032, MetalPlates006, Snow010A"
+  }
+]
