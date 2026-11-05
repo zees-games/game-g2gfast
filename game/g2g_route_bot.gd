@@ -34,6 +34,7 @@ extends RefCounted
 ##               it false for the whole route at the top level.
 ##   `"door"`    true: a door (a TELEPORT zone) to walk into; passed when it teleports
 ##   `"launch"`  true: a booster pad; once landed on it, the bot jumps while still on it
+##   `"slide"`   true: a drop walked off or slid down a face too steep to stand on; no jump, and on the face the bot steers down it
 ##   `"note"`    why the point is there; ignored
 ## A point also counts as passed once the bot is beyond it along the leg it is on, so a
 ## point the bot flies past at speed is not chased back.
@@ -113,6 +114,7 @@ static func load_points(id: StringName, why: Array = []) -> Array[Dictionary]:
 			"land": bool(p.get("land", parsed.get("land", true))),
 			"door": bool(p.get("door", false)),
 			"launch": bool(p.get("launch", false)),
+			"slide": bool(p.get("slide", false)),
 		})
 	return out
 
@@ -162,7 +164,9 @@ func command(state: DotFpsState, space: PhysicsDirectSpaceState3D, tunables: Dot
 
 	var c := DotFpsCommand.new()
 	var ramp := ramp_under(space, at, flat, max_slope)
-	if ramp != Vector3.ZERO:
+	if ramp != Vector3.ZERO and bool(point.get("slide", false)):
+		c = _air(state, goal, flat, cap, tunables, delta)  # down the face to the point below it, not along it
+	elif ramp != Vector3.ZERO:
 		var inward := Vector3(-ramp.x, 0.0, -ramp.z).normalized()
 		var along := Vector3(inward.z, 0.0, -inward.x)
 		var going := to if to.length() > 0.01 else flat
@@ -176,7 +180,7 @@ func command(state: DotFpsState, space: PhysicsDirectSpaceState3D, tunables: Dot
 		c.yaw = goal_yaw
 		c.move = Vector2(0.0, 1.0)
 		var jump := false
-		if not bool(point.get("walk", false)):
+		if not bool(point.get("walk", false)) and not bool(point.get("slide", false)):
 			var dir := flat.normalized() if speed > 30.0 else to.normalized()
 			jump = (hop and speed > JUMP_FROM) or ledge_ahead(space, at, dir, speed) or wall_ahead(space, at, dir) \
 					or _on_launch(at)
