@@ -61,6 +61,8 @@ var _done := false
 var _fx_only := false
 ## Set by `--splits`: one frame, `hud_splits`, mid-run on bhop_g2g_stages.
 var _splits_only := false
+## Set by `--touch`: the phone layout, with the on-screen buttons built as `G2GClient` builds them.
+var _touch_mode := false
 var _presentation: G2GPresentation = null
 
 ## How far into its own life each effect is captured, in seconds of the effect's time, and
@@ -72,6 +74,10 @@ var _fx_since := 0
 
 func _initialize() -> void:
 	DotLog.set_level(DotLog.Level.WARN)
+	_touch_mode = "--touch" in OS.get_cmdline_user_args()
+	if _touch_mode:
+		# Forced before the HUD exists: it reads has_touch() when it lays itself out.
+		DotPlatform.touch_override = 1
 	_fx_only = "--fx" in OS.get_cmdline_user_args()
 	_splits_only = "--splits" in OS.get_cmdline_user_args()
 	if _splits_only:
@@ -94,6 +100,15 @@ func _initialize() -> void:
 	_hud = G2GHud.new()
 	_hud.name = "Hud"
 	root.add_child(_hud)
+
+	if _touch_mode:
+		var buttons := DotTouchButtons.new()
+		buttons.name = "TouchButtons"
+		buttons.set_anchors_preset(Control.PRESET_FULL_RECT)
+		buttons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		buttons.set_buttons(G2GTouch.layout())
+		_hud.add_child(buttons)
+		buttons.visible = true
 
 
 func _process(delta: float) -> bool:
@@ -396,7 +411,7 @@ func _arrange_fx(which: Array) -> void:
 
 func _capture(name: String) -> void:
 	var image := root.get_texture().get_image()
-	var path := "%s/%s.png" % [OUT_DIR, name]
+	var path := "%s/%s%s.png" % [OUT_DIR, name, "_touch" if _touch_mode else ""]
 	var err := image.save_png(path)
 
 	if err != OK:
