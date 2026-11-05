@@ -11,7 +11,8 @@ WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
 SURF_NY = math.cos(math.radians(85.0))  # a face steeper than this is a wall, not a surf face (the route bot's ramp_under)
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
 FALL = 2000.0       # the deepest drop off a ledge into a catch box that a fall door takes
-STEP = 18.0         # the motor's step: walking up a slope, a cell's low edge may stand this far over the last one's top
+BURIED = 1024.0     # terrain this far over a brush top is ground it is buried under; higher is a ceiling
+STEP = 18.0        # the motor's step: walking up a slope, a cell's low edge may stand this far over the last one's top
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
 
 
@@ -100,6 +101,9 @@ def load(mid, root, slopes_walked=False):
             key = (int(math.floor(x / CELL)), int(math.floor(z / CELL)), int(math.floor(y / 96.0)))
             lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
             cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
+    ground = d['ground'] = {}  # cell -> lowest terrain sample in it
+    for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
+        ground[(gx, gz)] = min(ground.get((gx, gz), 1e18), lo_)
     for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
         slope = y - lo_ > CELL_SPREAD
         if slope and not slopes_walked:
@@ -272,6 +276,10 @@ def main():
                         inside(o, (tf[0] + tf[1]) / 2, y, (tf[2] + tf[3]) / 2) for y in (h['top'] + 8.0, h['top'] + 40.0, h['top'] + HEADROOM - 1.0)):
                     continue  # a diagonal slab's box covers floor the slab is nowhere near: ask its planes
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
+            # a brush top the terrain runs over is inside the hill, not a floor
+            gl = d['ground'].get((int(math.floor((tf[0] + tf[1]) / 2 / CELL)), int(math.floor((tf[2] + tf[3]) / 2 / CELL))))
+            if h['box'] is not None and gl is not None and h['top'] + 8.0 < gl < h['top'] + BURIED:
+                continue
             if shade <= 0.5 * (tf[1] - tf[0]) * (tf[3] - tf[2]):
                 tops.append(t)
     hulls = [h if h['box'] is not None else None for h in hulls]  # terrain cells are tops now; only boxed hulls block a line
