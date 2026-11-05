@@ -328,6 +328,8 @@ func _test_follows_its_recording() -> void:
 ## Perturbed starts the surf section rides besides the stage's own arrival, and how many must arrive.
 ## Not all: the pilot arrives from 72 to 80% of them (50 simulated and 20 live rides, game-dev/docs/surf-bots-study.md); the stage's own arrival must. Seeded.
 const SURF_PERTURBED := 4
+## A ride is cut off at this many seconds; surf_mesa's long course needs more than the planner's default 20.
+const SURF_RIDE_SECONDS := 100.0
 const SURF_PERTURBED_ARRIVING := 3
 
 
@@ -381,7 +383,7 @@ func _test_surfs_from_its_cache() -> void:
 	pilot.load_stage(data, G2GUnits.METRES_PER_UNIT)
 	pilot.sim = sim
 	pilot.score = course.score
-	var result: Dictionary = await SurfPlan.ride_live(game, bot, course, pilot, base, 1 + SURF_PERTURBED, 7000 + number, true)
+	var result: Dictionary = await SurfPlan.ride_live(game, bot, course, pilot, base, 1 + SURF_PERTURBED, 7000 + number, true, SURF_RIDE_SECONDS)
 	var times: Array = result["times"]
 	print("        stage %d: %d of %d rides arrived (%s); %s" % [number, result["ok"], 1 + SURF_PERTURBED,
 		", ".join(times.map(func(t: float) -> String: return "%.2f s" % t)),
