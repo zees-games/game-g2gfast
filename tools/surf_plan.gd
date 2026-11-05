@@ -42,6 +42,8 @@ const SPEED_UNITS := 150.0
 const RIDE_SECONDS := 20.0
 
 var game: G2GGame = null
+## `--seconds N`: how long a ride may take; a whole-run stage 0 is longer than a stage.
+var ride_seconds := RIDE_SECONDS
 
 
 func _ready() -> void:
@@ -53,6 +55,7 @@ func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var id := StringName(args[0] if args.size() > 0 else "surf_beginner")
 	var number := int(args[1]) if args.size() > 1 else 1
+	ride_seconds = float(_opt(args, "--seconds", int(RIDE_SECONDS)))
 	var starts := _opt(args, "--starts", 6)
 	var runs := _opt(args, "--runs", 40)
 	var live := _opt(args, "--live", 10)
@@ -127,7 +130,7 @@ func _run() -> void:
 	_simulated_rides(runs, number, base, course, bot, sim, pilot)
 
 	if live > 0:
-		var result: Dictionary = await ride_live(game, bot, course, pilot, base, live, 9000 + number)
+		var result: Dictionary = await ride_live(game, bot, course, pilot, base, live, 9000 + number, false, ride_seconds)
 		print("[surf]   live rides: %d of %d reached the next stage (%.0f%%), %s; %s" % [
 			result["ok"], live, 100.0 * float(result["ok"]) / maxf(1.0, live), _spread(result["times"]),
 			", ".join(result["failures"]) if not (result["failures"] as Array).is_empty() else "no failures"])
@@ -185,7 +188,7 @@ func _trace(args: PackedStringArray, base: DotFpsState, course: DotBotSurfCourse
 		base.mode = DotFpsState.Mode.AIR
 		base.yaw = rad_to_deg(atan2(-base.velocity.x, -base.velocity.z))
 	var tracer := DotBotSurfPlanner.new()
-	tracer.seconds = RIDE_SECONDS
+	tracer.seconds = ride_seconds
 	tracer.width = _opt(args, "--width", tracer.width)
 	tracer.trace = func(depth: int, best: Dictionary) -> void:
 		if depth % 4 == 0:
@@ -213,7 +216,7 @@ func _plan_stage(args: PackedStringArray, id: StringName, number: int, starts: i
 	var started := Time.get_ticks_msec()
 	var steps_before: int = sim.steps
 	var planner := DotBotSurfPlanner.new()
-	planner.seconds = RIDE_SECONDS
+	planner.seconds = ride_seconds
 	planner.width = _opt(args, "--width", planner.width)
 	var repair_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 	var repair_pilot := DotBotSurfPilot.new()
@@ -255,7 +258,7 @@ func _simulated_rides(runs: int, number: int, base: DotFpsState, course: DotBotS
 	var misses: Array[String] = []
 	var ride_sim: DotFpsSimulator = course.simulator_for(bot.controller, game.mechanics)
 	for i in range(runs):
-		var r: Dictionary = pilot.ride(perturbed(base, course, rng), ride_sim, int(RIDE_SECONDS / sim.delta))
+		var r: Dictionary = pilot.ride(perturbed(base, course, rng), ride_sim, int(ride_seconds / sim.delta))
 		ridden += int(r["ticks"])
 		if int(r["event"]) == DotBotSurfCourse.EVENT_GOAL:
 			ok += 1
@@ -286,7 +289,7 @@ func _chain(args: PackedStringArray, box_arg: String, course: DotBotSurfCourse, 
 	course.goal_fn = func(s: Variant) -> bool:
 		return box.has_point(s.position) and Vector2(s.velocity.x, s.velocity.z).length() >= min_speed
 	var planner := DotBotSurfPlanner.new()
-	planner.seconds = RIDE_SECONDS
+	planner.seconds = ride_seconds
 	planner.width = _opt(args, "--width", planner.width)
 	planner.trace = func(depth: int, best: Dictionary) -> void:
 		if depth % 4 == 0:
@@ -481,7 +484,7 @@ static func simulator_checks(p_game: Node, bot: G2GPlayer, sim: DotFpsSimulator,
 ## `{"ok": int, "times": Array[float], "failures": Array[String]}`.
 ## The first ride is from [param base] itself when [param exact_first] is true.
 static func ride_live(p_game: Node, bot: G2GPlayer, course: DotBotSurfCourse, pilot: DotBotSurfPilot,
-		base: DotFpsState, count: int, seed_value: int, exact_first: bool = false) -> Dictionary:
+		base: DotFpsState, count: int, seed_value: int, exact_first: bool = false, seconds: float = RIDE_SECONDS) -> Dictionary:
 	var tree := bot.get_tree()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
@@ -514,7 +517,7 @@ static func ride_live(p_game: Node, bot: G2GPlayer, course: DotBotSurfCourse, pi
 		arrived[0] = false
 		put_back[0] = false
 		var t := 0
-		while t < int(RIDE_SECONDS * rate) and not arrived[0] and not put_back[0]:
+		while t < int(seconds * rate) and not arrived[0] and not put_back[0]:
 			bot.controller.apply_command(pilot.command(bot.controller.state))
 			fell_at[0] = bot.controller.state.position
 			await tree.physics_frame
