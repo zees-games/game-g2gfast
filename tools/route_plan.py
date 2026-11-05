@@ -5,6 +5,11 @@ import json, struct, sys, heapq, math, argparse, os
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 32.0         # terrain is binned into cells this wide
 WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
+SURF_MIN, SURF_MAX = 0.1, 0.7  # a face with this normal-y is surfed, not stood on (steeper is a wall, flatter is ground)
+SURF_CELL = 64.0    # a surf face is binned into cells this wide
+SURF_STEP = 100.0   # the furthest apart two surf cells' centres are and still one ride
+SURF_CLIMB = 16.0   # the most a ride climbs between two cells (momentum, not a jump)
+SURF_SPEED = 500.0  # take-off speed (u/s) trusted for a jump off a ramp
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
 
@@ -34,9 +39,10 @@ def geometry(f):
     except Exception:  # no scipy, or a flat hull qhull refuses
         if not _warned[0]:
             _warned[0] = True; print('warning: scipy missing or a hull refused: sloped faces are skipped, the plan differs', file=sys.stderr)
-        return None, []
+        return None, [], []
     slopes = [[tuple(ch.points[v]) for v in s] for s, e in zip(ch.simplices, ch.equations) if WALKABLE <= e[1] < 0.999]
-    return [tuple(e) for e in ch.equations], slopes
+    surfs = [[tuple(ch.points[v]) for v in s] for s, e in zip(ch.simplices, ch.equations) if SURF_MIN <= e[1] < SURF_MAX]
+    return [tuple(e) for e in ch.equations], slopes, surfs
 
 
 def inside(h, x, y, z, inset=0.0):
@@ -44,17 +50,17 @@ def inside(h, x, y, z, inset=0.0):
     return h['planes'] is None or all(a * x + b * y + c * z + d < -inset for a, b, c, d in h['planes'])
 
 
-def load(mid, root):
+def load(mid, root, surf=False):
     base = '%s/maps/imported/%s/%s' % (root, mid, mid)
     d = json.load(open(base + '.json')); blob = open(base + '.bin', 'rb').read()
-    c = d['collision']; off = c['hull_offset']; hulls = []; slopes = []
+    c = d['collision']; off = c['hull_offset']; hulls = []; slopes = []; surfs = []
     for _ in range(c['hull_count']):
         n = struct.unpack_from('<I', blob, off)[0]; off += 4
         f = struct.unpack_from('<%df' % (n * 3), blob, off); off += n * 12
         xs, ys, zs = f[0::3], f[1::3], f[2::3]
         ty = max(ys)
         top = [(xs[i], zs[i]) for i in range(n) if ys[i] > ty - 1]
-        pl, sl = geometry(f); slopes += sl
+        pl, sl, sf = geometry(f); slopes += sl; surfs += sf
         hulls.append({'box': (min(xs), max(xs), min(zs), max(zs)), 'bottom': min(ys), 'top': ty, 'planes': pl,
                       'face': (min(p[0] for p in top), max(p[0] for p in top),
                                min(p[1] for p in top), max(p[1] for p in top)) if len(top) >= 3 else None})
@@ -67,13 +73,26 @@ def load(mid, root):
         ix = struct.unpack_from('<%di' % ic, blob, c['displacement_index_offset'])
         tris = tris + [[v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)] for k in range(0, ic - 2, 3)]
     cells = {}
-    for p in tris:
+    scells = {}
+    for p, isterrain in [(t, False) for t in tris[:len(slopes)]] + [(t, True) for t in tris[len(slopes):]] + [(t, False) for t in (surfs if surf else [])]:
         ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
         bx, by, bz = [p[2][q] - p[0][q] for q in range(3)]
         nx, ny, nz = ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx
         ln = math.sqrt(nx * nx + ny * ny + nz * nz) or 1.0
+        if surf and SURF_MIN <= abs(ny) / ln < SURF_MAX:
+            # a surf face: cells of its own (a cell spans the slope's height, so no spread test), the mean height their top
+            n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 16.0)))
+            for s_ in range(n + 1):
+                for t_ in range(n + 1 - s_):
+                    x, y, z = [p[0][q] + (p[1][q] - p[0][q]) * s_ / n + (p[2][q] - p[0][q]) * t_ / n for q in range(3)]
+                    key = (int(math.floor(x / SURF_CELL)), int(math.floor(z / SURF_CELL)), int(math.floor(y / SURF_CELL)))
+                    lo_, hi_, sm, n_ = scells.get(key, (1e18, -1e18, 0.0, 0))
+                    scells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
+            continue
         if abs(ny) / ln < WALKABLE:  # a steeper sliver of cliff base is not ground to land on
             continue
+        if surf and isterrain:
+            continue  # a surf map's terrain is ridden, and its walkable cells (hundreds of thousands) are not what the route stands on
         # a vertex outside the cell would put its height (a lower shore) on the cell
         n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
         for s_ in range(n + 1):
@@ -87,6 +106,11 @@ def load(mid, root):
             continue  # a cell on a slope: its highest vertex is a lip over lower ground, not a floor to land on
         hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None,
                       'face': (gx * CELL, (gx + 1) * CELL, gz * CELL, (gz + 1) * CELL)})
+    for (gx, gz, _), (lo_, hi_, sm, n_) in scells.items():
+        if n_ < 4:
+            continue  # a sliver of face is no ride
+        hulls.append({'box': None, 'bottom': sm / n_ - 1.0, 'top': sm / n_, 'low': lo_, 'planes': None, 'surf': True,
+                      'face': (gx * SURF_CELL, (gx + 1) * SURF_CELL, gz * SURF_CELL, (gz + 1) * SURF_CELL)})
     return d, hulls
 
 def inert_filters(mid, root, b):
@@ -203,10 +227,12 @@ def main():
     ap.add_argument('--speed', type=float, default=RUN_SPEED, help='take-off speed (u/s) trusted for a long gap; past run speed the bot hops into it to carry speed')
     ap.add_argument('--carry', type=float, default=0.0, help='speed (u/s) a hop gains over the one before it; each edge then lands with the speed it carried, up to --vmax (0: every jump at --speed)')
     ap.add_argument('--vmax', type=float, default=416.0, help='the most speed a chain of hops carries')
+    ap.add_argument('--surf', action='store_true', help='plan along surf faces: ramps are ridden cell to cell, and a jump off one is trusted at --surf-speed')
+    ap.add_argument('--surf-speed', type=float, default=SURF_SPEED)
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
-    d, hulls = load(a.map, a.root)
+    d, hulls = load(a.map, a.root, a.surf)
     region = [float(v) for v in a.region.split(',')] if a.region else None
     tops = []
     # Only boxed hulls can shade a top; a grid over them replaces a scan of every terrain cell too.
@@ -231,6 +257,7 @@ def main():
         over = [hulls[j]['box'] for j in sorted(cand)
                 if j != i and hulls[j]['bottom'] < h['top'] + HEADROOM and hulls[j]['top'] > h['top'] + 1 and overlap(f, hulls[j]['box'])]
         for t in tiles(f, h['top'], h.get('low')):
+            t['surf'] = bool(h.get('surf'))
             tf = t['face']; shade = 0.0
             for b in over:
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
@@ -454,10 +481,27 @@ def main():
                     w = math.dist(centre(tops[i]), centre(tops[j])) + 64.0
                     if c + w < dist.get(j, 1e18):
                         dist[j] = c + w; prev[j] = s_; via.pop(j, None); boost_from[j] = s_; heapq.heappush(q, (c + w, j))
+        si = tops[i].get('surf', False)
+        if si:
+            # a ride: along a face to the next cell, down or level; momentum climbs a little, a jump would not
+            for j in near(i, SURF_STEP):
+                if not tops[j].get('surf', False):
+                    continue
+                rise = tops[j]['top'] - tops[i]['top']; dd = math.dist(centre(tops[i]), centre(tops[j]))
+                if dd > SURF_STEP or rise > SURF_CLIMB or rise < -8.0 * dd:
+                    continue
+                w = dd
+                n_ = j + lv * N
+                if c + w < dist.get(n_, 1e18):
+                    dist[n_] = c + w; prev[n_] = s_; via.pop(n_, None); boost_from.pop(n_, None); heapq.heappush(q, (c + w, n_))
         for j in near(i, a.reach if not levels else max(a.reach, envelope(CLIMB, a.safety, a.vmax))):
+            if si and tops[j].get('surf', False):
+                continue
             g = gap(tops[i]['face'], tops[j]['face'])
             rise = tops[j]['top'] - tops[i]['top']
             v = a.speed + lv * a.carry
+            if si:
+                v = max(v, a.surf_speed)
             if g > min(a.reach, envelope(rise, a.safety, v)) or rise > CLIMB:
                 continue
             if not static_ok(i, j):
@@ -498,6 +542,19 @@ def main():
         path.append(prev[path[-1]])
     path.reverse()
     path = [path[0]] + [i for k, i in enumerate(path[1:-1], 1) if not walked_through(path[k - 1], i, path[k + 1])] + path[-1:]
+    def sf(i):
+        return tops[i % N].get('surf', False)
+    kept = [path[0]]; run_ = 0.0
+    for k in range(1, len(path) - 1):
+        i = path[k]
+        if sf(i) and sf(path[k - 1]) and sf(path[k + 1]):
+            u = (centre(tops[i % N])[0] - centre(tops[kept[-1] % N])[0], centre(tops[i % N])[1] - centre(tops[kept[-1] % N])[1])
+            v_ = (centre(tops[path[k + 1] % N])[0] - centre(tops[i % N])[0], centre(tops[path[k + 1] % N])[1] - centre(tops[i % N])[1])
+            nu, nv = math.hypot(*u), math.hypot(*v_)
+            if nu > 0 and nv > 0 and nu < 384.0 and (u[0] * v_[0] + u[1] * v_[1]) / (nu * nv) > math.cos(math.radians(25.0)):
+                continue  # a ride straight on: the next point is far enough to steer by
+        kept.append(i)
+    path = kept + path[-1:]
     pts = []
     for k, (h, i) in enumerate(zip(path, path[1:]), 1):
         if i in via:
@@ -506,6 +563,9 @@ def main():
         h, pv, t = h % N, prev[i] % N, tops[i % N]; f = t['face']; cx, cz = centre(t)
         pts.append({'at': [round(cx), round(t['top']), round(cz)],
                     'radius': round(min(32.0, (f[1] - f[0]) / 2, (f[3] - f[2]) / 2))})
+        if tops[i % N].get('surf', False):
+            pts[-1]['land'] = False  # a face is ridden, not landed on
+            continue
         if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0:
             pts[-1]['hop'] = True  # terrain has no lip to jump at: run on it and the bot walks down into the water
         if i not in via and i not in boost_from and gap(tops[pv]['face'], f) > envelope(t['top'] - tops[pv]['top'], 1.0):
@@ -516,7 +576,7 @@ def main():
             pts[-1]['launch'] = True  # a booster: passed by jumping off it
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
     doc = {'id': a.map, 'units': 'manifest units and axes: Godot axes in genre units (x, up, z), what the tools print',
-           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else ''),
+           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --surf' + (' --surf-speed %g' % a.surf_speed if a.surf_speed != SURF_SPEED else '') if a.surf else '') + (' --region %s' % a.region if a.region else ''),
            'points': pts}
     s = json.dumps(doc, indent=1) + '\n'
     if a.out:
