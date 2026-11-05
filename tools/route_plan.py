@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import booster_flight
 
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
+BIG_HULL = 4.0e6     # u^2: a hull whose box spans more is a skybox wall, a whole-map floor or a long diagonal slab
 CELL = 32.0         # terrain is binned into cells this wide
 WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
 SURF_NY = math.cos(math.radians(85.0))  # a face steeper than this is a wall, not a surf face (the route bot's ramp_under)
@@ -168,8 +169,15 @@ def teleports(mid, root, d):
             og = [float(v) for v in e.get('origin', '0 0 0').split()]
             lo, hi = to_godot([mi[k] + og[k] for k in range(3)]), to_godot([ma[k] + og[k] for k in range(3)])
             q = to_godot([float(v) for v in t['origin'].split()])
-            out.append(((min(lo[0], hi[0]), max(lo[0], hi[0]), min(lo[2], hi[2]), max(lo[2], hi[2])),
-                        (min(lo[1], hi[1]), max(lo[1], hi[1])), q))
+            box = (min(lo[0], hi[0]), max(lo[0], hi[0]), min(lo[2], hi[2]), max(lo[2], hi[2]))
+            # the manifest cuts a trigger per brush; the model's box also covers the gaps between its brushes
+            cut = [z for z in d['zones'] if z.get('destination') and z.get('track', 0) == 0 and 'min' in z
+                   and abs(z['destination'][0] - q[0]) < 1.0 and abs(z['destination'][2] - q[2]) < 1.0 and abs(z['destination'][1] - q[1]) < 32.0
+                   and box[0] - 1 <= min(z['min'][0], z['max'][0]) and max(z['min'][0], z['max'][0]) <= box[1] + 1
+                   and box[2] - 1 <= min(z['min'][2], z['max'][2]) and max(z['min'][2], z['max'][2]) <= box[3] + 1]
+            for z in cut if len(cut) > 1 else [None]:
+                out.append((box if z is None else (min(z['min'][0], z['max'][0]), max(z['min'][0], z['max'][0]), min(z['min'][2], z['max'][2]), max(z['min'][2], z['max'][2])),
+                            (min(lo[1], hi[1]), max(lo[1], hi[1])) if z is None else (min(z['min'][1], z['max'][1]), max(z['min'][1], z['max'][1])), q))
         return out, True
     for z in d['zones']:
         if z['kind'] != 'TELEPORT' or z.get('track', 0) != 0 or not z.get('destination'):
@@ -254,11 +262,15 @@ def main():
         for gx in range(int(math.floor(f[0] / SB)), int(math.floor(f[1] / SB)) + 1):
             for gz in range(int(math.floor(f[2] / SB)), int(math.floor(f[3] / SB)) + 1):
                 cand.update(shade_grid.get((gx, gz), ()))
-        over = [hulls[j]['box'] for j in sorted(cand)
+        over = [hulls[j] for j in sorted(cand)
                 if j != i and hulls[j]['bottom'] < h['top'] + HEADROOM and hulls[j]['top'] > h['top'] + 1 and overlap(f, hulls[j]['box'])]
         for t in tiles(f, h['top'], h.get('low'), h.get('slope', False), h.get('crease', False)):
             tf = t['face']; shade = 0.0
-            for b in over:
+            for o in over:
+                b = o['box']
+                if (b[1] - b[0]) * (b[3] - b[2]) > BIG_HULL and not any(
+                        inside(o, (tf[0] + tf[1]) / 2, y, (tf[2] + tf[3]) / 2) for y in (h['top'] + 8.0, h['top'] + 40.0, h['top'] + HEADROOM - 1.0)):
+                    continue  # a diagonal slab's box covers floor the slab is nowhere near: ask its planes
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
             if shade <= 0.5 * (tf[1] - tf[0]) * (tf[3] - tf[2]):
                 tops.append(t)
@@ -316,7 +328,9 @@ def main():
         for i, t in enumerate(tops):
             if overlap(t['face'], zb) and zy[0] - 24 <= t['top'] <= zy[1]:
                 if land != i:
-                    doors.setdefault(i, []).append((land, ((zb[0] + zb[1]) / 2, max(zy[0], t['top']), (zb[2] + zb[3]) / 2)))
+                    # walk to a big box's floor where it stands, not to its far centre past whatever lies between
+                    at = centre(t) if (zb[1] - zb[0]) * (zb[3] - zb[2]) > BIG_HULL else ((zb[0] + zb[1]) / 2, (zb[2] + zb[3]) / 2)
+                    doors.setdefault(i, []).append((land, (at[0], max(zy[0], t['top']), at[1])))
     if a.debug:
         print('teleports', len(tps), 'doors on', len(doors), 'tops', len(tops), file=sys.stderr)
     if not starts or not goals:
@@ -341,7 +355,7 @@ def main():
         b = h and h['box']
         if b is None:
             continue
-        if (b[1] - b[0]) * (b[3] - b[2]) > 4.0e6:
+        if (b[1] - b[0]) * (b[3] - b[2]) > BIG_HULL:
             continue  # a skybox wall or a whole-map floor: never between two blocks
         for gx in range(int(math.floor(b[0] / B)), int(math.floor(b[1] / B)) + 1):
             for gz in range(int(math.floor(b[2] / B)), int(math.floor(b[3] / B)) + 1):
@@ -418,6 +432,9 @@ def main():
                         break
         if a.debug:
             print('fall doors', nf, file=sys.stderr)
+    # the manifest's pits are cut per brush, where a trigger's own box can also hold the floor it sends from
+    pit_boxes = [((min(z['min'][0], z['max'][0]), max(z['min'][0], z['max'][0]), min(z['min'][2], z['max'][2]), max(z['min'][2], z['max'][2])),
+                  (min(z['min'][1], z['max'][1]), max(z['min'][1], z['max'][1])), None) for z in pits]
     def falls_into_trigger(i, j):
         """A drop whose column crosses a teleport trigger (a pit's catch box) lands the player at the pit's destination, not on j."""
         if tops[i]['top'] - tops[j]['top'] < 24.0:
@@ -426,7 +443,7 @@ def main():
         (px, pz), (qx, qz) = centre(tops[i]), centre(tops[j])
         n = max(2, int(math.dist((px, pz), (qx, qz)) / 32.0))
         pts_ = [(px + (qx - px) * k / n, pz + (qz - pz) * k / n) for k in range(n + 1)]
-        for zb, zy, _ in tps + [((w[0], w[1], w[2], w[3]), (w[4], w[5]), None) for w in waters]:
+        for zb, zy, _ in tps + [((w[0], w[1], w[2], w[3]), (w[4], w[5]), None) for w in waters] + pit_boxes:
             if zy[0] < tt - 8.0 and zy[1] > lt + 24.0 and not (zy[0] - 24.0 <= lt <= zy[1]):
                 if any(zb[0] <= x <= zb[1] and zb[2] <= z <= zb[3] for x, z in pts_):
                     return True
@@ -588,9 +605,11 @@ def main():
     while path[-1] in prev:
         path.append(prev[path[-1]])
     path.reverse()
+    walked = {s_: n for n, s_ in enumerate(path)}; full = path  # the steps pruned below still decide a crease
     path = [path[0]] + [i for k, i in enumerate(path[1:-1], 1) if not walked_through(path[k - 1], i, path[k + 1])] + path[-1:]
     pts = []
     for k, (h, i) in enumerate(zip(path, path[1:]), 1):
+        crease = any(tops[s_ % N].get('crease') for s_ in full[walked[h] + 1:walked[i] + 1])
         if i in via:
             x, y, z = via[i]
             pts.append({'at': [round(x), round(y), round(z)], 'radius': 16, 'door': True})
@@ -608,7 +627,7 @@ def main():
         if a.slopes and i not in via and i not in boost_from and drop > 2.0 * STEP and \
                 gap(tops[pv]['face'], f) <= 0.8 * RUN_SPEED * math.sqrt(2.0 * drop / GRAVITY):
             pts[-1].pop('hop', None); pts[-1]['slide'] = True  # walked off, or slid down a face too steep to stand on
-        if a.slopes and t.get('crease') and i not in via and i not in boost_from:
+        if a.slopes and crease and i not in via and i not in boost_from:
             # a surf face beside it: steer at the point rather than surf the face, and pass it from the face too
             pts[-1].pop('hop', None); pts[-1]['slide'] = True; pts[-1]['land'] = False
         if a.slopes and t['slope']:
