@@ -376,9 +376,9 @@ def main():
             if b[0] < x < b[1] and b[2] < z < b[3] and h['bottom'] < hi and h['top'] > lo and \
                     any(h['bottom'] < y < h['top'] and inside(h, x, y, z) for y in (lo + 8.0 + 32.0 * n for n in range(int((hi - lo) / 32.0) + 1))):
                 return False
-        if any(a_ < hi - 40.0 and b_ > lo for a_, b_ in d['steep'].get((int(math.floor(x / CELL)), int(math.floor(z / CELL))), [])):
+        if any(a_ < hi and b_ > lo for a_, b_ in d['steep'].get((int(math.floor(x / CELL)), int(math.floor(z / CELL))), [])):
             return False  # a displacement face too steep to be a top still stops a fall
-        return not any(lo < tops[j]['top'] < hi - 40.0 and tops[j]['face'][0] <= x <= tops[j]['face'][1] and tops[j]['face'][2] <= z <= tops[j]['face'][3]
+        return not any(lo < tops[j]['top'] < hi and tops[j]['face'][0] <= x <= tops[j]['face'][1] and tops[j]['face'][2] <= z <= tops[j]['face'][3]
                        for j in grid.get((int(math.floor(x / B)), int(math.floor(z / B))), []))
     # Fall doors: a teleport box with no floor inside it (a stage's catch box over the void) is
     # entered by walking off a ledge over it, so the ledge is joined to the box's destination.
@@ -401,7 +401,9 @@ def main():
                 f = t['face']; cx, cz = centre(t)
                 for x, z in ((f[0] - 24.0, cz), (f[1] + 24.0, cz), (cx, f[2] - 24.0), (cx, f[3] + 24.0)):
                     if zb[0] < x < zb[1] and zb[2] < z < zb[3] and all(open_column(x + dx, z + dz, zy[1], t['top'] + 48.0)
-                                                                 for dx, dz in ((0, 0), (-16, -16), (16, -16), (-16, 16), (16, 16))):
+                                                                 for dx, dz in ((0, 0), (-16, -16), (16, -16), (-16, 16), (16, 16))) \
+                            and not any(q2 != q and zy2[0] < t['top'] and zy2[1] > zy[1] and zb2[0] - 16 <= x <= zb2[1] + 16 and zb2[2] - 16 <= z <= zb2[3] + 16
+                                        for zb2, zy2, q2 in tps):  # a pit on the way down sends elsewhere first
                         doors.setdefault(i, []).append((land, (x, zy[1] - 8.0, z))); nf += 1
                         break
         if a.debug:
