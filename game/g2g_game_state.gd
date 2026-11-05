@@ -477,23 +477,24 @@ func _build_boards() -> void:
 	boards.report_to_backbone = config.report_to_backbone
 	add_child(boards)
 
-	# `publish` follows the server's own switch. Both were defined with it off, the
-	# reporter skips an unpublished board, and so a server with report_to_backbone on
-	# sent nothing at all — the site had no records from any g2gfast server, with no
-	# error anywhere, because "this board is not published" is a normal configuration.
+	for def in board_defs(config.report_to_backbone):
+		boards.define(def)
+
+
+## The game's leaderboard definitions; static so the site-defs exporter reads the same ones.
+static func board_defs(publish := true) -> Array:
+	# `publish` follows the server's own switch: the reporter skips an unpublished board.
 	var fastest := DotLeaderboardDef.make(&"fastest", DotLeaderboardDef.Kind.TIME)
 	fastest.display_name = "Fastest time"
-	fastest.publish = config.report_to_backbone
-	boards.define(fastest)
+	fastest.publish = publish
 
 	var points := DotLeaderboardDef.make(&"points", DotLeaderboardDef.Kind.POINTS)
 	points.display_name = "Ranking points"
 	points.decimals = 1
-	points.publish = config.report_to_backbone
-	# A ranking total goes DOWN when somebody else's record moves the scale; a board
-	# that kept each player's best would freeze them at their highest-ever total.
+	points.publish = publish
+	# A ranking total goes DOWN when somebody else's record moves the scale.
 	points.running_total = true
-	boards.define(points)
+	return [fastest, points]
 
 
 ## The SQL records store [member G2GConfig.records_database] names, not yet open. Null

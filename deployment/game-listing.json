@@ -1,0 +1,15 @@
+{
+  "format": "tmc-game-listing",
+  "version": 1,
+  "listing": {
+    "name": "g2gfast",
+    "description": "Surf and bunny-hop through timed courses against the clock and other players, with stages, bonus tracks, movement styles, records and ranking points.",
+    "tags": ["3D", "Multiplayer", "Racing"],
+    "platforms": ["PLATFORM_WEB"],
+    "graphicsType": "THREE_D",
+    "tmcKind": "GAME"
+  },
+  "pack": {
+    "id": "gamemann/game-g2gfast"
+  }
+}

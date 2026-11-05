@@ -1,0 +1,26 @@
+{
+	"format": "dot-leaderboard-defs",
+	"version": 1,
+	"boards": [
+		{
+			"key": "fastest",
+			"scope": {},
+			"name": "Fastest time",
+			"description": "",
+			"kind": "TIME",
+			"decimals": 3,
+			"unit": "",
+			"visible": true
+		},
+		{
+			"key": "points",
+			"scope": {},
+			"name": "Ranking points",
+			"description": "",
+			"kind": "POINTS",
+			"decimals": 1,
+			"unit": "",
+			"visible": true
+		}
+	]
+}

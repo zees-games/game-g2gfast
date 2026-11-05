@@ -1,0 +1,348 @@
+{
+	"format": "dot-achievement-defs",
+	"version": 1,
+	"achievements": [
+		{
+			"key": "g2g.first_finish",
+			"name": "Made It",
+			"description": "Finish a course.",
+			"points": 5,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.finisher",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.runs_finished",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.hundred_finishes",
+			"name": "Regular",
+			"description": "A hundred finished runs.",
+			"points": 25,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.finisher",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.runs_finished",
+					"op": "at_least",
+					"value": 100.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.thousand_finishes",
+			"name": "Fixture",
+			"description": "A thousand finished runs.",
+			"points": 100,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.finisher",
+			"tier": 3,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.runs_finished",
+					"op": "at_least",
+					"value": 1000.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.first_pb",
+			"name": "Personal Best",
+			"description": "Beat your own time.",
+			"points": 10,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.records_set",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.first_wr",
+			"name": "Top of the Board",
+			"description": "Take a server record.",
+			"points": 40,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.record_holder",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.world_records",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.ten_wr",
+			"name": "Record Holder",
+			"description": "Hold ten server records.",
+			"points": 90,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.record_holder",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.world_records",
+					"op": "at_least",
+					"value": 10.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.sub_thirty",
+			"name": "Under Thirty",
+			"description": "Finish a course in under thirty seconds.",
+			"points": 30,
+			"category": "timer",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.best_time",
+					"op": "at_most",
+					"value": 30.0,
+					"merge": "lowest"
+				},
+				{
+					"stat": "g2g.runs_finished",
+					"op": "at_least",
+					"value": 1.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.ten_thousand_jumps",
+			"name": "Springs",
+			"description": "Ten thousand jumps.",
+			"points": 25,
+			"category": "movement",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.jumps",
+					"op": "at_least",
+					"value": 10000.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.perfect_thousand",
+			"name": "Frame Perfect",
+			"description": "Five thousand perfect jumps.",
+			"points": 60,
+			"category": "movement",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.perfect_jumps",
+					"op": "at_least",
+					"value": 5000.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.fast_mover",
+			"name": "Terminal",
+			"description": "Reach 2000 u/s.",
+			"points": 40,
+			"category": "movement",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.speed",
+			"tier": 1,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.top_speed",
+					"op": "at_least",
+					"value": 2000.0,
+					"merge": "highest"
+				}
+			]
+		},
+		{
+			"key": "g2g.very_fast_mover",
+			"name": "Escape Velocity",
+			"description": "Reach 3500 u/s.",
+			"points": 90,
+			"category": "movement",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "g2g.speed",
+			"tier": 2,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.top_speed",
+					"op": "at_least",
+					"value": 3500.0,
+					"merge": "highest"
+				}
+			]
+		},
+		{
+			"key": "g2g.marathon",
+			"name": "Marathon",
+			"description": "Travel a marathon.",
+			"points": 50,
+			"category": "movement",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.distance",
+					"op": "at_least",
+					"value": 42195.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.tourist",
+			"name": "Tourist",
+			"description": "Play twenty-five maps.",
+			"points": 20,
+			"category": "server",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.maps_played",
+					"op": "at_least",
+					"value": 25.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.resident",
+			"name": "Resident",
+			"description": "Twenty-four hours on the server.",
+			"points": 60,
+			"category": "server",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.playtime_sec",
+					"op": "at_least",
+					"value": 86400.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.duellist",
+			"name": "Duellist",
+			"description": "A hundred kills in deathmatch.",
+			"points": 25,
+			"category": "combat",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.kills",
+					"op": "at_least",
+					"value": 100.0,
+					"merge": "sum"
+				}
+			]
+		},
+		{
+			"key": "g2g.hunted",
+			"name": "Hunted",
+			"description": "Put down fifty hunters.",
+			"points": 30,
+			"category": "combat",
+			"icon": "",
+			"hidden": false,
+			"secret": false,
+			"series": "",
+			"tier": 0,
+			"requireAll": true,
+			"rules": [
+				{
+					"stat": "g2g.hunters_killed",
+					"op": "at_least",
+					"value": 50.0,
+					"merge": "sum"
+				}
+			]
+		}
+	]
+}
