@@ -7,6 +7,7 @@ import booster_flight
 HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 32.0         # terrain is binned into cells this wide
 WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
+SURF_NY = math.cos(math.radians(85.0))  # a face steeper than this is a wall, not a surf face (the route bot's ramp_under)
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
 FALL = 2000.0       # the deepest drop off a ledge into a catch box that a fall door takes
 STEP = 18.0         # the motor's step: walking up a slope, a cell's low edge may stand this far over the last one's top
@@ -72,6 +73,12 @@ def load(mid, root, slopes_walked=False):
         ix = struct.unpack_from('<%di' % ic, blob, c['displacement_index_offset'])
         tris = tris + [[v[ix[k + m] * 3: ix[k + m] * 3 + 3] for m in range(3)] for k in range(0, ic - 2, 3)]
     cells = {}; steep = d['steep'] = {}  # cell -> height spans of faces too steep to stand on
+    surf = {}  # cell -> 8 u height bands sampled on faces the route bot surfs (too steep to stand on, not a wall)
+    def samples(p):
+        """Points every few units over triangle p."""
+        n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
+        return ([p[0][q] + (p[1][q] - p[0][q]) * s_ / n + (p[2][q] - p[0][q]) * t_ / n for q in range(3)]
+                for s_ in range(n + 1) for t_ in range(n + 1 - s_))
     walkable = math.cos(math.radians(d.get('max_slope', 45.57))) if slopes_walked else WALKABLE
     for p in tris:
         ax, ay, az = [p[1][q] - p[0][q] for q in range(3)]
@@ -83,20 +90,23 @@ def load(mid, root, slopes_walked=False):
                 for gx in range(int(math.floor(min(q[0] for q in p) / CELL)), int(math.floor(max(q[0] for q in p) / CELL)) + 1):
                     for gz in range(int(math.floor(min(q[2] for q in p) / CELL)), int(math.floor(max(q[2] for q in p) / CELL)) + 1):
                         steep.setdefault((gx, gz), []).append((min(q[1] for q in p), max(q[1] for q in p)))
+                if slopes_walked and abs(ny) / ln >= SURF_NY:
+                    for x, y, z in samples(p):
+                        surf.setdefault((int(math.floor(x / CELL)), int(math.floor(z / CELL))), set()).add(int(y // 8.0))
             continue
         # a vertex outside the cell would put its height (a lower shore) on the cell
-        n = max(1, int(math.ceil(max(math.dist(p[0], p[1]), math.dist(p[0], p[2]), math.dist(p[1], p[2])) / 8.0)))
-        for s_ in range(n + 1):
-            for t_ in range(n + 1 - s_):
-                x, y, z = [p[0][q] + (p[1][q] - p[0][q]) * s_ / n + (p[2][q] - p[0][q]) * t_ / n for q in range(3)]
-                key = (int(math.floor(x / CELL)), int(math.floor(z / CELL)), int(math.floor(y / 96.0)))
-                lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
-                cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
+        for x, y, z in samples(p):
+            key = (int(math.floor(x / CELL)), int(math.floor(z / CELL)), int(math.floor(y / 96.0)))
+            lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
+            cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
     for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
         slope = y - lo_ > CELL_SPREAD
         if slope and not slopes_walked:
             continue  # a cell on a slope: its highest vertex is a lip over lower ground, not a floor to land on
-        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None, 'slope': slope,
+        # a surf face at foot height in or beside the cell: the route bot there sees a ramp and would surf up it
+        crease = any(lo_ - STEP < 8.0 * h_ + 4.0 < y + 8.0 for dx in (-1, 0, 1) for dz in (-1, 0, 1)
+                     for h_ in surf.get((gx + dx, gz + dz), ()))
+        hulls.append({'box': None, 'bottom': y - 1.0, 'top': y, 'low': lo_, 'planes': None, 'slope': slope, 'crease': crease,
                       'face': (gx * CELL, (gx + 1) * CELL, gz * CELL, (gz + 1) * CELL)})
     return d, hulls
 
@@ -171,13 +181,13 @@ def teleports(mid, root, d):
 
 TILE = 96.0          # a long top is cut into nodes this wide: a line between two centres crosses walls a hop never would
 
-def tiles(f, top, low=None, slope=False):
+def tiles(f, top, low=None, slope=False, crease=False):
     """A top as itself, or as a row of tiles when it is long enough that its centre is nowhere near its ends."""
     area = (f[1] - f[0]) * (f[3] - f[2])
     tile = max(TILE, math.sqrt(area / 2500.0))   # a floor the size of the map still gets tiles, only coarser
     nx = max(1, int(math.ceil((f[1] - f[0]) / tile))); nz = max(1, int(math.ceil((f[3] - f[2]) / tile)))
     if nx == 1 and nz == 1:
-        return [{'face': f, 'top': top, 'low': top if low is None else low, 'terrain': low is not None, 'slope': slope}]
+        return [{'face': f, 'top': top, 'low': top if low is None else low, 'terrain': low is not None, 'slope': slope, 'crease': crease}]
     out = []
     for ix in range(nx):
         for iz in range(nz):
@@ -246,7 +256,7 @@ def main():
                 cand.update(shade_grid.get((gx, gz), ()))
         over = [hulls[j]['box'] for j in sorted(cand)
                 if j != i and hulls[j]['bottom'] < h['top'] + HEADROOM and hulls[j]['top'] > h['top'] + 1 and overlap(f, hulls[j]['box'])]
-        for t in tiles(f, h['top'], h.get('low'), h.get('slope', False)):
+        for t in tiles(f, h['top'], h.get('low'), h.get('slope', False), h.get('crease', False)):
             tf = t['face']; shade = 0.0
             for b in over:
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
@@ -598,6 +608,9 @@ def main():
         if a.slopes and i not in via and i not in boost_from and drop > 2.0 * STEP and \
                 gap(tops[pv]['face'], f) <= 0.8 * RUN_SPEED * math.sqrt(2.0 * drop / GRAVITY):
             pts[-1].pop('hop', None); pts[-1]['slide'] = True  # walked off, or slid down a face too steep to stand on
+        if a.slopes and t.get('crease') and i not in via and i not in boost_from:
+            # a surf face beside it: steer at the point rather than surf the face, and pass it from the face too
+            pts[-1].pop('hop', None); pts[-1]['slide'] = True; pts[-1]['land'] = False
         if a.slopes and t['slope']:
             pts[-1]['land'] = False  # a slope cell's top is its lip: passed walking over it, never by landing
         if k + 1 < len(path) and path[k + 1] in boost_from:
