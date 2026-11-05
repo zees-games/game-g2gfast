@@ -51,6 +51,11 @@ def inside(h, x, y, z, inset=0.0):
     return h['planes'] is None or all(a * x + b * y + c * z + d < -inset for a, b, c, d in h['planes'])
 
 
+def on_top(h, x, z):
+    """Whether (x, z) lies on hull h's top face, by its side planes at the top's height."""
+    return h['planes'] is None or all(a * x + b * h['top'] + c * z + d < 0.0 for a, b, c, d in h['planes'] if abs(b) < 0.999)
+
+
 def load(mid, root, surf=False):
     base = '%s/maps/imported/%s/%s' % (root, mid, mid)
     d = json.load(open(base + '.json')); blob = open(base + '.bin', 'rb').read()
@@ -260,6 +265,9 @@ def main():
         for t in tiles(f, h['top'], h.get('low')):
             t['surf'] = bool(h.get('surf'))
             tf = t['face']; shade = 0.0
+            if not on_top(h, (tf[0] + tf[1]) / 2, (tf[2] + tf[3]) / 2):
+                continue  # `face` is the top's bounding box: a chevron or diagonal top leaves tiles over air
+
             for b in over:
                 shade += max(0.0, min(tf[1], b[1]) - max(tf[0], b[0])) * max(0.0, min(tf[3], b[3]) - max(tf[2], b[2]))
             if shade <= 0.5 * (tf[1] - tf[0]) * (tf[3] - tf[2]):
