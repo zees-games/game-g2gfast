@@ -5,6 +5,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GUnits := preload("../game/g2g_units.gd")
 const RouteBot := preload("../game/g2g_route_bot.gd")
+const G2GBspMap := preload("../game/g2g_bsp_map.gd")
 const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 
 ## Rides a stage of a map from where `!s<n>` puts a player, and says where it got to.
@@ -245,10 +246,16 @@ func _watch_timers(bot: G2GPlayer, router: RouteBot, events: Array[String], put_
 	var on_effect := func(pid: StringName, zone: DotTimerZone) -> void:
 		if pid != &"bot":
 			return
+		# A pit the route walks into on purpose (a stage trigger the planner reads as a door) is a door.
+		var planned := zone.kind == DotTimerZone.Kind.RESPAWN and zone.payload.has(G2GBspMap.SENDS_TO) \
+			and router != null and router.index < router.points.size() \
+			and bool(router.points[router.index]["door"]) and zone.contains(router.points[router.index]["at"])
 		match zone.kind:
-			DotTimerZone.Kind.RESPAWN, DotTimerZone.Kind.SLAY:
+			DotTimerZone.Kind.RESPAWN when not planned:
 				put_back[0] = true
-			DotTimerZone.Kind.TELEPORT:
+			DotTimerZone.Kind.SLAY:
+				put_back[0] = true
+			DotTimerZone.Kind.TELEPORT, DotTimerZone.Kind.RESPAWN:
 				if router != null:
 					router.teleported.call_deferred()
 				events.append("a door at %s u -> %s u" % [

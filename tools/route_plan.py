@@ -8,6 +8,7 @@ HEADROOM = 72.0      # a top with a solid this close above it is not stood on
 CELL = 32.0         # terrain is binned into cells this wide
 WALKABLE = 0.8      # the least normal-y of a triangle that is ground to land on
 CELL_SPREAD = 24.0  # a terrain cell whose walkable triangles span more height than this is a slope
+FALL = 2000.0       # the deepest drop off a ledge into a catch box that a fall door takes
 STEP = 18.0         # the motor's step: walking up a slope, a cell's low edge may stand this far over the last one's top
 RUN_SPEED, JUMP_V, GRAVITY = 250.0, 302.0, 800.0  # u/s, u/s, u/s^2: the follower's take-off at a lip
 
@@ -212,6 +213,8 @@ def main():
     ap.add_argument('--no-strafe', action='store_true', help='a booster flight keeps its launch speed (the old envelope) instead of strafing for more (tools/booster_flight.py)')
     ap.add_argument('--slopes', action='store_true', help='walk terrain up to the map\'s max_slope: a cell on a slope is reached only by walking from the cell beside it')
     ap.add_argument('--to', help='x,up,z: plan to the tops within 64 u of this point instead of the END, to ride a section (never kept as the map\'s route)')
+    ap.add_argument('--from', dest='frm', help='x,up,z: start on the top under this point instead of the spawn, to plan a section from (never kept as the map\'s route)')
+    ap.add_argument('--fall-doors', action='store_true', help='a teleport box with no floor inside is a door entered by walking off a ledge over it (stages that join by a fall)')
     ap.add_argument('--out'); ap.add_argument('--debug', action='store_true')
     ap.add_argument('--why', help='x,up,z;x,up,z: why the tops nearest these two points are joined or not')
     a = ap.parse_args()
@@ -281,6 +284,8 @@ def main():
                 if best is None or t['top'] > tops[best]['top']:
                     best = i
         return best
+    if a.frm:
+        sp = [float(v) for v in a.frm.split(',')]
     s0 = under(sp[0], sp[2], sp[1], 3000.0)
     starts = [s0] if s0 is not None else []
     goals = set(i for i, t in enumerate(tops) if overlap(t['face'], ebox) and ey[0] - 300 <= t['top'] <= ey[1])
@@ -360,6 +365,40 @@ def main():
                         if h['bottom'] < y < h['top'] - 1 and inside(h, x, y, z, inset):
                             return False
         return True
+    def open_column(x, z, lo, hi):
+        """Whether nothing solid and no top stands in the column at (x, z) from lo up to hi."""
+        for k in hgrid.get((int(math.floor(x / B)), int(math.floor(z / B))), []):
+            h = hulls[k]; b = h['box']
+            if b[0] < x < b[1] and b[2] < z < b[3] and h['bottom'] < hi and h['top'] > lo and \
+                    any(h['bottom'] < y < h['top'] and inside(h, x, y, z) for y in (lo + 8.0 + 32.0 * n for n in range(int((hi - lo) / 32.0) + 1))):
+                return False
+        return not any(lo < tops[j]['top'] < hi - 40.0 and tops[j]['face'][0] <= x <= tops[j]['face'][1] and tops[j]['face'][2] <= z <= tops[j]['face'][3]
+                       for j in grid.get((int(math.floor(x / B)), int(math.floor(z / B))), []))
+    # Fall doors: a teleport box with no floor inside it (a stage's catch box over the void) is
+    # entered by walking off a ledge over it, so the ledge is joined to the box's destination.
+    if a.fall_doors:
+        nf = 0
+        for zb, zy, q in tps:
+            land = under(q[0], q[2], q[1], 600.0)
+            if land is None:
+                continue
+            cand = set()
+            for gx in range(int(math.floor((zb[0] - 48.0) / B)), int(math.floor((zb[1] + 48.0) / B)) + 1):
+                for gz in range(int(math.floor((zb[2] - 48.0) / B)), int(math.floor((zb[3] + 48.0) / B)) + 1):
+                    cand.update(grid.get((gx, gz), []))
+            if any(zy[0] - 24 <= tops[i]['top'] <= zy[1] and overlap(tops[i]['face'], zb) for i in cand):
+                continue  # it has a floor, and the ordinary door stands on it
+            for i in cand:
+                t = tops[i]
+                if i == land or not zy[1] < t['top'] <= zy[1] + FALL:
+                    continue
+                f = t['face']; cx, cz = centre(t)
+                for x, z in ((f[0] - 24.0, cz), (f[1] + 24.0, cz), (cx, f[2] - 24.0), (cx, f[3] + 24.0)):
+                    if zb[0] < x < zb[1] and zb[2] < z < zb[3] and open_column(x, z, zy[1], t['top'] + 48.0):
+                        doors.setdefault(i, []).append((land, (x, zy[1] - 8.0, z))); nf += 1
+                        break
+        if a.debug:
+            print('fall doors', nf, file=sys.stderr)
     def falls_into_trigger(i, j):
         """A drop whose column crosses a teleport trigger (a pit's catch box) lands the player at the pit's destination, not on j."""
         if tops[i]['top'] - tops[j]['top'] < 24.0:
@@ -539,7 +578,7 @@ def main():
         h, pv, t = h % N, prev[i] % N, tops[i % N]; f = t['face']; cx, cz = centre(t)
         pts.append({'at': [round(cx), round(t['top']), round(cz)],
                     'radius': round(min(32.0, (f[1] - f[0]) / 2, (f[3] - f[2]) / 2))})
-        if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0:
+        if i not in via and tops[h]['terrain'] and gap(tops[h]['face'], f) >= 8.0 and not (a.slopes and walk(prev[i], i)):
             pts[-1]['hop'] = True  # terrain has no lip to jump at: run on it and the bot walks down into the water
         if i not in via and i not in boost_from and gap(tops[pv]['face'], f) > envelope(t['top'] - tops[pv]['top'], 1.0):
             pts[-1]['hop'] = True  # past a run-speed jump: only speed carried from hop to hop crosses it
@@ -549,7 +588,7 @@ def main():
             pts[-1]['launch'] = True  # a booster: passed by jumping off it
     print('%s: %d tops, route of %d points, %.0f u' % (a.map, len(tops), len(pts), dist[done]), file=sys.stderr)
     doc = {'id': a.map, 'units': 'manifest units and axes: Godot axes in genre units (x, up, z), what the tools print',
-           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else '') + (' --slopes' if a.slopes else '') + (' --to %s' % a.to if a.to else ''),
+           'how': 'tools/route_plan.py %s --reach %.0f --safety %g' % (a.map, a.reach, a.safety) + (' --speed %g' % a.speed if a.speed != RUN_SPEED else '') + (' --carry %g --vmax %g' % (a.carry, a.vmax) if a.carry > 0 else '') + (' --region %s' % a.region if a.region else '') + (' --slopes' if a.slopes else '') + (' --fall-doors' if a.fall_doors else '') + (' --from %s' % a.frm if a.frm else '') + (' --to %s' % a.to if a.to else ''),
            'points': pts}
     s = json.dumps(doc, indent=1) + '\n'
     if a.out:
