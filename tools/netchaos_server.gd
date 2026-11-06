@@ -22,7 +22,12 @@ func _boot_world() -> void:
 	_game.name = "Game"
 	_game.config = cfg
 	add_child(_game)
-	if not (await boot_server()).ok:
+	# A server defaults to 60 Hz while the client runs the project's 128, and the clock snaps against the mismatch.
+	var cfg_path := "%s/server.cfg" % data_dir
+	var rate_file := FileAccess.open(cfg_path, FileAccess.WRITE)
+	rate_file.store_line("sv_tickrate %d" % ProjectSettings.get_setting("physics/common/physics_ticks_per_second", 128))
+	rate_file.close()
+	if not (await boot_server(cfg_path)).ok:
 		return
 	var deadline := Time.get_ticks_msec() + 15000
 	while (_game.maps == null or _game.maps.current == null) and Time.get_ticks_msec() < deadline:
