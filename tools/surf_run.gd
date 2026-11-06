@@ -62,79 +62,24 @@ func _ready() -> void:
 	samples.resize(mini(runs, samples.size()))
 
 	var limit := deg_to_rad(tunables.max_slope_angle)
-	var dead_stops := 0
-	var worst_stop: Dictionary = {}
-	var grounded_on_steep := 0
-	var total_ticks := 0
-	var stalled := 0
-	var carried := 0
-	var left_the_ramp := 0
-	var by_material: Dictionary = {}
-	var step := 1.0 / 128.0
+	var tally := {"dead_stops": 0, "worst_stop": {}, "grounded_on_steep": 0, "total_ticks": 0,
+		"stalled": 0, "carried": 0, "left_the_ramp": 0, "by_material": {}}
 	for sample: Array in samples:
-		var state := DotFpsState.new()
-		var n: Vector3 = sample[1]
-		state.position = sample[0] + n * G2GUnits.to_metres(DROP_UNITS)
-		# Entering the way a player does: across the slope, not into it. The downhill
-		# direction flattened is the line the ride runs along.
-		var along := (Vector3.DOWN - n * n.dot(Vector3.DOWN))
-		along.y = 0.0
-		if along.length_squared() < 1e-9:
-			continue
-		state.velocity = along.normalized() * G2GUnits.to_metres(ENTRY_SPEED_UNITS)
-		var command := DotFpsCommand.new()
+		_ride(motor, sample, limit, tally)
+	_report(id, tunables, motor, tally)
+	get_tree().quit(0)
 
-		var outcome := "carried"
-		var ticks := int(SECONDS / step)
-		for t in range(ticks):
-			var before := state.velocity.length()
-			motor.simulate(state, command, step)
-			# [b]A player is not meant to be STANDING on a surf ramp.[/b] The genre's
-			# rule is one number -- anything steeper than max_slope is not ground -- and
-			# it is the whole reason a ramp carries a player instead of stopping them.
-			# A tick that reports grounded on a face steeper than that is friction
-			# applied to a ride, which is a run ending in the middle of a ramp.
-			if state.is_grounded() and state.ground_normal.angle_to(Vector3.UP) > limit:
-				grounded_on_steep += 1
-			total_ticks += 1
 
-			# [b]A dead stop is not a slow-down, and only one thing in the motor does
-			# it.[/b] `_slide` zeroes the velocity outright when `_remember_plane`
-			# returns PLANE_FULL -- the player has touched
-			# [member DotFpsTunables.max_slide_planes] distinct planes inside one tick
-			# and the crease search gives up. That is the correct answer in a real
-			# five-plane corner and it is what an imported map hands out for free: a
-			# curved surf ramp is not one brush, it is a fan of convex hulls whose
-			# normals differ by more than the 2.56 degrees `_remember_plane` treats as
-			# the same plane, so a hull crossing a few seams in one tick fills the list
-			# on open ramp. Losing nearly all speed in a single tick, in the air, is
-			# that and nothing else.
-			var now := state.velocity.length()
-			if not state.is_grounded() and before > 1.0 and now < before * 0.3:
-				dead_stops += 1
-				if worst_stop.is_empty():
-					worst_stop = {
-						"at": state.position,
-						"from": G2GUnits.to_units(before),
-						"to": G2GUnits.to_units(now),
-					}
-			var speed := G2GUnits.to_units(state.horizontal_speed())
-			# Only a stop ON the ride counts. A player who has reached the floor at the
-			# bottom and slowed down there has finished the ramp, which is the ramp
-			# working.
-			if speed < STALL_UNITS and t > int(0.5 / step):
-				outcome = "stalled" if _on_a_ramp(state) else "reached the floor"
-				break
-		match outcome:
-			"stalled":
-				stalled += 1
-				var key: String = sample[2]
-				by_material[key] = int(by_material.get(key, 0)) + 1
-			"reached the floor":
-				left_the_ramp += 1
-			_:
-				carried += 1
-
+## Prints the row for [param id] from [param tally].
+func _report(id: String, tunables: DotFpsTunables, motor: DotFpsMotor, tally: Dictionary) -> void:
+	var dead_stops: int = tally["dead_stops"]
+	var worst_stop: Dictionary = tally["worst_stop"]
+	var grounded_on_steep: int = tally["grounded_on_steep"]
+	var total_ticks: int = tally["total_ticks"]
+	var stalled: int = tally["stalled"]
+	var carried: int = tally["carried"]
+	var left_the_ramp: int = tally["left_the_ramp"]
+	var by_material: Dictionary = tally["by_material"]
 	var total := maxf(1.0, float(stalled + carried + left_the_ramp))
 	print("[run] %s: %d runs of %ss -- %d carried to the end, %d reached the floor, %d STALLED ON THE RAMP (%.0f%%)"
 		% [id, int(total), SECONDS, carried, left_the_ramp, stalled,
@@ -155,7 +100,74 @@ func _ready() -> void:
 	names.sort_custom(func(a, b): return int(by_material[a]) > int(by_material[b]))
 	for n: String in names.slice(0, 8):
 		print("[run]   %4d  %s" % [int(by_material[n]), n])
-	get_tree().quit(0)
+
+
+## Rides one sample down its ramp and adds what happened to [param tally].
+func _ride(motor: DotFpsMotor, sample: Array, limit: float, tally: Dictionary) -> void:
+	var step := 1.0 / 128.0
+	var state := DotFpsState.new()
+	var n: Vector3 = sample[1]
+	state.position = sample[0] + n * G2GUnits.to_metres(DROP_UNITS)
+	# Entering the way a player does: across the slope, not into it. The downhill
+	# direction flattened is the line the ride runs along.
+	var along := (Vector3.DOWN - n * n.dot(Vector3.DOWN))
+	along.y = 0.0
+	if along.length_squared() < 1e-9:
+		return
+	state.velocity = along.normalized() * G2GUnits.to_metres(ENTRY_SPEED_UNITS)
+	var command := DotFpsCommand.new()
+
+	var outcome := "carried"
+	var ticks := int(SECONDS / step)
+	for t in range(ticks):
+		var before := state.velocity.length()
+		motor.simulate(state, command, step)
+		# [b]A player is not meant to be STANDING on a surf ramp.[/b] The genre's
+		# rule is one number -- anything steeper than max_slope is not ground -- and
+		# it is the whole reason a ramp carries a player instead of stopping them.
+		# A tick that reports grounded on a face steeper than that is friction
+		# applied to a ride, which is a run ending in the middle of a ramp.
+		if state.is_grounded() and state.ground_normal.angle_to(Vector3.UP) > limit:
+			tally["grounded_on_steep"] += 1
+		tally["total_ticks"] += 1
+
+		# [b]A dead stop is not a slow-down, and only one thing in the motor does
+		# it.[/b] `_slide` zeroes the velocity outright when `_remember_plane`
+		# returns PLANE_FULL -- the player has touched
+		# [member DotFpsTunables.max_slide_planes] distinct planes inside one tick
+		# and the crease search gives up. That is the correct answer in a real
+		# five-plane corner and it is what an imported map hands out for free: a
+		# curved surf ramp is not one brush, it is a fan of convex hulls whose
+		# normals differ by more than the 2.56 degrees `_remember_plane` treats as
+		# the same plane, so a hull crossing a few seams in one tick fills the list
+		# on open ramp. Losing nearly all speed in a single tick, in the air, is
+		# that and nothing else.
+		var now := state.velocity.length()
+		if not state.is_grounded() and before > 1.0 and now < before * 0.3:
+			tally["dead_stops"] += 1
+			if tally["worst_stop"].is_empty():
+				tally["worst_stop"] = {
+					"at": state.position,
+					"from": G2GUnits.to_units(before),
+					"to": G2GUnits.to_units(now),
+				}
+		var speed := G2GUnits.to_units(state.horizontal_speed())
+		# Only a stop ON the ride counts. A player who has reached the floor at the
+		# bottom and slowed down there has finished the ramp, which is the ramp
+		# working.
+		if speed < STALL_UNITS and t > int(0.5 / step):
+			outcome = "stalled" if _on_a_ramp(state) else "reached the floor"
+			break
+	match outcome:
+		"stalled":
+			tally["stalled"] += 1
+			var key: String = sample[2]
+			var by_material: Dictionary = tally["by_material"]
+			by_material[key] = int(by_material.get(key, 0)) + 1
+		"reached the floor":
+			tally["left_the_ramp"] += 1
+		_:
+			tally["carried"] += 1
 
 
 ## Is the player resting on something steeper than a floor? That is a ramp, and coming

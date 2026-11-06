@@ -73,21 +73,8 @@ func _measure(map_id: StringName, players: int) -> void:
 	var side := Node.new()
 	add_child(side)
 
-	var config := G2GConfig.new()
-	config.records_directory = ""
-	config.map_seconds = 0.0
-	config.initial_map = map_id
-	config.authoritative = true
-	var game := G2GGame.new()
-	game.config = config
-	game.service_scope = StringName("load%d" % players)
-	side.add_child(game)
-	for _i in range(600):
-		await get_tree().process_frame
-		if game.maps.current != null:
-			break
-	if game.maps.current == null:
-		push_error("map %s never loaded" % map_id)
+	var game := await _start_game(map_id, players, side)
+	if game == null:
 		side.queue_free()
 		return
 
@@ -106,20 +93,9 @@ func _measure(map_id: StringName, players: int) -> void:
 	_sent_ticks = {}
 	bridge.link.loopback = _on_send
 
-	for i in range(players):
-		var peer := i + 2
-		var added: DotResult = bridge.add_player(peer, peer, "load%d" % i)
-		if not added.ok:
-			push_error("player %d refused: %s" % [i, added.error])
-			continue
-		bridge._admit(peer)
+	_admit_players(bridge, players)
 
-	var commands: Array[DotFpsCommand] = []
-	for i in range(players):
-		var c := DotFpsCommand.new()
-		c.move = Vector2(0.0, 1.0)
-		c.yaw = TAU * float(i) / float(maxi(1, players))
-		commands.append(c)
+	var commands := _make_commands(players)
 
 	var times := PackedFloat64Array()
 	var net_ms := 0.0
@@ -127,56 +103,18 @@ func _measure(map_id: StringName, players: int) -> void:
 	var tick := 0
 	for t in range(WARMUP_TICKS + MEASURED_TICKS):
 		tick += 1
-		var k := 0
-		for session_id in bridge._behaviours:
-			var behaviour = bridge._behaviours[session_id]
-			var c := commands[k % commands.size()]
-			# Turning steadily, as a player strafing a ramp does; a still command is
-			# a player the motor has nothing to do for.
-			c.yaw = wrapf(c.yaw + 0.02, -PI, PI)
-			behaviour.last_move = c
-			k += 1
+		_drive(bridge, commands)
 		if t == WARMUP_TICKS:
 			_bytes = {}
 		# The bridge's server_tick with DotNetManager.server_tick's phases taken apart,
 		# so a row says where its cost is: simulating the entities (the motor, the
 		# zones, the timers -- the game) or building and sending snapshots.
-		var started := Time.get_ticks_usec()
-		bridge._tick = tick
-		bridge._game_ticked_for = -1
-		bridge._watch_hunters()
-		net.clock.tick = maxi(net.clock.tick, tick)
-		var identities := net.registry.all()
-		var step := net.clock.tick_duration()
-		for identity in identities:
-			if identity.can_simulate():
-				for behaviour in identity.behaviours:
-					behaviour._net_simulate(tick, step)
-		bridge.ensure_game_ticked(tick)
-		var mid := Time.get_ticks_usec()
-		var period := net.config.ticks_per_snapshot()
-		if net.config.stagger_snapshots and period > 1:
-			# What DotNetManager.server_tick does when staggered: some peers every tick.
-			net.history.record(identities, tick)
-			net._send_snapshots(tick, identities, posmod(tick, period), period)
-		net._ticks_since_snapshot += 1
-		if not (net.config.stagger_snapshots and period > 1) \
-				and net._ticks_since_snapshot >= net.config.ticks_per_snapshot():
-			net._ticks_since_snapshot = 0
-			var h0 := Time.get_ticks_usec()
-			net.history.record(identities, tick)
-			if OS.get_environment("LOAD_PHASES") != "":
-				phase["history"] = float(phase.get("history", 0.0)) + float(Time.get_ticks_usec() - h0)
-			if OS.get_environment("LOAD_PHASES") == "":
-				net._send_snapshots(tick, identities)
-			else:
-				_send_snapshots_timed(net, tick, identities)
-		var ended := Time.get_ticks_usec()
+		var stamps := _tick_once(bridge, net, tick)
+		var started := stamps[0]
+		var mid := stamps[1]
+		var ended := stamps[2]
 		if _hashing:
-			# Determinism gate: every player's exact float bits, every tick.
-			for session_id in bridge._behaviours:
-				var st: DotFpsState = bridge._behaviours[session_id].player.controller.state
-				_hash = hash([_hash, st.position, st.velocity, st.mode, st.ground_normal])
+			_hash_states(bridge)
 		if t >= WARMUP_TICKS:
 			times.append(float(ended - started) / 1000.0)
 			net_ms += float(ended - mid) / 1000.0
@@ -191,6 +129,106 @@ func _measure(map_id: StringName, players: int) -> void:
 	side.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+
+## One held command per player, spread round the compass.
+func _make_commands(players: int) -> Array[DotFpsCommand]:
+	var commands: Array[DotFpsCommand] = []
+	for i in range(players):
+		var c := DotFpsCommand.new()
+		c.move = Vector2(0.0, 1.0)
+		c.yaw = TAU * float(i) / float(maxi(1, players))
+		commands.append(c)
+	return commands
+
+
+## Gives every player the next command of its turn.
+func _drive(bridge: G2GNetBridge, commands: Array[DotFpsCommand]) -> void:
+	var k := 0
+	for session_id in bridge._behaviours:
+		var behaviour = bridge._behaviours[session_id]
+		var c := commands[k % commands.size()]
+		# Turning steadily, as a player strafing a ramp does; a still command is
+		# a player the motor has nothing to do for.
+		c.yaw = wrapf(c.yaw + 0.02, -PI, PI)
+		behaviour.last_move = c
+		k += 1
+
+
+## Determinism gate: every player's exact float bits.
+func _hash_states(bridge: G2GNetBridge) -> void:
+	for session_id in bridge._behaviours:
+		var st: DotFpsState = bridge._behaviours[session_id].player.controller.state
+		_hash = hash([_hash, st.position, st.velocity, st.mode, st.ground_normal])
+
+
+## The game for one row on [param map_id], added under [param side]; null when the map never loads.
+func _start_game(map_id: StringName, players: int, side: Node) -> G2GGame:
+	var config := G2GConfig.new()
+	config.records_directory = ""
+	config.map_seconds = 0.0
+	config.initial_map = map_id
+	config.authoritative = true
+	var game := G2GGame.new()
+	game.config = config
+	game.service_scope = StringName("load%d" % players)
+	side.add_child(game)
+	for _i in range(600):
+		await get_tree().process_frame
+		if game.maps.current != null:
+			break
+	if game.maps.current == null:
+		push_error("map %s never loaded" % map_id)
+		return null
+	return game
+
+
+## Admits [param players] peers the way a real server does.
+func _admit_players(bridge: G2GNetBridge, players: int) -> void:
+	for i in range(players):
+		var peer := i + 2
+		var added: DotResult = bridge.add_player(peer, peer, "load%d" % i)
+		if not added.ok:
+			push_error("player %d refused: %s" % [i, added.error])
+			continue
+		bridge._admit(peer)
+
+
+## One server tick with the phases taken apart; returns the microsecond stamps
+## [started, mid (the game is done), ended (snapshots are sent)].
+func _tick_once(bridge: G2GNetBridge, net: DotNetManager, tick: int) -> PackedInt64Array:
+	var started := Time.get_ticks_usec()
+	bridge._tick = tick
+	bridge._game_ticked_for = -1
+	bridge._watch_hunters()
+	net.clock.tick = maxi(net.clock.tick, tick)
+	var identities := net.registry.all()
+	var step := net.clock.tick_duration()
+	for identity in identities:
+		if identity.can_simulate():
+			for behaviour in identity.behaviours:
+				behaviour._net_simulate(tick, step)
+	bridge.ensure_game_ticked(tick)
+	var mid := Time.get_ticks_usec()
+	var period := net.config.ticks_per_snapshot()
+	if net.config.stagger_snapshots and period > 1:
+		# What DotNetManager.server_tick does when staggered: some peers every tick.
+		net.history.record(identities, tick)
+		net._send_snapshots(tick, identities, posmod(tick, period), period)
+	net._ticks_since_snapshot += 1
+	if not (net.config.stagger_snapshots and period > 1) \
+			and net._ticks_since_snapshot >= net.config.ticks_per_snapshot():
+		net._ticks_since_snapshot = 0
+		var h0 := Time.get_ticks_usec()
+		net.history.record(identities, tick)
+		if OS.get_environment("LOAD_PHASES") != "":
+			phase["history"] = float(phase.get("history", 0.0)) + float(Time.get_ticks_usec() - h0)
+		if OS.get_environment("LOAD_PHASES") == "":
+			net._send_snapshots(tick, identities)
+		else:
+			_send_snapshots_timed(net, tick, identities)
+	var ended := Time.get_ticks_usec()
+	return PackedInt64Array([started, mid, ended])
 
 
 ## The server-side net manager for one row, added under [param side].
