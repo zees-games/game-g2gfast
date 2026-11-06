@@ -102,8 +102,10 @@ def load(mid, root, slopes_walked=False):
             lo_, hi_, sm, n_ = cells.get(key, (1e18, -1e18, 0.0, 0))
             cells[key] = (min(lo_, y), max(hi_, y), sm + y, n_ + 1)
     ground = d['ground'] = {}  # cell -> lowest terrain sample in it
+    spans = d['terrain'] = {}  # cell -> walkable terrain height spans, kept when a pit drops the cell's top
     for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
         ground[(gx, gz)] = min(ground.get((gx, gz), 1e18), lo_)
+        spans.setdefault((gx, gz), []).append((lo_, y))
     for (gx, gz, _), (lo_, y, sm, n_) in cells.items():
         slope = y - lo_ > CELL_SPREAD
         if slope and not slopes_walked:
@@ -408,8 +410,9 @@ def main():
             if b[0] < x < b[1] and b[2] < z < b[3] and h['bottom'] < hi and h['top'] > lo and \
                     any(h['bottom'] < y < h['top'] and inside(h, x, y, z) for y in (lo + 8.0 + 32.0 * n for n in range(int((hi - lo) / 32.0) + 1))):
                 return False
-        if any(a_ < hi and b_ > lo for a_, b_ in d['steep'].get((int(math.floor(x / CELL)), int(math.floor(z / CELL))), [])):
-            return False  # a displacement face too steep to be a top still stops a fall
+        cell = (int(math.floor(x / CELL)), int(math.floor(z / CELL)))
+        if any(a_ < hi and b_ > lo for a_, b_ in d['steep'].get(cell, []) + d['terrain'].get(cell, [])):
+            return False  # terrain stops a fall, also a steep face or a slope whose top a pit dropped
         return not any(lo < tops[j]['top'] < hi and tops[j]['face'][0] <= x <= tops[j]['face'][1] and tops[j]['face'][2] <= z <= tops[j]['face'][3]
                        for j in grid.get((int(math.floor(x / B)), int(math.floor(z / B))), []))
     # Fall doors: a teleport box with no floor inside it (a stage's catch box over the void) is
@@ -497,6 +500,11 @@ def main():
         ti, tj = tops[i], tops[j]
         return a.slopes and ti['terrain'] and tj['terrain'] and gap(ti['face'], tj['face']) < 1.0 and \
             tj['low'] - ti['top'] <= STEP and ti['low'] - tj['top'] <= STEP
+    def slid(i, j):
+        """j is reached by walking off i or sliding down a face: no jump, so the bot lands at run speed (emitted as 'slide')."""
+        drop = tops[i]['top'] - tops[j]['top']
+        return a.slopes and drop > 2.0 * STEP and \
+            gap(tops[i]['face'], tops[j]['face']) <= 0.8 * RUN_SPEED * math.sqrt(2.0 * drop / GRAVITY)
     def slope_jump(i, j):
         """A jump onto or off a slope cell: its top is its highest sample, a lip, not where a jump lands or leaves."""
         return (tops[i]['slope'] or tops[j]['slope']) and not slope_walk(i, j)
@@ -579,8 +587,12 @@ def main():
                 continue
             ci, cj = centre(tops[i]), centre(tops[j])
             w = math.dist(ci, cj) + 2.0 * g + (g * g) / 100.0
-            # a walked step keeps no speed; every other hop lands a level up
-            nl = 0 if (not levels or sw or (g < 16.0 and abs(rise) < 1.0)) else min(levels, lv + 1)
+            # a walk, a slide or a climb keeps no speed (a climb's arc meets the rising side before the point); every
+            # other hop lands a level up, no faster than its length over its airtime (the bot brakes to land on a near point)
+            nl = 0 if (not levels or sw or (g < 16.0 and abs(rise) < 1.0) or rise > 8.0 or slid(i, j)) else min(levels, lv + 1)
+            if nl:
+                air = (JUMP_V + math.sqrt(max(0.0, JUMP_V * JUMP_V - 2.0 * GRAVITY * rise))) / GRAVITY
+                nl = max(0, min(nl, int((math.dist(ci, cj) / air - a.speed) / a.carry)))
             n_ = j + nl * N
             if c + w < dist.get(n_, 1e18):
                 dist[n_] = c + w; prev[n_] = s_; via.pop(n_, None); boost_from.pop(n_, None); heapq.heappush(q, (c + w, n_))
@@ -631,9 +643,7 @@ def main():
             pts[-1]['hop'] = True  # past a run-speed jump: only speed carried from hop to hop crosses it
         if levels and i not in via and i not in boost_from and gap(tops[pv]['face'], f) >= 16.0:
             pts[-1]['hop'] = True  # a chain of hops carries its speed only while it keeps jumping
-        drop = tops[pv]['top'] - t['top']
-        if a.slopes and i not in via and i not in boost_from and drop > 2.0 * STEP and \
-                gap(tops[pv]['face'], f) <= 0.8 * RUN_SPEED * math.sqrt(2.0 * drop / GRAVITY):
+        if i not in via and i not in boost_from and slid(pv, i % N):
             pts[-1].pop('hop', None); pts[-1]['slide'] = True  # walked off, or slid down a face too steep to stand on
         if a.slopes and crease and i not in via and i not in boost_from:
             # a surf face beside it: steer at the point rather than surf the face, and pass it from the face too
