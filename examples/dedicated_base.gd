@@ -31,7 +31,7 @@ const Accounts := preload("dedicated_accounts.gd")
 ## what the total sees when the section had already announced itself. See
 ## docs/testing.md: this suite had neither until 2026-09-24.
 const SECTIONS := 23
-const CHECKS := 279
+const CHECKS := 282
 
 ## Everything this run writes, and it is deleted on the way in and on the way out.
 ##

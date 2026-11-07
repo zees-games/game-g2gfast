@@ -472,8 +472,9 @@ func _wire_bridge_world() -> void:
 		# The server's mp_forceview: this end places its own camera (G2GGame keeps every
 		# camera under it).
 		var _view := game.view_rules.follow_cvars(link)
-		# mp_teamblock, mp_enemyblock and the `!block` requests, followed so this end predicts
+		# mp_solidplayers, then mp_teamblock, mp_enemyblock and the `!block` requests, followed so this end predicts
 		# against the same pairs. Needs dot-team; without it players are not blocked at all.
+		var _solid := game.body_rules.follow_cvars(link)
 		var blocked := platform.add_noblock(game, Callable(game, "block_side"))
 		if not blocked.ok:
 			DotLog.result("g2g.client", "the block rules", blocked)

@@ -12,6 +12,7 @@ const G2GMapMechanics := preload("g2g_map_mechanics.gd")
 const G2GMovement := preload("g2g_movement.gd")
 const G2GPaths := preload("g2g_paths.gd")
 const G2GPlayer := preload("g2g_player.gd")
+const G2GPlayerBodies := preload("g2g_player_bodies.gd")
 const G2GPlayerStack := preload("g2g_player_stack.gd")
 const G2GProgress := preload("g2g_progress.gd")
 const G2GProps := preload("g2g_props.gd")
@@ -69,20 +70,29 @@ signal player_removed(player_id: StringName)
 ## [method _ready] over [member config].
 var config_binder: DotGameConfigBinder = null
 
-## Whether players are solid to each other. Off: a timer server's runners pass through each
-## other (the genre), so nothing builds hulls; dot-team's block rules ride on its `pair_fn`
-## for the day it is turned on.
+## Whether players are solid to each other (`mp_solidplayers`, 1). Every player has a hull
+## (`g2g_player_bodies.gd`) and dot-team's block rules, on `pair_fn`, say which pairs stop:
+## runners pass through each other (the genre) until `mp_teamblock`, `mp_enemyblock` or `!block`
+## say otherwise. With no block rules (no dot-team in the build) nobody blocks.
 var body_rules: DotPlayerBodyRules = _make_body_rules()
 
 ## dot-team's `DotTeamBlockRules` (`mp_teamblock`, `!block`, `!noblock`), set by the module or
 ## the client's `add_noblock`; null while dot-team is not in the build.
-var block_rules: Object = null
+var block_rules: Object = null:
+	set(value):
+		block_rules = value
+		if value != null and value.has_signal(&"changed") and not value.is_connected(&"changed", body_rules.refresh):
+			value.connect(&"changed", body_rules.refresh)
+		body_rules.refresh()
 
+
+## Whether some pair of players currently stops at each other (set by `G2GPlayerBodies.apply`).
+var hulls_live: bool = false
 
 ## Whether nothing a player's body queries moves between ticks: no placed props (rigid bodies)
 ## and no player hulls. Lets the motor reuse a ground probe across ticks.
 func world_is_static() -> bool:
-	return props == null and not body_rules.solid
+	return props == null and not hulls_live
 
 
 ## Snapshots a second sent at [param rate] ticks: the nearest to 32 that is whole ticks apart
@@ -93,7 +103,7 @@ static func snapshot_rate_for(rate: int) -> int:
 
 static func _make_body_rules() -> DotPlayerBodyRules:
 	var rules := DotPlayerBodyRules.new()
-	rules.solid = false
+	rules.pair_fn = func(_a: Variant, _b: Variant) -> bool: return false
 	return rules
 
 
@@ -273,6 +283,12 @@ var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
 ## dot-replay's `mp_killview*`: the killer's replayed eye, off until the server turns it on.
 var killview_rules: DotKillViewRules = DotKillViewRules.new()
+
+## Hulls, masks and exclusions to match `body_rules` ([G2GPlayerBodies.apply]): when the rules
+## change, and when a player joins or leaves.
+func _apply_bodies() -> void:
+	G2GPlayerBodies.apply(self)
+
 
 ## Every camera under the view rules now, and the config's switch kept in step.
 func _on_view_rules_changed() -> void:

@@ -253,6 +253,9 @@ func _bind_mode_cvars() -> void:
 	var _ragdolls := game.ragdoll_rules.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 	var _drops := game.weapon_layer.rules.bind_cvars(add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 
+	# mp_solidplayers: the hulls (G2GPlayerBodies); REPLICATED, the client predicts against them.
+	var _solid := game.body_rules.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+
 	# sv_falldamage stays 0 (see G2GGame.fall_rules); bound so an admin sees it is a decision.
 	var _fall := game.fall_rules.bind_cvars(add_cvar, DotConVar.FLAG_NOTIFY)
 

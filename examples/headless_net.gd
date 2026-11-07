@@ -14,13 +14,13 @@ extends "headless_net_maps.gd"
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 253
+const CHECKS := 263
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 33
+const SECTIONS := 34
 
 
 func _ready() -> void:
@@ -52,6 +52,7 @@ func _run() -> void:
 		await _test_map_straggler()
 		await _test_map_refused()
 		_test_ghost()
+		await _test_solid_players()
 		await _test_voice_wire()
 		_test_vote_wire()
 		_test_clock_wire()
@@ -806,6 +807,58 @@ func _test_ghost() -> void:
 	_exchange()
 	_check(_server_bridge.behaviour_for(G2GGame.GHOST_SESSION) == null, "removing it releases the entity")
 	_check(not _client_game.players.has(G2GGame.GHOST_ID), "and the client drops it")
+	_done()
+
+
+## Players solid to each other behind the block rules: a runner walks through a stationary one while the
+## pair passes (the genre's default) and stops at it once the pair blocks, and the client, which predicts
+## against the same hull, ends where the server has it.
+func _test_solid_players() -> void:
+	_section("players are solid when the block rules say so")
+	var rules := _server_game.body_rules
+	var server := _server_player()
+	var client := _client_player()
+	var other := _server_game.add_player(&"u9000", "Other")
+	_check(other != null and rules.solid, "a second player joins, and mp_solidplayers is on")
+	_check(other.get_node_or_null(NodePath("SolidHullBody/SolidHull")) != null, "every player carries a hull")
+	_check(not _server_game.hulls_live, "and nothing is live while no pair blocks")
+	var pair_before := rules.pair_fn
+	var forward := _forward()
+	var travelled: Array[float] = []
+	for blocked in [false, true]:
+		rules.pair_fn = func(_a: Variant, _b: Variant) -> bool: return blocked
+		rules.refresh()
+		_check(_server_game.hulls_live == blocked, "hulls are live exactly when a pair blocks", str(blocked))
+		_server_game.spawn_player(server.player_id)
+		_steps(4)
+		_flush()
+		var start := server.global_position
+		var ahead := Vector3(-sin(server.controller.state.yaw), 0.0, -cos(server.controller.state.yaw))
+		other.teleport(start + ahead * 1.5, INF)
+		# The physics server takes a moved or new hull into its broadphase on its next step.
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		_steps(4)
+		_steps(200, forward)
+		var along := (server.global_position - start).dot(ahead)
+		travelled.append(along)
+		if blocked:
+			_check(along < 1.5, "a blocking pair stops the runner at the other's hull", "%.2f m along" % along)
+			_flush()
+			_check(client.global_position.distance_to(server.global_position) < 0.5, "and the client, predicting against the same hull, ends where the server has it",
+				"%.3f m apart" % client.global_position.distance_to(server.global_position))
+		else:
+			_check(along > 2.5, "a passing pair is walked through", "%.2f m along" % along)
+	_check(travelled.size() == 2 and travelled[0] > travelled[1] + 1.0, "so the same walk goes further when nobody blocks")
+	rules.pair_fn = pair_before
+	rules.solid = false
+	_check(not _server_game.hulls_live and (other.get_node("SolidHullBody/SolidHull") as CollisionShape3D).disabled, "mp_solidplayers 0 disables every hull")
+	rules.solid = true
+	_server_game.remove_player(&"u9000")
+	_server_game.spawn_player(server.player_id)
+	_steps(4)
+	_flush()
+	await get_tree().process_frame
 	_done()
 
 

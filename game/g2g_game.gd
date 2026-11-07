@@ -17,6 +17,8 @@ extends "g2g_game_build.gd"
 func _ready() -> void:
 	if config == null:
 		config = G2GConfig.new()
+	if not body_rules.changed.is_connected(_apply_bodies):
+		body_rules.changed.connect(_apply_bodies)
 	if not view_rules.changed.is_connected(_on_view_rules_changed):
 		view_rules.changed.connect(_on_view_rules_changed)
 
@@ -237,6 +239,7 @@ func add_player(
 		})
 
 	players[id] = player
+	_apply_bodies()
 	_samples[id] = DotTimerSample.new()
 	player.set_mechanics(mechanics)
 	player.map_event.connect(_on_map_event.bind(id))
