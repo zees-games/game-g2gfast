@@ -20,7 +20,7 @@ func _test_vote() -> void:
 	if vote == null:
 		return
 
-	_check(vote.source != null and vote.source.is_usable(), "with something to vote for")
+	_check(vote.source != null and (vote.source as DotVoteMapSource).is_usable(), "with something to vote for")
 	_check(
 		vote.director.rules.method == DotVoteRules.Method.INSTANT_RUNOFF,
 		"counted by instant runoff rather than plurality"
