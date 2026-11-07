@@ -12,8 +12,8 @@ extends "headless_presentation_chat.gd"
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 223
-const SECTIONS := 25
+const CHECKS := 232
+const SECTIONS := 26
 
 
 func _ready() -> void:
@@ -30,6 +30,7 @@ func _run() -> void:
 	_test_a_runner_is_not_shaken()
 	_test_the_sounds_are_the_run()
 	_test_the_sounds_follow_the_timer()
+	_test_the_ambience_director()
 	_test_a_run_is_drawn()
 	_test_the_landing_is_a_speedometer()
 	_test_the_weapons_are_heard()
@@ -132,6 +133,33 @@ func _test_a_runner_is_not_shaken() -> void:
 ## silence while this suite reported the sounds present and outranking everything. What
 ## the client does now is `follow_runs`, so that is what is driven here — through the
 ## timer manager's own signals, which are what a crossing emits.
+func _test_the_ambience_director() -> void:
+	_section("The ambience director picks a mood per map and goes indoors under a roof")
+
+	var p := _make()
+	var a := p.ambient
+	_check(a != null, "the presentation builds a DotAmbienceDirector")
+	_check(a != null and a.has_moods(), "and the stock mood set loaded")
+	if a == null or not a.has_moods():
+		p.queue_free()
+		_done()
+		return
+	_check(a.rules.prefix == "g2g", "its server rules are the g2g_ambient* cvars")
+	_check(a.ambient.get_parent() != null, "the layer is in the tree")
+	p.on_map_changed(&"surf_mesa")
+	_check(a.mood_for_map().mood == &"snow_wind", "a surf map is wind")
+	p.on_map_changed(&"kz_example")
+	_check(a.mood_for_map().mood == &"cave_tunnel", "a climb map is a cave")
+	p.on_map_changed(&"somewhere_else")
+	_check(a.mood_for_map().mood != &"" and a.mood_for_map().why != "name prefix", "any other map is voted or defaulted")
+	p.on_map_changed(&"surf_mesa")
+	_check(not a.ambient.indoors(), "a new map starts outdoors")
+	a.ambient.set_indoors(true)
+	_check(a.ambient.indoors(), "and the layer can go indoors")
+	p.queue_free()
+	_done()
+
+
 func _test_the_sounds_follow_the_timer() -> void:
 	_section("The timer's own signals are what make the timer's sounds")
 
