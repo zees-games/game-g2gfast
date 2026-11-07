@@ -29,6 +29,8 @@ const G2GUnits := preload("g2g_units.gd")
 const BELOW_UNITS := 256.0
 ## Downward speed, m/s (2400 u/s), past which a state counts as fallen into a pit.
 const STUCK_FALL := 45.7
+## Metres around the start inside which a pit box is not believed.
+const START_PIT_MARGIN := 2.0
 
 var map_id: StringName = &""
 var stage := 1
@@ -87,10 +89,19 @@ static func for_stage(game: Node, number: int, why: Array = []) -> DotBotSurfCou
 		why.append("stage %d has nowhere to arrive" % number)
 		return null
 	course.goal_zones = goals
-	course.pit_zones = pits
+	course.pit_zones = pits.filter(func(z: DotTimerZone) -> bool: return not _hugs_start(z, course.start))
 	course.settle_zones()
 	course.guide = guide_from_cache(course.map_id, number, course.start)
 	return course
+
+
+## Whether a pit box holds, or comes within START_PIT_MARGIN of, the start. An inflated RESPAWN or
+## teleport box that overlaps the floor the stage starts on is a map artefact: a bot hopping at the
+## spawn touches it and is put back every few ticks, so it never leaves.
+static func _hugs_start(zone: DotTimerZone, start: Vector3) -> bool:
+	if zone.shape != DotTimerZone.Shape.BOX:
+		return false
+	return AABB(zone.from, zone.to - zone.from).abs().grow(START_PIT_MARGIN).has_point(start)
 
 
 ## The guide polyline a stage's cache carries (genre units, Godot axes, in `"guide"`), from
