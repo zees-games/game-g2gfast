@@ -110,7 +110,9 @@ func _net_simulate(tick: int, delta: float) -> void:
 			bridge.ensure_game_ticked(tick)
 	else:
 		player.controller.apply_command(last_move.duplicate_command())
+		player.predicted_tick = tick
 		player.controller.simulate_tick(tick, delta)
+		player.replay_teleport(tick)
 
 	pull()
 
