@@ -326,6 +326,12 @@ func _bind_config() -> DotResult:
 
 	if wanted:
 		noblock = made.value
+		# The genre: runners pass through each other. dot-team's own default blocks enemies, and
+		# everyone is one: so unless a cfg layer says otherwise, nobody stops until `mp_enemyblock 1`
+		# or a pair of `!block` requests. (A client follows the server's value.)
+		var cfg: Object = noblock.rules.get(&"config")
+		if noblock.binder.source_of("enemy_block") == "default" and cfg != null:
+			cfg.set(&"enemy_block", false)
 		var bound := noblock.bind(add_cvar, self, runtime)
 		if not bound.ok:
 			return bound.wrap("noblock")

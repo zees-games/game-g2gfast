@@ -323,6 +323,7 @@ func remove_player(id: StringName) -> void:
 	timers.remove_player(record_key(id))
 	(players[id] as G2GPlayer).queue_free()
 	players.erase(id)
+	_apply_bodies()
 	_samples.erase(id)
 	_standings.erase(id)
 	player_removed.emit(id)
