@@ -14,7 +14,7 @@ extends "headless_net_maps.gd"
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 273
+const CHECKS := 276
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -1231,6 +1231,25 @@ func _test_hunters_reach_the_client() -> void:
 		"%.2f apart" % mirror.global_position.distance_to(hunter.position()) if mirror != null else "no mirror")
 	_check(mirror != null and absf(angle_difference(mirror.rotation.y, DotNpcNetSync.yaw_of(hunter))) < 0.3,
 		"facing the way the server's faces")
+
+	# Drawn as a person on the zombie gait: it moved 6 m, so it is mid-shuffle or sprint, and
+	# stood still it idles. The real clips come from dot-player-char's people_ual.res.
+	var person: DotHumanoidFigure = mirror.get("person") if mirror != null else null
+	_check(person != null and person.zombie_gait, "the client draws it as a person on the zombie gait")
+	if person != null:
+		var seen := {}
+		for i in 40:
+			(hunter.node as Node3D).global_position += Vector3(0.0, 0.0, 0.06)
+			_steps(1)
+			# No frames run in this suite: drive the figure's own per-frame measure by hand.
+			person._process(1.0 / 60.0)
+			seen[String(person.clip)] = true
+		var moving := ",".join(seen.keys())
+		_check(seen.has("ual_zombie_walk") or seen.has("ual_sprint"), "moving, it plays a real zombie clip", moving)
+		_steps(40)
+		for i in 120:
+			person._process(1.0 / 60.0)
+		_check(person.clip == DotHumanoidClips.ZOMBIE_IDLE, "and stood still it plays the zombie idle", String(person.clip))
 
 	hunters.spawner.remove(hunter.instance_id, DotNpcSpawner.REASON_ADMIN)
 	_exchange()
