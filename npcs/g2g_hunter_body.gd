@@ -1,6 +1,6 @@
 extends CharacterBody3D
 
-## A hunter's body: a capsule that walks and falls.
+## A hunter's body: a capsule that walks and falls, drawn as a person on the zombie gait.
 ##
 ## [b]A [CharacterBody3D] here, where game-arena's monsters are plain [Node3D]s, and
 ## the difference is the two games' collision.[/b] Arena is analytic — its map is a
@@ -21,6 +21,9 @@ extends CharacterBody3D
 @export var tint: Color = Color(0.75, 0.25, 0.30)
 
 @export var visible_body: bool = true
+
+## The drawn person, or null when the body is not drawn. Public for the suite.
+var person: DotHumanoidFigure = null
 
 
 func _ready() -> void:
@@ -46,29 +49,13 @@ func _ready() -> void:
 	if not visible_body:
 		return
 
-	var material := StandardMaterial3D.new()
-	material.albedo_color = tint
-	material.roughness = 0.85
-
-	var trunk := MeshInstance3D.new()
-	trunk.name = "Trunk"
-	var mesh := CapsuleMesh.new()
-	mesh.radius = body_radius
-	mesh.height = maxf(body_height, body_radius * 2.0 + 0.05)
-	trunk.mesh = mesh
-	trunk.material_override = material
-	trunk.position = Vector3(0.0, body_height * 0.5, 0.0)
-	add_child(trunk)
-
-	# A snout, so which way it faces is visible from down a course. The smaller shape
-	# has to sit OUTSIDE the larger or the silhouette is one blob.
-	var snout := MeshInstance3D.new()
-	snout.name = "Snout"
-	var box := BoxMesh.new()
-	box.size = Vector3(body_radius * 0.5, body_radius * 0.5, body_radius)
-	snout.mesh = box
-	snout.material_override = material
-	snout.position = Vector3(
-		0.0, body_height * 0.85, -(body_radius + box.size.z * 0.5)
-	)
-	add_child(snout)
+	# A person on the zombie gait, in the hunter's tint: the walk shuffles, the run is a real
+	# sprint, and it stands in the capsule the body collides as. It faces -Z, as the snout did.
+	var look := DotHumanoidLook.make(&"sam", Color("8a9a6a"), Color("2a2420"), tint, tint.darkened(0.55))
+	person = DotHumanoidFigure.new()
+	person.name = "Person"
+	person.zombie_gait = true
+	person.auto_animate = true
+	person.auto_smooth_time = 0.15
+	add_child(person)
+	person.build(look, body_height)
