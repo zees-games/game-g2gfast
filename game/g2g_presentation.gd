@@ -2,6 +2,7 @@ extends "g2g_presentation_schema.gd"
 
 const G2GWeaponIcons := preload("g2g_weapon_icons.gd")
 const G2GUnits := preload("g2g_units.gd")
+const G2GAmbience := preload("g2g_ambience.gd")
 
 ## Settings, audio, effects and a console, on a client whose whole output is a number.
 ##
@@ -38,6 +39,8 @@ var audio: DotAudioManager = null
 ## beds, CC0; the addon's stock/CREDITS.md). Under the landing and the timer, never over them.
 var steps: DotAudioFootsteps = null
 var ambience: DotAudioAmbience = null
+## The mood layer over the bed: a mood per map, indoors under a roof, the server's `g2g_ambient*` times the player's sliders.
+var ambient: DotAmbienceDirector = null
 var fx: DotFxManager = null
 ## The player's console, built by [method build_console] once the client has a menu.
 var console: DotConsoleController = null
@@ -176,6 +179,16 @@ func _build_audio() -> DotResult:
 	ambience.manager = audio
 	add_child(ambience)
 	ambience.set_map_bed(bed_for(&""))
+	ambient = DotAmbienceDirector.new()
+	ambient.name = "Ambient"
+	ambient.manager = audio
+	ambient.default_mood = G2GAmbience.DEFAULT_MOOD
+	ambient.prefix_moods = G2GAmbience.PREFIX_MOODS
+	ambient.rules = G2GAmbience.make_rules()
+	ambient.beds = ambience
+	add_child(ambient)
+	var _moods := ambient.setup()
+	ambient.follow_settings(settings)
 
 	# Only on a real sink, and only after setup: the manager decides whether there is a
 	# device, and on a headless server there is nothing to bake for. Building the bank
@@ -489,6 +502,8 @@ var _tails: Array[Dictionary] = []
 func follow_roof(delta: float, eye: Vector3, space: PhysicsDirectSpaceState3D, world_mask: int) -> void:
 	shot_roof.mask = world_mask
 	var _changed := shot_roof.step(delta, eye, space)
+	if ambient != null and ambient.has_moods():
+		ambient.follow_roof(delta, eye, space, world_mask)
 
 
 func _advance_tails(delta: float) -> void:
@@ -661,6 +676,8 @@ func on_flashlight(_on: bool) -> int:
 func on_map_changed(map_id: StringName = &"") -> void:
 	fx.clear()
 	_was_grounded = true
+	if ambient != null and ambient.has_moods():
+		ambient.on_map(map_id)
 	if ambience != null:
 		ambience.set_map_bed(bed_for(map_id))
 
