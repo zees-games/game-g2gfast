@@ -155,9 +155,19 @@ func _test_spectating() -> void:
 		"and it can be turned off"
 	)
 
+	# The wrapper is the shared host with this game's numbers.
+	_check(game.spectate is DotSpectatorHost and game.spectate.manager.rules.chase_distance == 4.0
+		and game.spectate.manager.rules.history_ticks == 4 * game.tick_rate,
+		"spectating is a DotSpectatorHost carrying this game's chase and history numbers")
+	var _watch_again := game.spectate.watch(&"watcher", &"bot")
+	var stepped := game.spectate.previous_target(&"watcher")
+	_check(stepped.ok and game.spectate.target_of(&"watcher") != &"", "stepping back keeps a target", str(stepped.error))
+
 	game.remove_player(&"watcher")
 	await get_tree().physics_frame
+	_check(not game.spectate.is_spectating(&"watcher"), "and a viewer who leaves is no longer a spectator")
 	_done()
+
 
 
 # --- Effects, and the rule that makes them safe here ------------------------

@@ -9,7 +9,7 @@ extends "headless_run_bank.gd"
 
 const G2GProgress := preload("../game/g2g_progress.gd")
 
-const CHECKS := 256
+const CHECKS := 259
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
