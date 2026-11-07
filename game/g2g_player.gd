@@ -292,6 +292,11 @@ func set_style(movement: DotFpsStyle, ranking: DotTimerStyle) -> DotResult:
 ## the next, and it is PART of the route. `G2GGame._on_effect_requested` is the only
 ## caller that passes true.
 func teleport(to: Vector3, yaw: float = INF, keep_run: bool = false) -> void:
+	if predicted_tick >= 0:
+		teleport_log[predicted_tick] = [to, yaw]
+		for old: int in teleport_log.keys():
+			if old < predicted_tick - TELEPORT_LOG_TICKS:
+				teleport_log.erase(old)
 	_teleported = true
 	controller.state.position = to
 	controller.state.velocity = Vector3.ZERO
@@ -310,6 +315,27 @@ func teleport(to: Vector3, yaw: float = INF, keep_run: bool = false) -> void:
 
 	if timer != null and not keep_run:
 		timer.stop(DotTimer.REASON_TELEPORT)
+
+
+## The last tick a prediction ran for this player, -1 on the authority. Keys [member teleport_log].
+var predicted_tick: int = -1
+
+## Teleports the client made, tick -> [position, yaw]. A replay re-simulates ticks without the timers, so
+## it has to be told where a pit or door sent the player, or it falls through the floor and the correction is the fall.
+var teleport_log: Dictionary = {}
+
+const TELEPORT_LOG_TICKS := 512
+
+
+## Re-applies the teleport made after [param tick]'s move, if there was one. Called by a replay.
+func replay_teleport(tick: int) -> void:
+	if not teleport_log.has(tick):
+		return
+	var entry: Array = teleport_log[tick]
+	controller.state.position = entry[0]
+	controller.state.velocity = Vector3.ZERO
+	if is_finite(entry[1]):
+		controller.state.yaw = entry[1]
 
 
 ## Whether the motor stands on something. Named for [CharacterBody3D] because that is what
