@@ -41,6 +41,11 @@ func _boot_world() -> void:
 		var cv: DotConVar = server.console.find_cvar("mp_solidplayers")
 		if cv != null:
 			cv.force_set(solid)
+	var eb := OS.get_environment("NC_ENEMYBLOCK")
+	if eb != "":
+		var ecv: DotConVar = server.console.find_cvar("mp_enemyblock")
+		if ecv != null:
+			ecv.force_set(eb)
 
 
 func _players() -> Array:
