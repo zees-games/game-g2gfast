@@ -1,0 +1,13 @@
+{
+ "id": "surf_poolday",
+ "author": "iceeater",
+ "attribution": {
+  "author": "iceeater",
+  "source": "https://gamebanana.com/mods/122736 (submitter iceeater)",
+  "archive": "surf_poolday.zip",
+  "recorded": "2026-11-07"
+ },
+ "notes": "Credit only, and deliberately no zones: combat surf. 16+16 team spawns, AWPs, rifles and a bomb target, buyzones; teleports are the map's pits. maps-conv-arena-surf-2. Not published.",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations and marks it for game-arena's deathmatch."
+}
