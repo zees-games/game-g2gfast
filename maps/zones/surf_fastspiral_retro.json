@@ -1,0 +1,13 @@
+{
+ "id": "surf_fastspiral_retro",
+ "author": "qdg (remake), eintagsfliege (original surf_fastspiral)",
+ "attribution": {
+  "author": "qdg (remake), eintagsfliege (original surf_fastspiral)",
+  "source": "https://gamebanana.com/mods/122039 (submitter qdg)",
+  "archive": "fastspiralretroby_eintagsfliege.zip",
+  "recorded": "2026-11-08"
+ },
+ "notes": "Credit only, and deliberately no zones: a team surf map (24 T and 24 CT spawns, buy monitors, a penalty room and pads aimed back at the spawns), listed by the owner under Surf Combat, so it is a loop to fight on and not a timed course. map-suggestions-1. Not published.",
+ "kind": "arena",
+ "kind_why": "A combat surf map: built to fight on rather than to time (see notes). 'arena' keeps it out of g2gfast's rotation, vote and nominations and marks it for game-arena's deathmatch."
+}
