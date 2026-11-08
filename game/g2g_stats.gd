@@ -84,7 +84,7 @@ static func schema() -> DotStatsSchema:
 	var schema := DotStatsSchema.new()
 	var _zones := DotStatsHitzones.declare(schema)
 
-	_counter(schema, RUNS_STARTED, "Runs started", "runs", false)
+	_counter(schema, RUNS_STARTED, "Runs started", "runs", true)
 	_counter(schema, RUNS_FINISHED, "Runs finished", "runs", true)
 	_counter(schema, RECORDS_SET, "Personal bests", "records", true)
 	_counter(schema, WORLD_RECORDS, "Server records", "records", true)
@@ -99,7 +99,7 @@ static func schema() -> DotStatsSchema:
 
 	_counter(schema, JUMPS, "Jumps", "jumps", true)
 	_counter(schema, PERFECT_JUMPS, "Perfect jumps", "jumps", true)
-	_counter(schema, STRAFES, "Strafes", "strafes", false)
+	_counter(schema, STRAFES, "Strafes", "strafes", true)
 
 	var top := DotStatsDef.make(TOP_SPEED, DotStatsDef.Kind.BEST, "Top speed")
 	top.unit = "u/s"

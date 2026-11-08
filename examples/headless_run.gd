@@ -9,7 +9,7 @@ extends "headless_run_bank.gd"
 
 const G2GProgress := preload("../game/g2g_progress.gd")
 
-const CHECKS := 259
+const CHECKS := 261
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -118,6 +118,15 @@ func _test_progression() -> void:
 
 
 func _progression_stats(progress: G2GProgress) -> void:
+	# The reporter drops an unpublished stat with "will not be reported why=unpublished",
+	# so the two the e2e run saw rejected must be published in the declared schema.
+	var schema := G2GStats.schema()
+	for id: StringName in [G2GStats.RUNS_STARTED, G2GStats.STRAFES]:
+		var published := false
+		for d: DotStatsDef in schema.stats:
+			if d.id == id:
+				published = d.publish
+		_check(published, "%s is published to the site" % id)
 	var values := progress.session_values(&"bot")
 
 	_check(
