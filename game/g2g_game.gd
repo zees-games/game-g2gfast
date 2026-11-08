@@ -73,7 +73,7 @@ func _ready() -> void:
 
 	if config.initial_map != &"":
 		_adopt_descriptor_owner()
-		var started: DotResult = await change_map(config.initial_map)
+		var started: DotResult = await change_map(config.initial_map, true)
 		DotLog.result(CHANNEL, "loading the first map", started)
 
 

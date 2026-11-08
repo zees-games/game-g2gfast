@@ -26,17 +26,17 @@ const BhopStages := preload("res://maps/bhop_g2g_stages.gd")
 ## Checks that do not depend on how many maps are on disk. `_test_zones_have_floor`
 ## adds one per hand-written map and `_test_maps_are_surveyed` six, which is a number
 ## this file deliberately does not write down -- see [method _test_zones_have_floor].
-const EXPECTED_FIXED_CHECKS := 39
+const EXPECTED_FIXED_CHECKS := 42
 
 ## Checks each hand-written map adds: one for its zones' floor, one for the collision audit, six for its survey.
 const CHECKS_PER_MAP := 8
 
-const CHECKS := 63
+const CHECKS := 66
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 8
+const SECTIONS := 9
 
 ## Hand-written maps whose survey finds a tilted slab a player can STAND on, and how
 ## many. Asserted both ways, like `headless_imported`'s `ARRIVES_IN_PIT`: a map not
@@ -51,6 +51,18 @@ const SECTIONS := 8
 ## two, until its slabs were steepened past 45.57 (`[stages-slabs-1]`); none now, and the
 ## check below fails the moment a map gains one.
 const STANDABLE_RAMPS := {}
+
+## A game whose boot map takes a while to arrive, as a download does.
+class SlowBootGame extends G2GGame:
+	var boot_id: StringName = &"bhop_g2g_intro"
+	var boot_waiting := false
+
+	func ensure_map_content(id: StringName) -> DotResult:
+		if id == boot_id:
+			boot_waiting = true
+			await get_tree().create_timer(0.5).timeout
+		return await super.ensure_map_content(id)
+
 
 var _entered := 0
 var _completed := 0
@@ -69,6 +81,7 @@ func _run() -> void:
 	_test_scan_order()
 	_test_derivations()
 	await _test_rescan()
+	await _test_boot_race()
 	_test_rotation_file()
 	await _test_client_config()
 	await _test_zones_have_floor()
@@ -291,6 +304,31 @@ func _test_rescan() -> void:
 	# it leaves the rotation offering exactly the maps that are no longer there.
 	_check(game.maps.rotation != null and game.maps.rotation.catalogue == game.maps.catalogue,
 		"and the rotation still points at the catalogue it was given")
+	_done()
+
+
+## A host asks for a map while the game's boot fetch is still downloading: the host's map is
+## the one the server ends on. The boot fetch used to finish later and switch it back.
+func _test_boot_race() -> void:
+	_section("boot race")
+	var config := G2GConfig.new()
+	config.records_directory = ""
+	config.map_seconds = 0.0
+	config.initial_map = &"bhop_g2g_intro"
+	var slow := SlowBootGame.new()
+	slow.config = config
+	add_child(slow)
+	for _i in range(120):
+		await get_tree().process_frame
+		if slow.boot_waiting:
+			break
+	_check(slow.boot_waiting, "the boot map is still being fetched")
+	var asked: DotResult = await slow.change_map(&"surf_g2g_intro")
+	_check(asked.ok, "the host's map loads meanwhile", "" if asked.ok else asked.error.message)
+	await get_tree().create_timer(1.0).timeout
+	var now := "" if slow.maps == null or slow.maps.current == null else String(slow.maps.current.id)
+	_check(now == "surf_g2g_intro", "and the late boot fetch does not switch it back", now)
+	slow.queue_free()
 	_done()
 
 

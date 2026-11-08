@@ -471,7 +471,17 @@ func _feed_timers() -> void:
 
 # --- Maps ------------------------------------------------------------------
 
-func change_map(id: StringName) -> DotResult:
+## Bumped by every map change that is asked for. The boot fetch compares it (see [method change_map]).
+var _map_requests := 0
+
+
+## [param boot]: the game's own first map. A host may ask for a map while the boot fetch is
+## still downloading; whoever asked second must win, so a boot change that finds another
+## request made after it began steps aside instead of switching the server back.
+func change_map(id: StringName, boot := false) -> DotResult:
+	if not boot:
+		_map_requests += 1
+	var seen_requests := _map_requests
 	# [b]Before the change, not after it.[/b] `DotMapSession.change_to` refuses an id the
 	# catalogue does not hold, and on a browser client the catalogue holds nothing until
 	# the pack is mounted -- so without this line a client joining a server whose map it
@@ -480,6 +490,10 @@ func change_map(id: StringName) -> DotResult:
 
 	if not content.ok:
 		return content
+
+	if boot and _map_requests != seen_requests:
+		return DotResult.fail(DotError.CODE_CONFLICT,
+			"A map was asked for while the first map was loading; keeping that one.")
 
 	# [b]Through the protocol on a server with clients, and only there.[/b] The session's
 	# own `change_to` swaps this process's world and nothing else; it is what the ad-hoc
