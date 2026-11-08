@@ -493,6 +493,7 @@ func _on_record_accepted(record: DotTimerRecord, _previous: DotTimerRecord, rank
 	var ranked := not is_legacy_key(record.player_id)
 
 	if ranked:
+		_bind_board_reporter()
 		await boards.submit_async(&"fastest", scope, record.player_id, record.player_name, record.time)
 
 	# Completions are a counter. Points are NOT: they used to be added here too, record
