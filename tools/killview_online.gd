@@ -173,6 +173,7 @@ func _play() -> void:
 		if dead:
 			await get_tree().process_frame
 			get_viewport().get_texture().get_image().save_png("%s/victim_%02d.png" % [data, shot])
+			print("  frame %02d saved at t=%.1f view_active=%s" % [shot, t, str(view != null and view.call("is_active"))])
 			shot += 1
 	var stop := FileAccess.open(data + "/stop", FileAccess.WRITE)
 	stop.store_string("1")
