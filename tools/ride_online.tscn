@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tools/ride_online.gd" id="1"]
+
+[node name="RideOnline" type="Node"]
+script = ExtResource("1")
