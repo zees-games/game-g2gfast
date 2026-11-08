@@ -47,6 +47,9 @@ var stats: DotStatsTracker = null
 var achievements: DotAchievementTracker = null
 var link: DotAchievementStatsLink = null
 
+## The skill rank (dot-stats' DotStatsRank): weighted lifetime figures, filed as rank_score.
+var rank: DotStatsRank = null
+
 var _game: G2GGame = null
 
 ## player id -> the movement counters as they were at the last sample.
@@ -118,6 +121,19 @@ func _build() -> DotResult:
 	feed = DotStatsEventFeed.new(stats)
 	feed.key_of = func(id: Variant) -> StringName:
 		return _stats_key(_game.combat.player_id_for(int(id))) if _game.combat != null else StringName(str(id))
+
+	rank = DotStatsRank.new()
+	rank.stat_id = G2GStats.RANK_SCORE
+	rank.terms = [
+		{"stat": String(G2GStats.RUNS_FINISHED), "weight": 1.0},
+		{"stat": String(G2GStats.RECORDS_SET), "weight": 3.0},
+		{"stat": String(G2GStats.WORLD_RECORDS), "weight": 10.0},
+		{"stat": String(G2GStats.KILLS), "weight": 0.5},
+		{"stat": String(G2GStats.HUNTERS_KILLED), "weight": 0.5},
+		{"stat": String(G2GStats.DEATHS), "weight": -0.25},
+	]
+	rank.record_fn = func(who: Variant, stat: StringName, value: float) -> void: record(StringName(str(who)), stat, value)
+	rank.key_fn = func(who: Variant) -> StringName: return _stats_key(StringName(str(who)))
 
 	var stats_started := stats.start()
 
@@ -196,6 +212,7 @@ func begin(player_id: StringName, display_name: String = "") -> void:
 	if not _attached:
 		return
 
+	_load_baseline(player_id)
 	stats.begin(_stats_key(player_id), display_name)
 	relay.record_of[_stats_key(player_id)] = _key(player_id)
 
@@ -225,6 +242,7 @@ func leave(player_id: StringName) -> void:
 	_distance_owed.erase(player_id)
 
 	stats.end(_stats_key(player_id))
+	rank.forget(player_id)
 	relay.record_of.erase(_stats_key(player_id))
 	if _stats_keys.has(player_id):
 		stats_feed.forget(int(_stats_keys[player_id][1]))
@@ -246,6 +264,23 @@ func leave(player_id: StringName) -> void:
 func record(player_id: StringName, stat_id: StringName, value: float = 1.0) -> void:
 	if _attached:
 		stats.record(_stats_key(player_id), stat_id, value)
+		if stat_id != G2GStats.RANK_SCORE and rank != null and _rank_stats().has(String(stat_id)):
+			_publish_rank(player_id)
+
+
+## Reads the player's stored lifetime totals before this session's figures are flushed into the store (reading later would count them twice).
+func _load_baseline(player_id: StringName) -> void:
+	if rank != null and stats.store != null:
+		rank.load_baseline(stats.store, player_id)
+
+
+func _rank_stats() -> Array:
+	return rank.terms.map(func(t: Dictionary) -> String: return str(t["stat"]))
+
+
+## Republishes the player's rank score from the stored baseline plus this session.
+func _publish_rank(player_id: StringName) -> void:
+	var _s := rank.publish_lifetime(player_id, session_values(player_id), stats.schema)
 
 
 ## A landed hit, filed by body zone (and wall or body crossed) through the dot-stats hook.
@@ -421,12 +456,12 @@ func _on_finished(timer_key: StringName, run: DotTimerRun) -> void:
 
 ## A record was accepted. Rank 1 is the server record.
 func _on_record(
-	record_row: DotTimerRecord, _previous: DotTimerRecord, rank: int
+	record_row: DotTimerRecord, _previous: DotTimerRecord, place: int
 ) -> void:
 	var who := _game.match_id(record_row.player_id)
 	record(who, G2GStats.RECORDS_SET)
 
-	if rank == 1:
+	if place == 1:
 		record(who, G2GStats.WORLD_RECORDS)
 
 

@@ -68,6 +68,9 @@ const DEATHS := &"g2g.deaths"
 const HUNTERS_KILLED := &"g2g.hunters_killed"
 const PROPS_SPAWNED := &"g2g.props_spawned"
 
+## The published skill figure the site orders by (dot-stats' DotStatsRank).
+const RANK_SCORE := &"rank_score"
+
 
 static func ids() -> Array[StringName]:
 	return [
@@ -125,6 +128,8 @@ static func schema() -> DotStatsSchema:
 
 	_counter(schema, HUNTERS_KILLED, "Hunters killed", "kills", true)
 	_counter(schema, PROPS_SPAWNED, "Props placed", "props", false)
+
+	var _rank := DotStatsRank.declare(schema, RANK_SCORE, "Rank score")
 
 	return schema
 
