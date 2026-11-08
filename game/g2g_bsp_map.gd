@@ -34,6 +34,8 @@ const G2GMapDressing := preload("g2g_map_dressing.gd")
 ## theirs to read: DotLog, not `push_error`, which reaches stderr and the editor's dock and
 ## neither the log file nor anything shipping it.
 const CHANNEL := "g2g.bsp"
+## Meta on a collision shape whose hull is not plain solid: "clip", "glass", "fence" or "sky".
+const HULL_KIND_META := "hull_kind"
 
 const VERTEX_FLOATS := 10          # position 3, normal 3, uv 2, uv2 2
 
@@ -100,6 +102,8 @@ var global_worlds := false
 var global_world: DotMapWorld = null
 
 var manifest: Dictionary = {}
+## Hulls by kind ("clip", "glass", "fence", "sky" -> how many), from the manifest's `collision.hull_kinds`. Empty for a manifest written before the importer recorded kinds, which loads as all solid.
+var hull_kind_counts: Dictionary = {}
 var _bounds_min := Vector3.ZERO
 var _bounds_max := Vector3.ZERO
 var _built := false
@@ -339,6 +343,15 @@ func _build_collision(drawn: Array[MeshInstance3D], blob: PackedByteArray) -> in
 	body.name = "Solid"
 	add_child(body)
 
+	# Hull index -> kind for every hull that is not plain solid; the shapes stay in the one body with the layers they always had (surf rides on clip hulls being solid), and carry their kind as meta for the sight and shot rules to read.
+	var kind_of := {}
+	hull_kind_counts = {}
+	var kinds: Dictionary = info.get("hull_kinds", {})
+	for kind: String in kinds:
+		hull_kind_counts[kind] = (kinds[kind] as Array).size()
+		for index: Variant in kinds[kind]:
+			kind_of[int(index)] = kind
+
 	var made := 0
 	var offset := int(info.get("hull_offset", 0))
 	for _h in range(int(info.get("hull_count", 0))):
@@ -360,6 +373,8 @@ func _build_collision(drawn: Array[MeshInstance3D], blob: PackedByteArray) -> in
 		hull.points = points
 		var shape := CollisionShape3D.new()
 		shape.shape = hull
+		if kind_of.has(_h):
+			shape.set_meta(HULL_KIND_META, kind_of[_h])
 		body.add_child(shape)
 		made += 1
 
