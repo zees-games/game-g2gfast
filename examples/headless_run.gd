@@ -9,7 +9,7 @@ extends "headless_run_bank.gd"
 
 const G2GProgress := preload("../game/g2g_progress.gd")
 
-const CHECKS := 261
+const CHECKS := 262
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -127,6 +127,13 @@ func _progression_stats(progress: G2GProgress) -> void:
 			if d.id == id:
 				published = d.publish
 		_check(published, "%s is published to the site" % id)
+	var held := DotStatsValues.new()
+	held.values = {String(G2GStats.RUNS_FINISHED): 10.0}
+	progress.rank.seed_baseline(&"bot", held)
+	var life: float = progress.rank.publish_lifetime(&"bot", DotStatsValues.new(), progress.stats.schema)
+	_check(schema.has(G2GStats.RANK_SCORE) and life == 10.0,
+		"rank_score is declared and ranks on a stored lifetime baseline", "%.1f" % life)
+	progress.rank.forget(&"bot")
 	var values := progress.session_values(&"bot")
 
 	_check(
