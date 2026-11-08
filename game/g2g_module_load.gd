@@ -490,7 +490,6 @@ func _report_map(map: DotMapDef, _world: Node = null) -> void:
 func _physics_process(delta: float) -> void:
 	if not loaded or bridge == null:
 		return
-	_tick += 1
 	_follow_npc_lod(game.hunters.spawner if game != null and game.hunters != null else null, delta)
 	_tick += 1
 	bridge.server_tick(_tick)
