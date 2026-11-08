@@ -3,6 +3,7 @@ extends RefCounted
 ## The kill view's server half over this game: every living eye, respawns held in dot-match's queue.
 
 const CHANNEL := "g2g.killview"
+const KillPov := preload("../g2g_kill_pov.gd")
 
 ## Most bytes a KILLVIEW body may take: the event body's cap, less its framing.
 const BYTES := 15000
@@ -67,5 +68,6 @@ func _eyes() -> Array:
 			continue
 		var st: DotFpsState = p.controller.state
 		var basis := Basis.from_euler(Vector3(deg_to_rad(st.pitch), deg_to_rad(st.yaw), 0.0))
-		eyes.append({"id": _game.combat.entity_for(id), "transform": Transform3D(basis, p.eye_position())})
+		eyes.append({"id": _game.combat.entity_for(id), "transform": Transform3D(basis, p.eye_position()),
+			"aux": KillPov.aux_of(p, DotKillViewRing.AUX)})
 	return eyes

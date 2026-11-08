@@ -24,7 +24,7 @@ const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 90
+const CHECKS := 92
 const SECTIONS := 16
 
 var _entered := 0
@@ -439,6 +439,10 @@ func _test_an_online_kill_view_poses_the_bodies() -> void:
 		flat.append_array(PackedFloat32Array([t, 0.0, 1.6, 0.0, 0.0, 0.0, 0.0, 1.0, 90.0, -1.0, -1.0]))
 		flat.resize(flat.size() + DotKillViewRing.AUX)
 	# 9000 is a server entity id: nothing on this client is numbered that.
+	# The deagle's hash rides the first aux float, as the server's eyes record it.
+	var weapon_hash := float(int(String("deagle").hash() & 0xFFFFFF))
+	for i in range(12):
+		flat[i * (11 + DotKillViewRing.AUX) + 11] = weapon_hash
 	var info := {"killer": "Rival", "weapon": "deagle", "killer_key": "u93"}
 	var clip := {"v": DotKillViewRing.VERSION, "killer": 9000, "cursor": false, "f": flat, "info": info}
 	bridge.killview_received.emit(clip, info)
@@ -448,12 +452,16 @@ func _test_an_online_kill_view_poses_the_bodies() -> void:
 	var posed: Dictionary = host.view.get("_posed")
 	_check(posed.has("eye") and posed.has("target"),
 		"the stage found the killer and the victim by the server's keys and posed them", str(posed.keys()))
+	var screen: Node = host.get_node_or_null("KillerScreen")
+	_check(screen != null and screen.label != null and screen.label.text != "",
+		"the killer's screen shows the recorded weapon", str(screen.label.text if screen != null and screen.label != null else null))
 	var local_layer := 1 << (G2GRig.LAYER_LOCAL_BODY - 1)
 	_check(host.view.camera.cull_mask & local_layer != 0,
 		"the replay camera draws the layer the local body sits on, or the victim is not in their own kill view",
 		str(host.view.camera.cull_mask))
 	host.view.kv.killcam.skip()
 	_check(not host.view.is_active(), "and a skip ends the replay")
+	_check(screen.crosshair == null, "which takes the killer's screen down")
 	game.killview_rules.enabled = false
 	host.queue_free()
 	bridge.queue_free()
