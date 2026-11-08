@@ -491,6 +491,8 @@ func _physics_process(delta: float) -> void:
 	if not loaded or bridge == null:
 		return
 	_tick += 1
+	_follow_npc_lod(game.hunters.spawner if game != null and game.hunters != null else null, delta)
+	_tick += 1
 	bridge.server_tick(_tick)
 
 	# Twice a second is soon enough for a person to take a bot's seat.
@@ -711,3 +713,18 @@ func _on_client_disconnected(session: DotClientSession, _reason: String = "") ->
 		var loadouts := DotGameAvatarActionRelay.loadouts_of(net)
 		if loadouts != null:
 			loadouts.remove_peer(session.peer_id)
+
+
+## The NPC level of detail and sense workers follow the `npc_lod*` cvars (dot-game's DotGameNpcLod; all off by default). This module is a DotModule, so it holds the attachment itself.
+var _npc_lod: DotGameNpcLod = null
+
+
+func _follow_npc_lod(spawner: Object, delta: float) -> void:
+	if spawner == null or console == null:
+		return
+	if _npc_lod == null or _npc_lod.spawner != spawner:
+		if _npc_lod != null:
+			_npc_lod.release()
+		_npc_lod = DotGameNpcLod.attach(self, console, spawner, server.config if server != null else null)
+	if _npc_lod != null:
+		_npc_lod.follow(delta)
