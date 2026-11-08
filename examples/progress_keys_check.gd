@@ -27,9 +27,9 @@ static func run(progress: G2GProgress) -> Array[String]:
 	await progress.begin(id, "Keyed")
 	if progress._stats_key(id) != &"plat-9001":
 		bad.append("stats key is %s" % progress._stats_key(id))
-	if progress.relay.record_of.get(&"plat-9001", &"") != progress._key(id):
-		bad.append("the relay does not map the stats key to the record key")
+	if progress.link.key_map.get(&"plat-9001", &"") != progress._key(id):
+		bad.append("the link does not map the stats key to the record key")
 	await progress.leave(id)
-	if progress._stats_key(id) != progress._key(id) or progress.relay.record_of.has(&"plat-9001"):
+	if progress._stats_key(id) != progress._key(id) or progress.link.key_map.has(&"plat-9001"):
 		bad.append("leave left the stats key behind")
 	return bad

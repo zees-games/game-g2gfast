@@ -3,7 +3,6 @@ extends Node
 const G2GAwards := preload("g2g_awards.gd")
 const G2GGame := preload("g2g_game.gd")
 const G2GPlayer := preload("g2g_player.gd")
-const G2GStatsRelay := preload("g2g_stats_relay.gd")
 const G2GStats := preload("g2g_stats.gd")
 const G2GUnits := preload("g2g_units.gd")
 
@@ -71,8 +70,6 @@ var stats_feed := DotGameStatsFeed.new()
 
 ## player id -> [stats key, userid], noted at join by [method note_session].
 var _stats_keys: Dictionary = {}
-
-var relay := G2GStatsRelay.new()
 
 ## Kills and hits by body zone, through dot-stats' event feed; ids are combat entity ids.
 var feed: DotStatsEventFeed = null
@@ -156,8 +153,7 @@ func _build() -> DotResult:
 	link = DotAchievementStatsLink.new()
 	link.name = "StatsLink"
 	link.tracker = achievements
-	relay.follow(stats)
-	link.stats = relay
+	link.stats = stats
 	add_child(link)
 
 	var linked := link.start()
@@ -197,7 +193,7 @@ func begin(player_id: StringName, display_name: String = "") -> void:
 		return
 
 	stats.begin(_stats_key(player_id), display_name)
-	relay.record_of[_stats_key(player_id)] = _key(player_id)
+	link.key_map[_stats_key(player_id)] = _key(player_id)
 
 	_movement_baseline[player_id] = {}
 	_playtime[player_id] = 0.0
@@ -225,7 +221,7 @@ func leave(player_id: StringName) -> void:
 	_distance_owed.erase(player_id)
 
 	stats.end(_stats_key(player_id))
-	relay.record_of.erase(_stats_key(player_id))
+	link.key_map.erase(_stats_key(player_id))
 	if _stats_keys.has(player_id):
 		stats_feed.forget(int(_stats_keys[player_id][1]))
 		_stats_keys.erase(player_id)
