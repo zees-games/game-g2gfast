@@ -14,13 +14,13 @@ extends "headless_net_maps.gd"
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 263
+const CHECKS := 265
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 34
+const SECTIONS := 35
 
 
 func _ready() -> void:
@@ -32,6 +32,7 @@ func _run() -> void:
 	print("game-g2gfast: netcode")
 	print("")
 	_test_command_wire()
+	_test_neutralise()
 	_test_movement_wire()
 	_test_hello_wire()
 	if await _build():
@@ -239,6 +240,20 @@ func _test_command_wire() -> void:
 	var twice := G2GNetCommand.new()
 	twice.read(DotNetReader.new(again.to_bytes()))
 	_check(twice.equals(back), "and is stable under a second trip, which is what input compression rests on")
+	_done()
+
+
+func _test_neutralise() -> void:
+	_section("a silent player's command lets go")
+	var command := G2GNetCommand.new()
+	command.attack = true
+	command.move.move = Vector2(0.0, 1.0)
+	command.move.yaw = 40.0
+	command.move.set_button(DotFpsCommand.BUTTON_JUMP, true)
+	command._neutralise()
+	_check(not command.attack and command.move.move == Vector2.ZERO and command.move.buttons == 0,
+		"attack, move and buttons are cleared")
+	_check(is_equal_approx(command.move.yaw, 40.0), "and the view is kept")
 	_done()
 
 

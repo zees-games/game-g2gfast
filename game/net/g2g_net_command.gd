@@ -51,6 +51,12 @@ func _sanitise() -> void:
 	move.sanitise()
 
 
+## A silent player lets go: the default neutralises `move`, the held trigger is released here.
+func _neutralise() -> void:
+	super()
+	attack = false
+
+
 func _equals(other: DotNetInput) -> bool:
 	var them := other as G2GNetCommand
 	return them != null and attack == them.attack and move.equals(them.move)
