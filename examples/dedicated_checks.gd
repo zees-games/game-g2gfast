@@ -61,6 +61,17 @@ func _test_stats_report() -> void:
 	_check(progress.stats.get_node_or_null(DotGameStatsReport.TIMER_NAME) != null, "and adds the flush timer")
 	var _r2 := cv.set_value("0")
 	_check(not progress.stats.report_to_backbone, "off stops it again")
+	# The boards' reporter is handed the registered client, or no record ever reaches the site.
+	var was_reporting: bool = game.config.report_to_backbone
+	game.boards.reporter.client = null
+	game.config.report_to_backbone = false
+	game._bind_board_reporter()
+	_check(game.boards.reporter.client == null, "the boards' reporter stays unbound while reporting is off")
+	game.config.report_to_backbone = true
+	game._bind_board_reporter()
+	_check(game.boards.reporter.client == client, "the boards' reporter takes the registered backbone client")
+	game.boards.reporter.client = null
+	game.config.report_to_backbone = was_reporting
 	DotRegistry.unregister_instance(&"dot_backbone_client", client)
 	client.free()
 	_done()

@@ -492,6 +492,7 @@ func _build_boards() -> void:
 	boards.backend = boards_config.backend
 	boards.report_to_backbone = config.report_to_backbone
 	add_child(boards)
+	_bind_board_reporter()
 
 	# `publish` follows the server's own switch. Both were defined with it off, the
 	# reporter skips an unpublished board, and so a server with report_to_backbone on
@@ -510,6 +511,24 @@ func _build_boards() -> void:
 	# that kept each player's best would freeze them at their highest-ever total.
 	points.running_total = true
 	boards.define(points)
+
+
+## Hands the boards' reporter the backbone client the host (or the identity layer) registered.
+##
+## **Without this the reporter has no client, so nothing is ever sent**: `publish` was on and
+## `report_to_backbone` was on, every record was queued, and the site had no board for any
+## g2gfast server (found on the dev end-to-end run, 2026-11-08). The stats and achievement
+## trackers find the client by themselves; the boards' reporter only has what it is given.
+## Safe to call again: it binds once, and a client that registers later is picked up by the
+## next call (a record being filed).
+func _bind_board_reporter() -> void:
+	if boards == null or not config.report_to_backbone or boards.reporter.client != null:
+		return
+
+	var client: Object = DotRegistry.get_service(&"dot_backbone_client")
+
+	if client != null:
+		boards.reporter.client = client
 
 
 ## The SQL records store [member G2GConfig.records_database] names, not yet open. Null
