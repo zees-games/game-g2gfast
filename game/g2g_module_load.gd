@@ -485,6 +485,20 @@ func _report_map(map: DotMapDef, _world: Node = null) -> void:
 		map_config.apply(String(map.id))
 	if server != null and server.games != null:
 		server.games.set_current_map(String(map.id) if map != null else "")
+	_attach_visibility(map)
+
+
+## The converted world's PVS (res://worlds/<id>) as the snapshot visibility, cvar net_visibility; none clears it.
+func _attach_visibility(map: DotMapDef) -> void:
+	if net == null or DotAddonApi.build_level("dot_game") < 52:
+		return
+	var mesh: Object = null
+	var prefix := G2GPaths.rebase("res://worlds").path_join(String(map.id)) if map != null else ""
+	if not prefix.is_empty() and FileAccess.file_exists(prefix + ".json") and FileAccess.file_exists(prefix + ".bin"):
+		var got: DotResult = DotMapBspMesh.load_prefix(prefix)
+		mesh = got.value if got.ok else null
+	var on: bool = (DotGameNetcode as GDScript).call(&"attach_visibility", net, mesh)
+	DotLog.info(CHANNEL, "snapshot visibility", {"map": String(map.id) if map != null else "", "in_force": on})
 
 
 func _physics_process(delta: float) -> void:
