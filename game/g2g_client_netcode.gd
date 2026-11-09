@@ -287,6 +287,11 @@ func _drive_free_camera(camera: Camera3D) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# The release goes first and past every cover: a menu opened mid-hold must not leave the key down on the server.
+	if bridge != null and event.is_action_released(&"g2g_drop_weapon"):
+		bridge.ask_drop_weapon(false)
+		return
+
 	if _covered():
 		return
 
@@ -411,7 +416,7 @@ func _press_action(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"g2g_restart"):
 		_restart_key()
 	elif event.is_action_pressed(&"g2g_drop_weapon"):
-		bridge.ask_drop_weapon()
+		bridge.ask_drop_weapon(true)
 	elif event.is_action_pressed(&"g2g_zones"):
 		if zone_editor != null:
 			zone_editor.toggle()

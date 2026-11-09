@@ -129,7 +129,7 @@ enum Ask {
 	SPECTATE,
 	## The victim skips the kill view and asks to respawn; the server releases the hold. Appended.
 	RESPAWN,
-	## The drop key: throw the weapon in hand. No body.
+	## The drop key: body one byte, 1 down and 0 up (the server holds it for the throw); no body is a tap.
 	DROP_WEAPON,
 	## The use key went down (1) or up (0): the E-key pickup rules. Appended.
 	USE_KEY,

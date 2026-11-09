@@ -17,7 +17,7 @@ const G2GWeaponNet := preload("../game/net/g2g_weapon_net.gd")
 ## [/codeblock]
 
 const SECTIONS := 5
-const CHECKS := 31
+const CHECKS := 36
 
 var _entered := 0
 var _completed := 0
@@ -110,6 +110,24 @@ func _test_throw_and_pickup() -> void:
 
 	layer.clear()
 	_check(layer.drops.count() == 0, "a new round clears the floor")
+
+	# The drop key with a hold: nothing on the press, a throw when the hold is over, none on a tap or a release.
+	_hold_deagle(arsenal)
+	rules.key_hold = 0.5
+	_check(layer.set_key(&"u1", true) == 0 and layer.drops.count() == 0, "a hold key throws nothing on the press")
+	layer.tick(0.3)
+	_check(layer.drops.count() == 0, "nor before the hold is over")
+	layer.tick(0.3)
+	_check(layer.drops.count() == 1 and not arsenal.has_slot(deagle), "it throws when the hold is over")
+	layer.clear()
+	_hold_deagle(arsenal)
+	var _tap := layer.set_key(&"u1", true)
+	layer.tick(0.3)
+	var _up := layer.set_key(&"u1", false)
+	layer.tick(0.5)
+	_check(layer.drops.count() == 0 and arsenal.has_slot(deagle), "a release before the hold is over throws nothing")
+	_check(layer.throw_for(&"u1") == 0, "and a tap of the old kind cannot complete a hold")
+	rules.key_hold = 0.0
 	_completed += 1
 
 

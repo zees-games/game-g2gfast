@@ -320,6 +320,8 @@ func remove_player(id: StringName) -> void:
 		return
 
 	maps.time_limit.unrock(id)
+	if weapon_layer != null:
+		weapon_layer.reset_key(id)
 	timers.remove_player(record_key(id))
 	(players[id] as G2GPlayer).queue_free()
 	players.erase(id)

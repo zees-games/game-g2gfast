@@ -489,8 +489,9 @@ func ask_restart(mode: int = G2GEvents.RESTART_TRACK) -> void:
 	_ask(G2GEvents.Ask.RESTART, G2GEvents.write_int(mode))
 
 
-func ask_drop_weapon() -> void:
-	_ask(G2GEvents.Ask.DROP_WEAPON, PackedByteArray())
+## The drop key going down (true) or up (false); the server holds it for `sv_weapon_drop_key_hold`.
+func ask_drop_weapon(down: bool = true) -> void:
+	_ask(G2GEvents.Ask.DROP_WEAPON, G2GEvents.write_int(1 if down else 0))
 
 
 ## The use key changed: down or up, for the pickup rules.
@@ -590,7 +591,8 @@ func _on_request(message: DotNetMessage) -> void:
 			if _track_of(id) != track_before:
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 		G2GEvents.Ask.DROP_WEAPON:
-			var _thrown := game.weapon_layer.throw_for(id)
+			# One byte: 1 down, 0 up. No body is an older client's tap.
+			var _thrown := game.weapon_layer.throw_for(id) if not reader.has_more() else game.weapon_layer.set_key(id, G2GEvents.read_int(reader) != 0)
 		G2GEvents.Ask.USE_KEY:
 			game.weapon_layer.set_use(id, G2GEvents.read_int(reader) != 0)
 		G2GEvents.Ask.SPECTATE:

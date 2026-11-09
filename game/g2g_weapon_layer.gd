@@ -37,25 +37,67 @@ func setup(owner_game: G2GGame) -> void:
 	add_child(drops)
 
 
-## The drop key: throws the weapon in hand along the aim. Server side.
+## One drop key per player (server): it holds the key state for `sv_weapon_drop_key_hold`.
+var _drop_keys: Dictionary[StringName, DotWeaponDropKey] = {}
+## Players whose drop key is down now, stepped every tick for the hold.
+var _down: Dictionary[StringName, bool] = {}
+
+
+## The drop key tapped once: throws the weapon in hand along the aim when the hold is 0 (an older
+## client sends a press only, which never completes a hold). Server side.
 func throw_for(player_id: StringName) -> int:
+	var thrown := _step_key(player_id, true, 0.0)
+	var _released := _step_key(player_id, false, 0.0)
+	_down.erase(player_id)
+	return thrown
+
+
+## The drop key goes down or up (server). A throw on the press (hold 0) returns its drop id, else 0;
+## a held key throws from [method tick] once the hold is over.
+func set_key(player_id: StringName, down: bool) -> int:
+	if down:
+		_down[player_id] = true
+	else:
+		_down.erase(player_id)
+	return _step_key(player_id, down, 0.0)
+
+
+## Forgets a player's hold: call on death, respawn and disconnect (a weapon switch resets itself).
+func reset_key(player_id: StringName) -> void:
+	var key: DotWeaponDropKey = _drop_keys.get(player_id)
+	if key != null:
+		key.reset()
+	_drop_keys.erase(player_id)
+	_down.erase(player_id)
+
+
+func _step_key(player_id: StringName, pressed: bool, delta: float) -> int:
 	var player: G2GPlayer = game.players.get(player_id)
 	var arsenal := _arsenal(player_id)
 	if drops == null or player == null or arsenal == null or not game.combat.health_of(player_id).alive:
+		reset_key(player_id)
 		return 0
-	return drops.throw(arsenal, player.eye_position(), player.aim_direction(),
-		game.combat.entity_for(player_id), null, player.controller.state.velocity)
+	var key: DotWeaponDropKey = _drop_keys.get(player_id)
+	if key == null:
+		key = DotWeaponDropKey.new()
+		_drop_keys[player_id] = key
+	return key.step(drops, arsenal, player.eye_position(), player.aim_direction(),
+		game.combat.entity_for(player_id), pressed, delta, null, player.controller.state.velocity)
 
 
 ## An armed player standing at a dropped weapon takes it when the slot is empty. Server side.
-func tick(_delta: float) -> void:
-	if drops == null or not drops.is_authority or game.combat == null or drops.count() == 0:
+func tick(delta: float) -> void:
+	if drops == null or not drops.is_authority or game.combat == null:
+		return
+	for held_id: StringName in _down.keys():
+		var _thrown := _step_key(held_id, true, delta)
+	if drops.count() == 0:
 		return
 	for player_id: StringName in game.players:
 		var arsenal := _arsenal(player_id)
 		var player: G2GPlayer = game.players[player_id]
 		if arsenal != null and not arsenal.disabled and game.combat.health_of(player_id).alive:
-			if use_step(player_id, arsenal, player, bool(use_down.get(player_id, false)), _delta):
+			if use_step(player_id, arsenal, player, bool(use_down.get(player_id, false)), delta):
 				continue
 			var _taken := drops.take_for(arsenal, player.controller.state.position + Vector3.UP * 0.5,
 				game.combat.entity_for(player_id))
@@ -97,6 +139,7 @@ func update_prompt(player: G2GPlayer, arsenal: Object, pressed: bool, delta: flo
 
 ## Called as a player dies, before the combat layer disables the arsenal (a dead one gives up nothing).
 func drop_dead(player_id: StringName) -> void:
+	reset_key(player_id)
 	var player: G2GPlayer = game.players.get(player_id)
 	var arsenal := _arsenal(player_id)
 	if drops == null or player == null or arsenal == null:
@@ -107,6 +150,9 @@ func drop_dead(player_id: StringName) -> void:
 
 
 func clear() -> void:
+	_keys.clear()
+	_drop_keys.clear()
+	_down.clear()
 	if drops != null:
 		drops.clear()
 

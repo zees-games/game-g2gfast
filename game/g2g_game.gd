@@ -298,6 +298,8 @@ func spawn_player(id: StringName) -> void:
 	# A spawn follows a join, a track or style change, a map change and a restart —
 	# every moment the board a player is measured against may have changed.
 	refresh_standing(id)
+	if weapon_layer != null:
+		weapon_layer.reset_key(id)
 
 	var track := player.timer.track if player.timer != null else DotTimerTrack.MAIN
 	var map := current_map_node()
