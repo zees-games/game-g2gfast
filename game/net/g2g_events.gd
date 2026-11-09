@@ -131,6 +131,8 @@ enum Ask {
 	RESPAWN,
 	## The drop key: throw the weapon in hand. No body.
 	DROP_WEAPON,
+	## The use key went down (1) or up (0): the E-key pickup rules. Appended.
+	USE_KEY,
 }
 
 ## [constant Ask.SPECTATE]'s body. Numbered rather than signed because `write_int` is a

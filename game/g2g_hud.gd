@@ -257,6 +257,12 @@ static func _weapon_defs() -> Dictionary:
 	return _defs
 
 
+## The ring round the crosshair that fills while the use key is held over a dropped weapon, 0..1.
+func set_hold_progress(fraction: float) -> void:
+	if _crosshair != null:
+		_crosshair.hold_progress = fraction
+
+
 func notice(text: String) -> void:
 	_notice.text = text
 	_notice_until = Time.get_ticks_msec() / 1000.0 + 4.0

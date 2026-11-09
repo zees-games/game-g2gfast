@@ -48,6 +48,8 @@ const ROWS: Array[Dictionary] = [
 
 	{"action": &"g2g_drop_weapon", "setting": &"bind_drop_weapon", "label": "Drop weapon (deathmatch)", "default": "Q", "group": "Running"},
 
+	{"action": &"g2g_use", "setting": &"bind_use", "label": "Pick up weapon (hold to replace)", "default": "E", "group": "Running"},
+
 	{"action": &"g2g_flashlight", "setting": &"bind_flashlight", "label": "Flashlight", "default": "F", "group": "View"},
 	{"action": &"g2g_hide_others", "setting": &"bind_hide_others", "label": "Hide other players", "default": "O", "group": "View"},
 	# Only a spectator's key: it sends the free-camera request while somebody is watching, and

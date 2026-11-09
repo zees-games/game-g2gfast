@@ -130,6 +130,21 @@ func _wire_bridge_feedback() -> void:
 	)
 
 
+var _use_was_down: bool = false
+
+
+## The use key: tells the server when it changes, and draws the pickup panel and the crosshair ring.
+func _use_key_frame(delta: float) -> void:
+	if game.weapon_layer == null or player == null or bridge == null or hud == null:
+		return
+	var down := Input.is_action_pressed(&"g2g_use") and InputMap.has_action(&"g2g_use")
+	if down != _use_was_down:
+		_use_was_down = down
+		bridge.ask_use_key(down)
+	var arsenal: Object = game.combat.arsenal_of(bridge._player_key(bridge.local_player_id)) if game.combat != null else null
+	hud.set_hold_progress(game.weapon_layer.update_prompt(player, arsenal, down, delta))
+
+
 func _process(delta: float) -> void:
 	if net != null and not _offline:
 		net.interpolate_frame()
@@ -146,6 +161,7 @@ func _process(delta: float) -> void:
 
 	if game != null:
 		_present_others()
+		_use_key_frame(delta)
 	# Every frame rather than on change: a style change hands the player new tunables, and
 	# two assignments a frame are cheaper than tracking which object the sampler holds.
 	_apply_look()
