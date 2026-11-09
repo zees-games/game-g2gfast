@@ -36,6 +36,8 @@ func _build_gate() -> void:
 	# platform each frame, so nothing needs forwarding from each of them.
 	platform.busy_fn = _input_busy
 	add_child(platform)
+	# The Performance card and the profiler_* commands: DotGameClient places the profiler only in a full setup, and this one is gate-only.
+	DotGameClientExtras.add_profiler(platform)
 	gate = platform.gate
 	gate.hold(&"map", "Loading the map")
 	# The cover blocks input too, so the sampler is still while it is up.
