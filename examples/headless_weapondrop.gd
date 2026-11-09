@@ -16,8 +16,8 @@ const G2GWeaponNet := preload("../game/net/g2g_weapon_net.gd")
 ## godot --headless --path . res://examples/headless_weapondrop.tscn
 ## [/codeblock]
 
-const SECTIONS := 4
-const CHECKS := 22
+const SECTIONS := 5
+const CHECKS := 31
 
 var _entered := 0
 var _completed := 0
@@ -38,6 +38,7 @@ func _run() -> void:
 	_client = await _make_game(false, &"drops_client")
 	_test_wire()
 	_test_throw_and_pickup()
+	_test_use_key()
 	_test_cvars()
 	_test_replication()
 	_report_sections(_entered, _completed, SECTIONS, CHECKS)
@@ -109,6 +110,46 @@ func _test_throw_and_pickup() -> void:
 
 	layer.clear()
 	_check(layer.drops.count() == 0, "a new round clears the floor")
+	_completed += 1
+
+
+func _test_use_key() -> void:
+	_entered += 1
+	print("The use key: tap and hold")
+	_check(G2GEvents.Ask.has("USE_KEY") and G2GRequest.fits(), "the use-key ask fits its field")
+	var layer := _server.weapon_layer
+	layer.clear()
+	var ada: Node = _server.players[&"u1"]
+	var arsenal := _server.combat.arsenal_of(&"u1")
+	var deagle: int = G2GArsenal.deagle().slot
+	if not _check(arsenal != null, "an armed player to press the key"):
+		return
+	layer.set_use(&"u1", true)
+	_check(bool(layer.use_down[&"u1"]), "the ask records the key down")
+	layer.set_use(&"u1", false)
+	_check(not bool(layer.use_down[&"u1"]), "and up")
+	# A deagle lying right at the aim while the same weapon is in hand: a tap takes ammo only, a hold replaces.
+	var _equipped := arsenal.equip(deagle)
+	var state := arsenal.drop_current([G2GArsenal.knife().slot] as Array[int])
+	_check(not state.is_empty(), "the weapon in hand can be set down")
+	var _spawned := layer.drops.spawn(state, ada.eye_position() + ada.aim_direction() * 0.8, Vector3.ZERO, _server.combat.entity_for(&"u1"), layer.rules.resolve(null))
+	layer.drops.tick(1.0)
+	var _given := arsenal.give(G2GArsenal.deagle().id, true)
+	_equipped = arsenal.equip(deagle)
+	_check(arsenal.has_slot(deagle) and layer.drops.count() == 1, "the same weapon is in hand and on the floor")
+	var info := layer.drops.prompt_for(arsenal, ada.eye_position(), ada.aim_direction())
+	_check(info.get("mode", "") == "ammo" or bool(info.get("hold", false)), "the prompt asks for a hold", str(info))
+	var dropped_id := int(layer.drops.snapshot()[0]["id"])
+	var fill := 0.0
+	for _i in range(5):
+		fill = layer.update_prompt(ada, arsenal, true, 0.1)
+	_check(fill > 0.0 and fill < 1.0, "holding fills the ring part way", str(fill))
+	var done := layer.use_step(&"u1", arsenal, ada, true, 0.1)
+	for _i in range(12):
+		done = layer.use_step(&"u1", arsenal, ada, true, 0.1)
+	# The deagle holds no rounds in a magazine here, so the swap itself finds the two identical; the hold is what is checked.
+	_check(done and is_equal_approx(layer._keys[&"u1"].hold.progress, 1.0), "a full hold fires on the server and the key stays busy with the drop")
+	layer.clear()
 	_completed += 1
 
 

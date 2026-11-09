@@ -493,6 +493,11 @@ func ask_drop_weapon() -> void:
 	_ask(G2GEvents.Ask.DROP_WEAPON, PackedByteArray())
 
 
+## The use key changed: down or up, for the pickup rules.
+func ask_use_key(down: bool) -> void:
+	_ask(G2GEvents.Ask.USE_KEY, G2GEvents.write_int(1 if down else 0))
+
+
 ## A spectating step: one of `G2GEvents.SPECTATE_*`.
 func ask_spectate(step: int) -> void:
 	_ask(G2GEvents.Ask.SPECTATE, G2GEvents.write_int(step))
@@ -586,6 +591,8 @@ func _on_request(message: DotNetMessage) -> void:
 				_broadcast(G2GEvents.Kind.JOIN, _join_body(session_id))
 		G2GEvents.Ask.DROP_WEAPON:
 			var _thrown := game.weapon_layer.throw_for(id)
+		G2GEvents.Ask.USE_KEY:
+			game.weapon_layer.set_use(id, G2GEvents.read_int(reader) != 0)
 		G2GEvents.Ask.SPECTATE:
 			_on_spectate_asked(peer_id, session_id, id, G2GEvents.read_int(reader))
 		G2GEvents.Ask.RESPAWN:
