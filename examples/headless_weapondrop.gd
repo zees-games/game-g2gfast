@@ -165,6 +165,7 @@ func _test_cvars() -> void:
 	_hold_deagle(arsenal)
 	var _gone := layer.throw_for(&"u1")
 	layer.drops.tick(3.0)
+	layer.drops.scan()  # expiry runs on the scan pass (sv_weapon_drop_scan), not every tick
 	_check(layer.drops.count() == 0, "sv_weapon_drop_time makes a drop vanish once it has lain that long")
 
 	rules.lifetime = 60.0
