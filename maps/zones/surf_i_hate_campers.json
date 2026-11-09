@@ -2,6 +2,13 @@
  "id": "surf_i_hate_campers",
  "kind": "arena",
  "kind_why": "A combat surf map: buyzones and bomb sites, 14 spawns a side, every teleport back to a spawn or the top of the course. 'arena' keeps it out of g2gfast's rotation, vote and nominations and marks it for game-arena's deathmatch.",
+ "sealed_teleports": {
+  "targets": [
+   "ct_spawn",
+   "t_spawn"
+  ],
+  "note": "The catch-all teleports aimed at ct_spawn and t_spawn drop a faller into the two team spawn rooms, which a faller cannot leave (about 8 m of reach: found by game-arena's headless_imported fall-out walk, pits 6 and 1); the importer runs no outputs. Dropped, a fall is the map's own drop back into the fight, and the b_site and top teleports stay."
+ },
  "author": "Snah",
  "attribution": {
   "author": "Snah",
