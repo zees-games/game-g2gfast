@@ -1,0 +1,15 @@
+{
+  "format": "tmc-game-listing",
+  "version": 1,
+  "listing": {
+    "name": "g2gfast",
+    "description": "Players surf and bunny hop on maps to compete for world records through a timer.",
+    "tags": ["3D", "Multiplayer"],
+    "platforms": ["PLATFORM_WEB"],
+    "graphicsType": "THREE_D",
+    "tmcKind": "GAME"
+  },
+  "pack": {
+    "id": "gamemann/game-g2gfast"
+  }
+}
