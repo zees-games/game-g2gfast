@@ -48,6 +48,9 @@ cd "$ROOT" || exit 1
 GODOT="${GODOT:-godot}"
 TIMEOUT=900
 PARSE=1
+# A suite that legitimately needs at least this long, as name=seconds; a larger
+# --timeout still wins.
+MIN_TIMEOUTS="headless_imported=3000"
 RED=$'\033[31m'; GRN=$'\033[32m'; YLW=$'\033[33m'; OFF=$'\033[0m'
 CR=$'\r\033[K'
 [ -t 1 ] || { RED=""; GRN=""; YLW=""; OFF=""; CR=""; }
@@ -118,7 +121,11 @@ run_suite() {
     mkdir -p .godot/test-logs
     log=".godot/test-logs/$scene.log"
     [ -t 1 ] && printf '  ..   %s' "$scene"
-    timeout "$TIMEOUT" "$GODOT" --headless --path . "res://examples/$scene.tscn" >"$log" 2>&1
+    local limit="$TIMEOUT" mkv
+    for mkv in $MIN_TIMEOUTS; do
+        [ "${mkv%%=*}" = "$scene" ] && [ "$limit" -lt "${mkv#*=}" ] && limit="${mkv#*=}"
+    done
+    timeout "$limit" "$GODOT" --headless --path . "res://examples/$scene.tscn" >"$log" 2>&1
     status=$?
     summary="$(grep -Eo '[0-9]+ (passed|checks), [0-9]+ failed' "$log" | tail -1)"
     # Section accounting: "N sections entered, M finished" from DotGameCheckSuite._report_sections.
@@ -131,7 +138,7 @@ run_suite() {
         summary="$summary  [no section accounting]"
     fi
     if [ "$status" -eq 124 ]; then
-        out="did not finish within ${TIMEOUT}s"
+        out="did not finish within ${limit}s"
     elif [ "$status" -ne 0 ]; then
         out="exited $status"
     elif grep -qE 'SCRIPT ERROR|Parse Error|Lambda capture' "$log"; then
