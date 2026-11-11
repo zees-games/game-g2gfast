@@ -2,7 +2,7 @@
   "format": "tmc-game-listing",
   "version": 1,
   "listing": {
-    "name": "g2gfast",
+    "name": "Zee's Airdrift",
     "description": "Players surf and bunny hop on maps to compete for world records through a timer.",
     "tags": ["3D", "Multiplayer"],
     "platforms": ["PLATFORM_WEB"],

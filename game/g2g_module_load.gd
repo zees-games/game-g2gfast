@@ -587,7 +587,7 @@ func _register_games() -> void:
 		return
 	var descriptor := DotGameDescriptor.new()
 	descriptor.game_id = "g2gfast"
-	descriptor.display_name = "g2gfast"
+	descriptor.display_name = "Zee's Airdrift"
 	descriptor.scene = G2GPaths.rebase("res://game/g2g.tscn")
 	descriptor.client_scene = ""
 	server.games.add_game(descriptor)

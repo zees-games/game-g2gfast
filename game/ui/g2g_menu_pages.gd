@@ -149,7 +149,7 @@ static func _describe_stock_rows(menu: DotMenu) -> void:
 static func fill_help(help: DotMenuHelp, client: Node, key_for: Callable) -> void:
 	if help == null:
 		return
-	help.title_text = "How to play g2g fast"
+	help.title_text = "How to play Zee's Airdrift"
 	help.about = "Get from the start zone to the end zone as fast as you can. Hop by jumping as you land and steering with the mouse while you hold a strafe key; surf by holding into a ramp. The timer starts when you leave the start and stops in the end zone."
 	help.add_text("Runs", "%s restarts your run. Stages and bonuses have zones of their own, and every stage is timed against your best and the record. %s saves a checkpoint and %s goes back to it; a run that used one is practice, not a record." % [
 		key_for.call(&"g2g_restart"), key_for.call(&"g2g_checkpoint_save"), key_for.call(&"g2g_checkpoint_load")])

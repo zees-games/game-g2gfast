@@ -34,7 +34,7 @@
 # PACK is the game's id in dot-server-deploy (empty if it has no server), EXTRA_PACKS
 # are other packs it needs as id:repository pairs, and SUITES are the scenes in
 # examples/ that test it.
-GAME_NAME="g2gfast"
+GAME_NAME="Airdrift"
 PACK="g2gfast"
 EXTRA_PACKS=""
 SUITES="headless_config headless_figure headless_workbench headless_mapcfg headless_global_worlds headless_hull_kinds headless_run headless_net headless_link headless_bots headless_maps headless_workshop headless_presentation headless_client headless_feel headless_stack headless_imported headless_mechanics headless_weapondrop dedicated"

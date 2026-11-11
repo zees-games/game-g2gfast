@@ -145,7 +145,7 @@ func _test_help_lists_what_it_is_told() -> void:
 	h.pressed = true
 	_check(menu.handle_event(h) and menu.help.is_open(), "H opens the help screen")
 	await get_tree().process_frame
-	_check(menu.help.about != "" and texts.call().has("How to play g2g fast") and texts.call().has("RUNS"),
+	_check(menu.help.about != "" and texts.call().has("How to play Zee's Airdrift") and texts.call().has("RUNS"),
 		"which says what the game is before the keys")
 	menu.help.close()
 	menu.open()

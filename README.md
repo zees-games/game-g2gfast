@@ -1,6 +1,6 @@
-This is a game to demonstrate the capabilities of the [**Dot collection**](https://moddingcommunity.com/co/4-dot-assets) built on-top of [Godot 4](https://godotengine.org/) and [TMC's gaming platform](https://moddingcommunity.com/play). In this 3D game, players *surf* and *bunny hop* on *maps* to compete for world records through a timer. This is highly inspired off of Source Engine movement and includes some classic Surf Timer and Bunny Hop maps (WIP) from the game Counter-Strike: Source!
+**Zee's Airdrift** is a game to demonstrate the capabilities of the [**Dot collection**](https://moddingcommunity.com/co/4-dot-assets) built on-top of [Godot 4](https://godotengine.org/) and [TMC's gaming platform](https://moddingcommunity.com/play). In this 3D game, players *surf* and *bunny hop* on *maps* to compete for world records through a timer. This is highly inspired off of Source Engine movement and includes some classic Surf Timer and Bunny Hop maps (WIP) from the game Counter-Strike: Source!
 
-![Preview](https://github.com/zees-games/game-g2gfast/blob/main/images/preview.gif?raw=true)
+![Preview](https://github.com/zees-games/game-airdrift/blob/main/images/preview.gif?raw=true)
 
 *Play on my test server [here](https://moddingcommunity.com/g2gfast/s/g2gfast01/play)!*
 
@@ -20,7 +20,7 @@ The movement uses the classic units and cvars (`sv_airaccelerate`, `sv_autobunny
 
 There are styles for a harder run: normal, sideways, half-sideways, backwards, low gravity and prebhop. A run made with an admin's help (noclip, a speed change and so on) is never saved.
 
-The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` and `surf_g2g_intro`. The classic maps it imports live in a separate repository, [g2gfast-maps](https://github.com/zees-games/g2gfast-maps), and a server downloads them on demand.
+The game comes with three maps of its own: `bhop_g2g_intro`, `bhop_g2g_stages` and `surf_g2g_intro`. The classic maps it imports live in a separate repository, [airdrift-maps](https://github.com/zees-games/airdrift-maps), and a server downloads them on demand.
 
 ## Controls
 
@@ -187,13 +187,13 @@ tools/import_maps.sh      # imports anything new, skips what is already current
 tools/bsp_preview.sh      # renders each map from its spawn, so you can look at it
 ```
 
-The imported maps land in `maps/imported/`, which is a link to the g2gfast-maps checkout. A running server picks up new ones with `g2g_maps_reload`.
+The imported maps land in `maps/imported/`, which is a link to the airdrift-maps checkout (`../g2gfast-maps`). A running server picks up new ones with `g2g_maps_reload`.
 
 Collision comes from the map's brushes, not from what you can see, so invisible player clips and surf ramp clips work the way the mapper meant. Surfaces are coloured by their angle: one you can stand on, one you slide on, and a wall each look different.
 
 What the map's own volumes do comes across too: a teleport sends you where the map aims it and your run goes on, boosters push, water is swum in (hold jump to come up), ladders are climbed, conveyors carry you, and a bunny-hop block sends you back if you stand on it. Blocks are timed for each player on their own, so nobody can sink a block under the player behind them. [`docs/brush-entities.md`](docs/brush-entities.md) goes through every brush entity and what happens to it.
 
-**Combat maps.** Some surf maps are built to fight on, not to time. Their zones file says `"kind": "arena"` and they are not part of g2gfast-maps: they live in `arena-surf-dm-maps`, for game-arena's deathmatch. `tools/bsp_import.py` writes such a map there, not into `maps/imported/`. If one is installed anyway it stays loadable, **M** marks it "combat", and it is left out of the rotation and the vote unless `cfg/maps.yml` (named rotations, wildcards and `sv_map_rotation <name>`: see dot-map docs/rotation.md) lists it.
+**Combat maps.** Some surf maps are built to fight on, not to time. Their zones file says `"kind": "arena"` and they are not part of airdrift-maps: they live in `arena-surf-dm-maps`, for game-arena's deathmatch. `tools/bsp_import.py` writes such a map there, not into `maps/imported/`. If one is installed anyway it stays loadable, **M** marks it "combat", and it is left out of the rotation and the vote unless `cfg/maps.yml` (named rotations, wildcards and `sv_map_rotation <name>`: see dot-map docs/rotation.md) lists it.
 
 ### Zones
 Most surf and bunny-hop maps name their own start and end zones, stages and bonuses, and the importer reads those. For a map that doesn't, write the zones in `maps/zones/<id>.json` (see `maps/zones/README.md`), or draw them in the game.
@@ -248,7 +248,7 @@ g2g_zone_save           // write them to disk
 [`CLAUDE.md`](CLAUDE.md) has the design decisions and the reasoning behind them.
 
 ## Credits
-`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The players are the family's animated people from Quaternius' [Zombie Apocalypse Kit](https://quaternius.com/packs/zombieapocalypsekit.html) (CC0 1.0, credited in dot-player-char), coloured from Kenney's character kit skins (CC0); the avatar parts and hats are Kenney's. `props/kenney/` holds the Kenney Food Kit, Holiday Kit and Nature Kit models (CC0) a map's dressing file places as stand-ins for scenery its pack could not carry. `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete, metal and snow, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032), [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) and [Snow010A](https://ambientcg.com/view?id=Snow010A) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [g2gfast-maps](https://github.com/zees-games/g2gfast-maps). Footsteps are Kenney's Impact Sounds and the ambience beds are generated by dot-audio, both CC0 and shipped in dot-audio (`addons/dot_audio/stock/CREDITS.md`).
+`textures/prototype/` is Kenney's Prototype Textures (CC0). `textures/prototype/README.md` says which file came from where. The players are the family's animated people from Quaternius' [Zombie Apocalypse Kit](https://quaternius.com/packs/zombieapocalypsekit.html) (CC0 1.0, credited in dot-player-char), coloured from Kenney's character kit skins (CC0); the avatar parts and hats are Kenney's. `props/kenney/` holds the Kenney Food Kit, Holiday Kit and Nature Kit models (CC0) a map's dressing file places as stand-ins for scenery its pack could not carry. `textures/stock/` stands in for textures an imported map did not carry: Kenney's Retro Textures Fantasy (CC0), and for concrete, metal and snow, which Kenney has none of, [Concrete034](https://ambientcg.com/view?id=Concrete034), [Metal032](https://ambientcg.com/view?id=Metal032), [MetalPlates006](https://ambientcg.com/view?id=MetalPlates006) and [Snow010A](https://ambientcg.com/view?id=Snow010A) from ambientCG by Lennart Demes (CC0); `textures/stock/LICENSE.txt` lists every file. The imported maps are credited to their authors in [airdrift-maps](https://github.com/zees-games/airdrift-maps). Footsteps are Kenney's Impact Sounds and the ambience beds are generated by dot-audio, both CC0 and shipped in dot-audio (`addons/dot_audio/stock/CREDITS.md`).
 
 ## License
 MIT. See [LICENSE](LICENSE). The Kenney textures are CC0, which is public domain.

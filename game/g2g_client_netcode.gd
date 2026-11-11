@@ -616,7 +616,7 @@ func _build_overlays() -> void:
 ## client knows instead, which is every player and none of their pings.
 func _wire_scoreboard() -> void:
 	var board := menu.scoreboard
-	board.title_text = "g2gfast"
+	board.title_text = "Zee's Airdrift"
 	board.columns = [
 		{"key": &"name", "title": "Runner", "width": 3.0},
 		{"key": &"style", "title": "Style", "width": 1.4},
@@ -663,7 +663,7 @@ func board_snapshot() -> Dictionary:
 				"ping": -1, "you": who == player, "bot": who.replay != null}, true)
 			rows.append(row)
 	var map_name := game.maps.current.label() if game != null and game.maps != null and game.maps.current != null else ""
-	return {"server": {"name": "g2gfast", "game": "offline" if _offline else "", "map": map_name}, "players": rows}
+	return {"server": {"name": "Airdrift", "game": "offline" if _offline else "", "map": map_name}, "players": rows}
 
 
 func overlay_open() -> bool:

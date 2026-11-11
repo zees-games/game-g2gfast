@@ -1,4 +1,4 @@
-# game-g2gfast docs
+# game-airdrift docs
 
 One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; these files have the reasoning.
 
@@ -11,7 +11,7 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | [imported-maps.md](imported-maps.md) | The importer: scale and axes, zones and the zones file, pits, spawns, the solid as convex brushes, roles from slope, what brush entities do, static props, what is not imported |
 | [brush-entities.md](brush-entities.md) | Every brush entity class and what the importer and `G2GMapMechanics` make of it |
 | [map-rendering.md](map-rendering.md) | Lighting, the lightmap atlas, translucency, glass and water, stand-in textures and the prototype grid, skies, static prop lighting, the surface limit, the preview tool |
-| [map-delivery.md](map-delivery.md) | The catalogue with no list, g2gfast-maps and owners, pack versions, the map-change protocol and the trusted template, rotation and the map list |
+| [map-delivery.md](map-delivery.md) | The catalogue with no list, airdrift-maps and owners, pack versions, the map-change protocol and the trusted template, rotation and the map list |
 | [netcode.md](netcode.md) | The bridge, the movement config on the wire, the tick rate, drawing between ticks, what a connected player sees, wire rules, hunters, what a full server costs |
 | [client.md](client.md) | Field of view, the camera and the player's own body, avatars, keys, the pointer, menus (dot-menu), the HUD, the flashlight, presentation and sound, the chat box, the zone editor |
 | [services.md](services.md) | Admin tools (blind, beacon), chat and voice, the vote and its clock, the server browser, identity, statistics |
@@ -36,7 +36,7 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | `game/g2g_bsp_map.gd`, `g2g_map_mechanics.gd`, `g2g_lighting.gd`, `g2g_stock_substitutes.gd`, `*.gdshader`, `g2g_map_catalogue.gd` | imported maps, the catalogue (rotation is dot-map's `DotMapRotationFile`) |
 | `game/g2g_client.gd`, `g2g_hud.gd`, `g2g_presentation.gd`, `g2g_bindings.gd`, `ui/`, and the other client files | the client; never loaded by a server |
 | `game/net/` | the bridge (its ordering is the file), net classes, the `@rpc` link (identical on both ends), events and requests |
-| `maps/` | the three hand-built maps (+ generated `.zones.json`), `imported_map.tscn`, `imported/` (link to g2gfast-maps), `zones/<id>.json` (hand-written; see its README), `routes/` (route files, recordings, surf caches) |
+| `maps/` | the three hand-built maps (+ generated `.zones.json`), `imported_map.tscn`, `imported/` (link to airdrift-maps, checked out as `../g2gfast-maps`), `zones/<id>.json` (hand-written; see its README), `routes/` (route files, recordings, surf caches) |
 | `npcs/`, `props/`, `avatars/`, `textures/`, `scenes/` | hunters, practice blocks, avatar parts, prototype set and Kenney stand-ins, server scene and effect scenes |
 | `examples/`, `tools/` | the suites and the tools: [testing](testing.md) |
 

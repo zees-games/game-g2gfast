@@ -19,9 +19,9 @@ A second place to remember a map is the shape that went stale four times in this
 - **The map being played is not unloaded when it disappears from disk**: its players are mid-run. It finishes and is never chosen again; the reload says so.
 - `headless_imported` skips cleanly when `maps/imported/` is empty, and iterates what is there rather than naming a map: imported maps are optional content.
 
-## g2gfast-maps and owners
+## airdrift-maps and owners
 
-The imported maps live in their own repository, `../g2gfast-maps` (see its `CLAUDE.md`): the map data, `maps.json` with each map's author and source, and `tools/g2gmaps` to publish each as its own `gamemann/<map id>` pack (through this repository's `tools/publish_maps.sh`) and mirror them back. **The zone data stays here** in `maps/zones/`, because starts, finishes and stages are this game's, not the map's. Maps are released by tagging g2gfast-maps.
+The imported maps live in their own repository, airdrift-maps (checked out as `../g2gfast-maps`) (see its `CLAUDE.md`): the map data, `maps.json` with each map's author and source, and `tools/g2gmaps` to publish each as its own `gamemann/<map id>` pack (through this repository's `tools/publish_maps.sh`) and mirror them back. **The zone data stays here** in `maps/zones/`, because starts, finishes and stages are this game's, not the map's. Maps are released by tagging g2gfast-maps.
 
 - **A delivered map belongs to somebody.** The map id is what a player types and every record is filed under, and it does not change; the pack is `<owner>/<map id>`. `sv_map_content_owner` (`G2GConfig.map_content_owner`) prefixes only where a map is fetched (`map_content_id`); empty keeps the unowned layout. `game.yml` sets `gamemann`.
 - **Which maps a server offers is the server's, not this game's.** `game.yml`'s `maps:` is empty on purpose: the game ships its three built-in maps, and a server owner lists the courses in their deployment's map config (dot-server-deploy's `cfg/content.yml`), carried by dot-server as `DotGameDescriptor.maps` and read by `G2GGame._adopt_descriptor_maps`. A map id typed at the console that is not listed is fetched from the owner at the origin's latest.

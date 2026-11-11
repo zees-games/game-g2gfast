@@ -67,7 +67,7 @@ Thumbs.db
 # rather than beside the hand-written maps, so this stays one line and never becomes a
 # list of map names to keep in step -- which is this tree's most repeated bug.
 #
-# They live in the g2gfast-maps repository, and dot-bootstrap links them here off the
+# They live in the airdrift-maps repository (checked out as g2gfast-maps), and dot-bootstrap links them here off the
 # comment line below (copies them, on Windows by default).
 # bootstrap-link: g2gfast-maps/maps
 /maps/imported
@@ -95,7 +95,7 @@ screenshots/
 /_scratch_*
 /addons/dot_sql
 
-# Converted worlds (dot-map regen, `g2g_global_worlds`) and the art stores they name (licence.pbr_store ../pbr-library): links to g2gfast-maps.
+# Converted worlds (dot-map regen, `g2g_global_worlds`) and the art stores they name (licence.pbr_store ../pbr-library): links to airdrift-maps (checked out as g2gfast-maps).
 # bootstrap-link: g2gfast-maps/worlds
 /worlds
 /pbr-library

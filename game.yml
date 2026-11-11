@@ -10,7 +10,7 @@
 # neither of which this file can know. What is written here for them is a placeholder.
 #
 # Paths are relative to the pack's mount point, which is also this repository's root.
-# Keep scene, client_scene and module in step with dot-server-deploy/content/g2gfast/game.yml,
+# Keep scene, client_scene and module in step with dot-server-deploy/content/airdrift/game.yml,
 # which describes the same game for a deployment that publishes it itself;
 # dot-server-deploy's examples/install_descriptor suite fails when the two disagree.
 
@@ -18,7 +18,7 @@ content_id: gamemann/game-g2gfast
 version: 0.0.0
 kind: pack
 
-name: g2gfast
+name: "Zee's Airdrift"
 max_players: 32
 
 scene: scenes/g2g_server.tscn
@@ -40,7 +40,7 @@ cvars:
 
 # Delivered maps the game itself offers: none. The game ships its three built-in maps
 # (maps/*.tscn) and every other course is its own pack (gamemann/<map id>, from
-# g2gfast-maps), chosen by the SERVER rather than by a release of this game: a server
+# airdrift-maps), chosen by the SERVER rather than by a release of this game: a server
 # owner lists them in their deployment's map config (dot-server-deploy: cfg/content.yml),
 # which takes the newest version of each on every start. An entry here would be a default
 # every server offers, at the version pinned when the game was installed.

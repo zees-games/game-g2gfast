@@ -1,6 +1,8 @@
-# game-g2gfast
+# game-airdrift
 
 A bunny-hop and surf timer server in the competitive-shooter shape: the genre's movement, units and cvars, a timer with zones, stages, bonuses, styles, records and a replay ghost, and the genre's `.bsp` maps imported as content (game-playlot is a sandbox with a surf ramp; this is the *timer server* a records community would migrate to). It ships as a signed dot-cloud pack (`game.yml`) into dot-server-deploy's client shell; imported maps are their own packs from `../g2gfast-maps`.
+
+The game is **Zee's Airdrift** (it was G2G Fast; the repository was game-g2gfast, its maps g2gfast-maps; the checkouts keep their old directory names). **Wire and storage ids keep the old name on purpose**: the pack ids `gamemann/game-g2gfast` and the per-map `gamemann/<map id>` packs, the publish id `game-g2gfast`, the cfg game id `game-g2gfast` (`cfg/game/game-g2gfast/`), `game.sh` PACK `g2gfast`, the module name and game id `g2gfast` (the dot-server-deploy pack is `airdrift` with `g2gfast` as its former id), the site app slug `g2gfast` until the owner runs the slug migration, `user://g2gfast/*` and `user://cfg/g2gfast_*` paths, the settings namespace `game_g2gfast`, the log channel `g2g`, node names, the `g2g_` cvars, map ids, the dot-map-convert adapter `game-g2gfast` and the `G2G*` class and file names. Change one only together with dot-server-deploy, website-city and dot-cloud.
 
 **Movement and the timer are the core**: read [movement](docs/movement.md) and [timer](docs/timer.md) before touching either. Read the family [CLAUDE.md](../../CLAUDE.md) and each addon's `CLAUDE.md` first. **The detail is in [docs/](docs/README.md)**.
 
@@ -101,7 +103,7 @@ Short forms; the reasoning is in the linked file.
 - An imported map is data under the one `imported_map.tscn`; never generate a scene or script per map. [map-delivery](docs/map-delivery.md#maps-are-dropped-in-not-listed)
 - A map pack's version is a hash of its files; a mount can never be undone. [map-delivery](docs/map-delivery.md#a-map-packs-version-is-its-files)
 - Map changes go through `change_map` and dot-map's protocol; an oversized message is refused whole; a refusing client leaves. [map-delivery](docs/map-delivery.md#a-map-change-is-announced-and-then-made)
-- Which courses a server offers is its deployment's config; `game.yml`'s `maps:` is empty on purpose. [map-delivery](docs/map-delivery.md#g2gfast-maps-and-owners)
+- Which courses a server offers is its deployment's config; `game.yml`'s `maps:` is empty on purpose. [map-delivery](docs/map-delivery.md#airdrift-maps-and-owners)
 
 **Netcode**
 
