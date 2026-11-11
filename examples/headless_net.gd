@@ -41,8 +41,9 @@ func _run() -> void:
 		await _test_prediction_hopping()
 		await _test_timer()
 		await _test_finish()
-		# After the walked finish: run before it, they left that walk stopped short of the
-		# pad's edge (cause unknown, see nightly 1546's note).
+		# Probed 2026-11-11: the order does not matter. The walk ends at z=-0.97 m before and after
+		# these sections, with one server player, so extra hulls at the pad (solid players) do not
+		# block it; both orders give the same pit and finish results.
 		await _test_pit_respawn_predicted()
 		await _test_pit_zone_predicted()
 		_test_movement_change()
