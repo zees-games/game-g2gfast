@@ -163,8 +163,15 @@ func _build_combat() -> DotResult:
 
 	manager.entity_killed.connect(_on_entity_killed)
 	manager.damage_applied.connect(_on_damage_applied)
+	manager.shot_resolved.connect(_on_shot_resolved)
 
 	return DotResult.success(manager)
+
+
+## Files the walls a player's round crossed (authority only), for the site's Penetration cost panel.
+func _on_shot_resolved(shot: DotShot) -> void:
+	if game.authoritative and game.progress != null and shot.attacker != 0:
+		game.progress.report_shot(shot)
 
 
 ## Turns dot-combat's applied damage into [signal hit_landed] for the player who fired.
