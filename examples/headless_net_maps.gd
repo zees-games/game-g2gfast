@@ -161,7 +161,10 @@ const REPUB_FIXTURE := &"g2g_repub_fixture"
 
 ## The signing key the delivered-map section made, which the content client trusts.
 var _fixture_keys: Dictionary = {}
-const SYNC_FIXTURE_ROOT := "user://g2g_headless_net_sync"
+## One directory per process: user:// is shared by every copy of this project on a box, and
+## two suites at once (the fleet runs several per box) published, mounted and then deleted each
+## other's fixtures, which read as failures in the republish and delivered-map sections.
+var SYNC_FIXTURE_ROOT := "user://g2g_headless_net_sync_%d" % OS.get_process_id()
 const SYNC_TIMEOUT := 1.0
 ## Must outlast the server's swap (timeout plus the map load, over 2 s on a slow box), or the client has caught up.
 const SLOW_FETCH := 5.0
