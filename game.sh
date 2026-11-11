@@ -50,7 +50,7 @@ TIMEOUT=900
 PARSE=1
 # A suite that legitimately needs at least this long, as name=seconds; a larger
 # --timeout still wins.
-MIN_TIMEOUTS="headless_imported=3000"
+MIN_TIMEOUTS="headless_imported=3000 headless_mechanics=1500"
 RED=$'\033[31m'; GRN=$'\033[32m'; YLW=$'\033[33m'; OFF=$'\033[0m'
 CR=$'\r\033[K'
 [ -t 1 ] || { RED=""; GRN=""; YLW=""; OFF=""; CR=""; }
