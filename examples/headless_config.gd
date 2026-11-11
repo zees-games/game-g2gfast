@@ -7,7 +7,10 @@ const G2GArsenal := preload("../game/g2g_arsenal.gd")
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
-const ROOT := "user://g2g_cfgtest"
+## One directory per suite process (the probe child is handed its parent's): user:// is shared by
+## every copy of this project on a box, and two suites at once wrote and deleted each other's cfg files.
+const ROOT_ARG := "--cfgroot="
+var ROOT := _root()
 const GAME := "game-g2gfast"
 const CHECKS := 29
 const SECTIONS := 4
@@ -19,6 +22,13 @@ var _completed := 0
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.FATAL)
 	_run.call_deferred()
+
+
+func _root() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with(ROOT_ARG):
+			return a.substr(ROOT_ARG.length())
+	return "user://g2g_cfgtest_%d" % OS.get_process_id()
 
 
 func _run() -> void:
@@ -54,7 +64,7 @@ func _run() -> void:
 	config.max_velocity = 10.0
 	_check(not config.validate().ok, "validate refuses a max_velocity below max_speed")
 	_check(binder.schema()[0]["description"].length() > 5, "doc comments reach the schema")
-	_check(binder.write_schema("user://g2g_schema_check.json").ok, "write_schema works")
+	_check(binder.write_schema(ROOT + "_schema_check.json").ok, "write_schema works")
 	var fall := G2GGame.make_fall_rules()
 	var _made := fall.bind_cvars(console.cvar, DotConVar.FLAG_NOTIFY)
 	_check(console.get_int("sv_falldamage") == 0 and not fall.enabled, "fall damage is off in this game by default")
@@ -127,7 +137,7 @@ func _write(rel: String, text: String) -> void:
 func _child() -> String:
 	var out: Array = []
 	OS.execute(OS.get_executable_path(), ["--headless", "--path", ProjectSettings.globalize_path("res://"),
-		"res://examples/headless_config.tscn", "--", "--probe", "--g2g-respawn-delay=3.0"], out, true)
+		"res://examples/headless_config.tscn", "--", "--probe", ROOT_ARG + ROOT, "--g2g-respawn-delay=3.0"], out, true)
 	return "".join(PackedStringArray(out))
 
 
