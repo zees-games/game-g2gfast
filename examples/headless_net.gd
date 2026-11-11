@@ -14,13 +14,13 @@ extends "headless_net_maps.gd"
 ## server's. See the note in [method _build].
 const CLIENT_ENGINE_TICK_RATE := 60
 
-const CHECKS := 265
+const CHECKS := 273
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total above is the other half — see docs/testing.md.
-const SECTIONS := 35
+const SECTIONS := 37
 
 
 func _ready() -> void:
@@ -41,6 +41,10 @@ func _run() -> void:
 		await _test_prediction_hopping()
 		await _test_timer()
 		await _test_finish()
+		# After the walked finish: run before it, they left that walk stopped short of the
+		# pad's edge (cause unknown, see nightly 1546's note).
+		await _test_pit_respawn_predicted()
+		await _test_pit_zone_predicted()
 		_test_movement_change()
 		_test_style_and_track()
 		_test_avatar()
@@ -637,6 +641,98 @@ func _test_prediction_hopping() -> void:
 	_check(client.global_position.distance_to(server.global_position) < 0.5, "the client ends where the server has it",
 		"%.3f m apart" % client.global_position.distance_to(server.global_position))
 	_check(_client_net.predictor.correction_rate() < 0.1, "with almost no corrections", "%.3f" % _client_net.predictor.correction_rate())
+	await get_tree().process_frame
+	_done()
+
+
+## nightly 1546: the client ignored a lethal hurt volume and the server's respawn reached it a
+## round trip later as a 5 m correction. It now predicts the respawn at the map's start.
+func _test_pit_respawn_predicted() -> void:
+	_section("a pit's respawn is predicted, not corrected")
+	var server := _server_player()
+	var client := _client_player()
+	_server_game.spawn_player(server.player_id)
+	_steps(8)
+	_steps(60, _forward())
+	var pit := server.global_position
+	_server_game.spawn_player(server.player_id)
+	_steps(30)
+	var box := {"box": AABB(pit - Vector3(1.0, 1.0, 1.0), Vector3(2.0, 2.0, 2.0)), "damage": 1000.0}
+	_server_game.mechanics.hurt.append(box)
+	_client_game.mechanics.hurt.append(box.duplicate())
+	var hits := {"server": 0, "client": 0}
+	var on_server := func(event: int, _index: int) -> void:
+		if event == G2GPlayer.G2GMapMechanics.Event.HURT:
+			hits["server"] += 1
+	var on_client := func(event: int, _index: int) -> void:
+		if event == G2GPlayer.G2GMapMechanics.Event.HURT:
+			hits["client"] += 1
+	server.map_event.connect(on_server)
+	client.map_event.connect(on_client)
+	_client_net.predictor.set("_worst_error", 0.0)
+	_steps(100, _forward())
+	_flush()
+	server.map_event.disconnect(on_server)
+	client.map_event.disconnect(on_client)
+	_server_game.mechanics.hurt.pop_back()
+	_client_game.mechanics.hurt.pop_back()
+	var worst: float = _client_net.predictor.get("_worst_error")
+	_check(int(hits["server"]) >= 1, "the server's player runs into the pit", "%d hits" % hits["server"])
+	_check(int(hits["client"]) >= 1, "and the client's prediction does too", "%d hits" % hits["client"])
+	_check(worst < 0.5, "the respawn needs no large correction", "%.3f m" % worst)
+	_check(client.global_position.distance_to(server.global_position) < 0.5, "and the client ends where the server has it",
+		"%.3f m apart" % client.global_position.distance_to(server.global_position))
+	_server_game.spawn_player(server.player_id)
+	_steps(30)
+	await get_tree().process_frame
+	_done()
+
+
+## nightly 1546: a RESPAWN zone (the intro maps' pit) on the client teleported only after the predictor had
+## remembered the tick, so every pit was a 5 m correction in netchaos.
+func _test_pit_zone_predicted() -> void:
+	_section("a pit zone's respawn is predicted, not corrected")
+	var server := _server_player()
+	var client := _client_player()
+	_server_game.spawn_player(server.player_id)
+	_steps(8)
+	_steps(60, _forward())
+	var pit := server.global_position
+	_server_game.spawn_player(server.player_id)
+	_steps(30)
+	var added: Array[DotTimerZone] = []
+	for game: G2GGame in [_server_game, _client_game]:
+		var zone := DotTimerZone.make(DotTimerZone.Kind.RESPAWN, DotTimerTrack.MAIN).set_box(
+			pit - Vector3(1.0, 1.0, 1.0), pit + Vector3(1.0, 1.0, 1.0))
+		game.timers.zones.add(zone)
+		game.timers.set_zones(game.timers.zones)
+		added.append(zone)
+	var hits := {"server": 0, "client": 0}
+	var on_server := func(_id: StringName, zone: DotTimerZone) -> void:
+		if zone == added[0]:
+			hits["server"] += 1
+	var on_client := func(_id: StringName, zone: DotTimerZone) -> void:
+		if zone == added[1]:
+			hits["client"] += 1
+	_server_game.timers.effect_requested.connect(on_server)
+	_client_game.timers.effect_requested.connect(on_client)
+	_client_net.predictor.set("_worst_error", 0.0)
+	_steps(100, _forward())
+	_flush()
+	_server_game.timers.effect_requested.disconnect(on_server)
+	_client_game.timers.effect_requested.disconnect(on_client)
+	for i in range(2):
+		var game: G2GGame = [_server_game, _client_game][i]
+		game.timers.zones.remove_id(added[i].id)
+		game.timers.set_zones(game.timers.zones)
+	var worst: float = _client_net.predictor.get("_worst_error")
+	_check(int(hits["server"]) >= 1, "the server's player falls into the pit zone", "%d hits" % hits["server"])
+	_check(int(hits["client"]) >= 1, "and the client's timer sees it too", "%d hits" % hits["client"])
+	_check(worst < 0.5, "the zone's respawn needs no large correction", "%.3f m" % worst)
+	_check(client.global_position.distance_to(server.global_position) < 0.5, "and the client ends where the server has it",
+		"%.3f m apart" % client.global_position.distance_to(server.global_position))
+	_server_game.spawn_player(server.player_id)
+	_steps(30)
 	await get_tree().process_frame
 	_done()
 

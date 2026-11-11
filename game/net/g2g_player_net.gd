@@ -122,6 +122,8 @@ func _net_simulate(tick: int, delta: float) -> void:
 		player.predicted_tick = tick
 		player.controller.simulate_tick(tick, delta)
 		player.replay_teleport(tick)
+		if bridge != null:
+			bridge.timers_after_predicted_move(tick)
 
 	pull()
 

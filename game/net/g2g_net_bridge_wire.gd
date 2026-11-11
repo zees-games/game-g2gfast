@@ -355,8 +355,24 @@ func client_tick(tick: int, command: DotFpsCommand) -> void:
 		if not transit:
 			# Through the predictor, which remembers each tick: a snapshot can only skip its replay when the
 			# tick it describes was remembered.
+			_fresh_tick = tick
 			net.predict_tick(tick, packet)
-		game.tick_timers_only(tick)
+		feed_client_timers(tick)
+
+
+## The predicted player's fresh move times the tick from inside the prediction, so a pit zone's teleport is
+## in the tick the predictor remembers. After it, every snapshot of a pit was a 5 m correction (nightly 1546).
+func timers_after_predicted_move(tick: int) -> void:
+	if tick == _fresh_tick:
+		feed_client_timers(tick)
+
+
+## Once a tick: a replay reaching a tick again must not re-enter its zones.
+func feed_client_timers(tick: int) -> void:
+	if _timers_fed_for == tick or game == null:
+		return
+	_timers_fed_for = tick
+	game.tick_timers_only(tick)
 
 
 # --- Receiving -------------------------------------------------------------

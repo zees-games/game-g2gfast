@@ -429,13 +429,18 @@ func _on_effect_requested(timer_key: StringName, zone: DotTimerZone) -> void:
 			pass
 
 
-## A map volume finished something only the server may: a block sank under a player
-## who stayed on it, or a lethal hurt volume caught one. See [G2GMapMechanics].
+## A map volume finished something: a block sank under a player who stayed on it, or a
+## lethal hurt volume caught one. See [G2GMapMechanics]. A client predicts only the hurt.
 func _on_map_event(event: int, index: int, player_id: StringName) -> void:
-	if not authoritative or mechanics == null:
+	if mechanics == null:
 		return
 	var player: G2GPlayer = players.get(player_id)
 	if player == null:
+		return
+	if not authoritative:
+		# Unpredicted, a pit was a 5 m correction one round trip later (nightly 1546).
+		if event == G2GMapMechanics.Event.HURT:
+			_predict_respawn(player)
 		return
 	match event:
 		G2GMapMechanics.Event.BLOCK_SANK:
@@ -446,6 +451,18 @@ func _on_map_event(event: int, index: int, player_id: StringName) -> void:
 				player.teleport(block["destination"], float(block["yaw"]), true)
 		G2GMapMechanics.Event.HURT:
 			spawn_player(player_id)
+
+
+## A client's guess at [method spawn_player]: the map's start for the track, which is
+## also what the director's single-start rule picks (one site per track).
+func _predict_respawn(player: G2GPlayer) -> void:
+	var map := current_map_node()
+	if map == null:
+		return
+	var track := player.timer.track if player.timer != null else DotTimerTrack.MAIN
+	# Through a Basis like the director's site, so the yaw wraps as the server's does.
+	var yaw := rad_to_deg(Basis(Vector3.UP, deg_to_rad(map.spawn_yaw_for(track))).get_euler().y)
+	player.teleport(map.spawn_for(track), yaw)
 
 
 ## R, and R twice. [param mode] is one of `G2GEvents.RESTART_*`:

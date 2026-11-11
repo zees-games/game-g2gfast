@@ -169,6 +169,9 @@ var _tick: int = 0
 var _adding: bool = false
 var _game_ticked_for: int = -1
 var _client_ticked_for: int = -1
+## Client: the tick being predicted fresh (not replayed), and the last tick the timers were fed.
+var _fresh_tick: int = -1
+var _timers_fed_for: int = -1
 
 ## Client: the map id of the announce being handled, for [signal map_refused]. dot-map
 ## reports a refused announce with no map, because it refused to make one.
