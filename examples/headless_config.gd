@@ -9,7 +9,7 @@ const G2GGame := preload("../game/g2g_game.gd")
 const G2GMapMechanics := preload("../game/g2g_map_mechanics.gd")
 const ROOT := "user://g2g_cfgtest"
 const GAME := "game-g2gfast"
-const CHECKS := 28
+const CHECKS := 29
 const SECTIONS := 4
 
 var _entered := 0
@@ -30,6 +30,7 @@ func _run() -> void:
 	var config := G2GConfig.new()
 	var binder := G2GConfig.make_binder(config)
 	binder.strict = true
+	_check(DotAddonConfig.game_names("game-airdrift") == PackedStringArray(["game-g2gfast", "game-airdrift"]), "the binder registers game-g2gfast as game-airdrift's former id", str(DotAddonConfig.game_names("game-airdrift")))
 	_check(binder.load_layers().ok, "defaults load")
 	_check(binder.diff().is_empty(), "no diff at the code defaults")
 	_check(binder.schema().size() >= 55, "every exported field is in the schema")

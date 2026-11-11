@@ -379,8 +379,21 @@ const CFG_FILES := {
 }
 
 
+## The game's own id since the rename (Zee's Airdrift), and the ids it had before (oldest first).
+## The cfg tree is still `cfg/game/game-g2gfast/`: the binder reads it under the former id.
+const GAME_ID := "game-airdrift"
+const FORMER_IDS: PackedStringArray = ["game-g2gfast"]
+
+
+## Declares the rename to dot-core (API 31), so whatever names the game by its new id (rotation
+## `games:` keys, `cfg/game/game-airdrift/` lookups) also finds its `game-g2gfast` ones. Idempotent.
+static func register_ids() -> void:
+	DotAddonConfig.register_former_game(GAME_ID, FORMER_IDS)
+
+
 ## The binder every entry point uses: [param config] layered, one cfg file per [constant CFG_FILES] entry.
 static func make_binder(config: DotConfig, json_path := "") -> DotGameConfigBinder:
+	register_ids()
 	var b := DotGameConfigBinder.create(config, "game-g2gfast", "g2g", json_path)
 	b.grouped = true
 	b.group_files = CFG_FILES
