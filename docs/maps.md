@@ -42,12 +42,12 @@ The hand-built maps draw the generated grid, not the installed Kenney prototype 
 
 ## Every hand-built map is surveyed
 
-`G2GMapSurvey` (game-playground's survey reimplemented in genre units) runs over every hand-built map in `headless_maps`' last section, after a built-in bad map that has one of everything it looks for. Per map it asserts: every spawn and `!s<n>` destination lands on standable ground; no two solids leave a slot narrower than the hull; nothing standable is out of reach of every start unless declared, and no declaration covers ground that is reached; nothing a start reaches is a trap (no finish, pit or spawn out); every declared CHAIN course is a way forward; and the tilted slabs a player can stand on are exactly `STANDABLE_RAMPS`.
+`G2GMapSurvey` (game-playlot's survey reimplemented in genre units) runs over every hand-built map in `headless_maps`' last section, after a built-in bad map that has one of everything it looks for. Per map it asserts: every spawn and `!s<n>` destination lands on standable ground; no two solids leave a slot narrower than the hull; nothing standable is out of reach of every start unless declared, and no declaration covers ground that is reached; nothing a start reaches is a trap (no finish, pit or spawn out); every declared CHAIN course is a way forward; and the tilted slabs a player can stand on are exactly `STANDABLE_RAMPS`.
 
 - The numbers are the tunables' own (see [movement.md](movement.md#numbers-that-explain-the-hull)); the grid is 16 u, half the hull, so a cell's eight neighbours are the hull.
 - **A CHAIN course is linked body to body when `G2GReach.chain` says a perfect strafe runs it**, because the main routes' gaps (up to 288 u) are past any RUN jump by design.
 - **On a surf map the survey stops short, on purpose.** A ramp is slid on, not stood on, and where a rider gets to is decided by speed that is theirs to make; any bound on it is "everywhere" or a guess at skill. The survey floods only what needs none (walking, a step, a drop, a RUN jump, a slide straight down a face's fall line) and a surface reached by a carried flight is declared, naming the check that rides it.
-- The declarations live in `headless_maps._survey_declared`, not on the maps as game-playground has them. Moving them is not yet done.
+- The declarations live in `headless_maps._survey_declared`, not on the maps as game-playlot has them. Moving them is not yet done.
 
 ## Stage destinations are on the route
 
