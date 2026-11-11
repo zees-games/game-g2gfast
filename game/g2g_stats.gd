@@ -84,6 +84,7 @@ static func schema() -> DotStatsSchema:
 	var schema := DotStatsSchema.new()
 	var _zones := DotStatsHitzones.declare(schema)
 	DotStatsPenetration.declare_walls(schema)
+	var _shots := DotStatsShots.declare(schema)
 
 	_counter(schema, RUNS_STARTED, "Runs started", "runs", true)
 	_counter(schema, RUNS_FINISHED, "Runs finished", "runs", true)

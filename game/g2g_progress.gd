@@ -250,10 +250,11 @@ func report_damage(damage: DotDamage) -> void:
 		var _filed := DotStatsDamage.report(feed, damage)
 
 
-## Every wall a resolved shot crossed, for the site's Penetration cost panel (the shape is dot-stats').
+## Every wall a resolved shot crossed, for the site's Penetration cost panel, and the shot itself for Accuracy (the shapes are dot-stats').
 func report_shot(shot: DotShot) -> void:
 	if feed != null and stats != null:
 		var _walls := DotStatsDamage.report_shot(feed, shot)
+		var _outcome := DotStatsDamage.report_shot_outcome(feed, shot)
 
 
 ## A player kill for the head-to-head table; world deaths and suicides are refused by the feed.
