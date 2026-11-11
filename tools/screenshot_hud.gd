@@ -96,7 +96,25 @@ func _initialize() -> void:
 	root.add_child(_hud)
 
 
+## Frame sequence after each still (DOT_SHOT_FRAMES, set by the .sh); see DotShotSeq. The state machine holds still while it records, and `_seq_end` defers the quit until it is done.
+var _seq := DotShotSeq.new()
+var _seq_active := false
+var _seq_end := false
+
+
+func _seq_begin(path: String) -> void:
+	if _seq.enabled():
+		_seq.begin(path)
+		_seq_active = true
+
+
+
 func _process(delta: float) -> bool:
+	if _seq_active:
+		_seq_active = _seq.step(root)
+		return false
+	if _seq_end:
+		return true
 	if _done:
 		return true
 
@@ -159,7 +177,8 @@ func _process(delta: float) -> bool:
 
 	print("[hud] %d frames in screenshots/" % _shots.size())
 	_done = true
-	return true
+	_seq_end = true
+	return false
 
 
 ## The three states, and what each is for.
@@ -404,3 +423,4 @@ func _capture(name: String) -> void:
 		return
 
 	print("[hud] %s  %dx%d" % [path, image.get_width(), image.get_height()])
+	_seq_begin(path)

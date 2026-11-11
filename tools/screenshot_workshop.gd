@@ -44,7 +44,25 @@ func _initialize() -> void:
 	root.add_child(_client)
 
 
+## Frame sequence after each still (DOT_SHOT_FRAMES, set by the .sh); see DotShotSeq. The state machine holds still while it records, and `_seq_end` defers the quit until it is done.
+var _seq := DotShotSeq.new()
+var _seq_active := false
+var _seq_end := false
+
+
+func _seq_begin(path: String) -> void:
+	if _seq.enabled():
+		_seq.begin(path)
+		_seq_active = true
+
+
+
 func _process(_delta: float) -> bool:
+	if _seq_active:
+		_seq_active = _seq.step(root)
+		return false
+	if _seq_end:
+		return true
 	if _client.player == null or _client.game == null or _client.game.maps.current == null:
 		return false
 	if _loaded < 60:
@@ -65,8 +83,8 @@ func _process(_delta: float) -> bool:
 			_capture("workshop_maplist_%d" % (_step - 1))
 			_client.menu.picker.turn(1)
 		_:
-			quit(0)
-			return true
+			_seq_end = true
+			return false
 	_step += 1
 	_wait = SETTLE
 	return false
@@ -76,3 +94,4 @@ func _capture(name: String) -> void:
 	var image := root.get_texture().get_image()
 	image.save_png("%s/%s.png" % [OUT_DIR, name])
 	print("wrote %s (%d x %d)" % [name, image.get_width(), image.get_height()])
+	_seq_begin("%s/%s.png" % [OUT_DIR, name])
