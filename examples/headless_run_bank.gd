@@ -80,7 +80,7 @@ func _test_surf_run() -> void:
 	# `Vector3.FORWARD`, which banks a slab in X and Y and leaves its Z extent
 	# horizontal, so both of this map's ramps are LEVEL along their length and give a
 	# player nothing. The descent comes from the stepped valley floor between them. That
-	# is `[surf-ramp-1]`, and it is the same finding game-playground's `pg_surf_intro`
+	# is `[surf-ramp-1]`, and it is the same finding game-playlot's `pg_surf_intro`
 	# made about itself — these two maps were built the same way.
 	#
 	# The main run is deliberately NOT reshaped: it has records against it and a scored
@@ -708,7 +708,7 @@ func _look_guard() -> void:
 	# this suite stands a `G2GClient` up, so the honest thing this can check is the
 	# contract the motion handler branches on. `Input.mouse_mode` is not the thing to
 	# assert against: the dummy display server pins it to VISIBLE and drops every write
-	# without erroring, which is why `game-arena`'s identical guard has never been
+	# without erroring, which is why `game-fatal-contact`'s identical guard has never been
 	# exercised by anything either.
 	var look := G2GClient.new()
 	_check(not look.mouse_drives_view(),

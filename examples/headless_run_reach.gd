@@ -2,8 +2,8 @@ extends "headless_run_base.gd"
 
 ## Every jump a hand-written map declares, against what the movement can do.
 ##
-## [b]`[reach-1]`, asked of this game.[/b] game-playground's jump course was
-## unfinishable past platform three and game-arena's three maps had routes nothing had
+## [b]`[reach-1]`, asked of this game.[/b] game-playlot's jump course was
+## unfinishable past platform three and game-fatal-contact's three maps had routes nothing had
 ## ever climbed, and every check over all of them passed, because a box count and a
 ## zone file cannot tell a platform from a wall. Each map here says which of its bodies
 ## are a route and which reach a route is sized for (`G2GMap.add_course`); the rise and

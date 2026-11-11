@@ -9,7 +9,7 @@ const G2GUnits := preload("g2g_units.gd")
 
 ## Blocks an admin can place on a course, and take away again.
 ##
-## [b]Not a sandbox.[/b] game-playground is the sandbox and this is the timer server;
+## [b]Not a sandbox.[/b] game-playlot is the sandbox and this is the timer server;
 ## what a records community actually places is a practice line, a temporary block on
 ## the section everybody fails, and a marker at the spot people keep asking about.
 ## Every one of those wants to stay where it was put, so a prop here is spawned

@@ -1,6 +1,6 @@
 extends "headless_net_maps.gd"
 
-## game-g2gfast's netcode, end to end, in one process.
+## game-airdrift's netcode, end to end, in one process.
 ##
 ## A server game and a client game, each with its own [DotNetManager] and [G2GNetBridge], with a
 ## lossy loopback where the socket would be. This proves the bridge, not dot-net.

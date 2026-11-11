@@ -8,7 +8,7 @@ dot-moderation's live tools are here (`G2GModTools`, built in `G2GServices`, com
 
 - **Health, weapons and god mode exist only while `sv_deathmatch` is on**, so god, buddha, hp, slay, give and strip answer "not running its deathmatch" rather than being absent: whether they mean anything is a cvar, not a build.
 - **Blind and beacon are two replicated flags** (`G2GPlayer.blinded`, `G2GPlayer.beacon`, in `G2GPlayerNet` after the movement specs). **`net_blind` is owner-only**: nobody else's screen changes, and an opponent on the deathmatch layer who could read it would know when to go and find somebody. `net_beacon` goes to everybody. State rather than an event, so a joiner, a lost snapshot and a map change are corrected by the next snapshot. `DotFxBeacon` (dot-fx, ping off: the game plays its own through dot-audio) is a ring and a once-a-second ripple sized to this game's 32-unit hull, and a column through walls the beaconed player's own camera does not draw.
-- Three differences from game-arena's version, on purpose: **neither taints a run**; **nothing re-applies them on a respawn**, because a respawn here is `G2GGame.spawn_player`, a teleport of the same node, so the flags stay (this game never calls `DotModTools.respawned`, so adding them to `persist_on_respawn` would be a setting nothing reads); and **a beacon changes no relevance**. Every player entity is already `always_relevant` (`G2GNetBridge._build_entity`); arena's `always_relevant = beacon` here would CUT every runner the moment their beacon went off.
+- Three differences from game-fatal-contact's version, on purpose: **neither taints a run**; **nothing re-applies them on a respawn**, because a respawn here is `G2GGame.spawn_player`, a teleport of the same node, so the flags stay (this game never calls `DotModTools.respawned`, so adding them to `persist_on_respawn` would be a setting nothing reads); and **a beacon changes no relevance**. Every player entity is already `always_relevant` (`G2GNetBridge._build_entity`); arena's `always_relevant = beacon` here would CUT every runner the moment their beacon went off.
 
 ## Chat is the policy; dot-server stays the transport
 
@@ -23,7 +23,7 @@ dot-moderation's live tools are here (`G2GModTools`, built in `G2GServices`, com
 
 **Voice rides its own channel on the link.** A talk spurt is fifty frames a second per speaker relayed to every listener; on the state channel it would queue with the snapshots, and on a server where a run is counted in ticks, latency must not depend on whether anybody is talking. **The speaker id is stamped from the transport's sender, never read from the payload.** The two voice calls are declared `unreliable`: a lost frame is 20 ms a jitter buffer conceals, and a resent one arrives after its neighbours played. What that becomes on the wire is the transport's decision (UDP on ENet, reliable TCP on a browser's WebSocket); the game names no transport.
 
-The default voice channel is **ALL**, the opposite of game-arena's, and both are right: an arena is a room, and a course is long and thin with half the server two hundred metres away.
+The default voice channel is **ALL**, the opposite of game-fatal-contact's, and both are right: an arena is a room, and a course is long and thin with half the server two hundred metres away.
 
 ## The vote
 
@@ -43,7 +43,7 @@ The default voice channel is **ALL**, the opposite of game-arena's, and both are
 
 - **The map is not `entry.map`**: that is dot-server's `info.map`, the content id of the loaded game. A game's own section is under `rules["game"]` precisely so a field called `map` there cannot overwrite it.
 - **JSON has one number type**: `tick_rate` comes back as a float; `game_number` is the accessor, and `wr` (a dictionary) has a third.
-- **The list is a chat command** (`!servers`, or F3), because that is what this genre's fingers do and this client has a HUD rather than a screen stack. game-arena has the screen.
+- **The list is a chat command** (`!servers`, or F3), because that is what this genre's fingers do and this client has a HUD rather than a screen stack. game-fatal-contact has the screen.
 
 ## Identity and platform
 

@@ -14,7 +14,7 @@ extends Node
 ## thing that could read any of it was a test. That is the family's own "produced
 ## correctly and consumed by nobody" with the ends swapped.
 ##
-## [b]There is no screen here, and game-arena has one.[/b] That game has a
+## [b]There is no screen here, and game-fatal-contact has one.[/b] That game has a
 ## [DotScreenStack]; this client has a HUD and a keyboard, and the genre's answer to
 ## "show me the servers" is a chat command — `!servers` — because that is what a bhop
 ## player's fingers already do. The list model, the sources, the filters and the

@@ -22,7 +22,7 @@ static func apply(parent: Node3D, lighting: Dictionary) -> DirectionalLight3D:
 	return sun
 
 
-## The hand-built maps' light: a clear afternoon, the family's look (game-arena's built-in
+## The hand-built maps' light: a clear afternoon, the family's look (game-fatal-contact's built-in
 ## maps). A warm sun high and behind the start (every hand-built route runs toward -Z, so
 ## the faces a player runs at are the lit ones; from the other side the start block's face
 ## rendered olive), a pale cool fill (a blue fill at its strength
@@ -55,7 +55,7 @@ const DAYLIGHT := {
 ## headroom above white, and at Forward+'s numbers the pastel blocks clip to flat white
 ## and the grid, which is what a jump is judged by, goes with them. Under
 ## `gl_compatibility` the sun is divided by 700 instead of 200 and the fill is 0.62
-## (game-arena's numbers, rendered side by side here too); at Forward+ the fill is full.
+## (game-fatal-contact's numbers, rendered side by side here too); at Forward+ the fill is full.
 ## Only the hand-built maps: an imported map's light is its own manifest's ([method apply]).
 static func builtin(parent: Node3D) -> DirectionalLight3D:
 	var p := profile()

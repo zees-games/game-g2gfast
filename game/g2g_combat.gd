@@ -122,7 +122,7 @@ func _build_combat() -> DotResult:
 	# Physics, not analytic. This game's players collide against Godot's physics —
 	# `G2GPlayer` uses the stock `DotFpsController`, whose `_make_body` is a physics
 	# body — so a shot traced against anything else would be traced against a world
-	# the movement does not agree with. game-arena is the other way round and says so
+	# the movement does not agree with. game-fatal-contact is the other way round and says so
 	# for the same reason.
 	var trace := DotTracePhysics.new()
 	manager.trace = trace
@@ -147,7 +147,7 @@ func _build_combat() -> DotResult:
 	add_child(manager)
 
 	# AFTER add_child: `DotCombatManager.setup` runs from `_ready` and that is what builds
-	# the resolver, so assigning the hook beforehand writes to nothing. game-arena's
+	# the resolver, so assigning the hook beforehand writes to nothing. game-fatal-contact's
 	# combat build carries the same warning for the same reason.
 	#
 	# [b]The spawn window, asked at the one point every hit goes through.[/b] `health`

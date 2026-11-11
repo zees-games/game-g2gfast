@@ -7,7 +7,7 @@ const G2GUnits := preload("g2g_units.gd")
 ## A map builds its geometry and its zones from the same constants, so a start line
 ## cannot drift from the block it sits on; the written-out JSON copy in `maps/` is what
 ## a DELIVERED map would ship, and the headless suite checks the two agree. See
-## game-playground's docs/maps.md for the reasoning; it is the same here.
+## game-playlot's docs/maps.md for the reasoning; it is the same here.
 ##
 ## Positions and sizes are in genre units throughout. Zone volumes are converted to
 ## metres where they are built, because the timer works in whatever the movement
@@ -44,7 +44,7 @@ var courses: Array[Course] = []
 ## [b]The only hand-written part is which bodies are a route and which reach it is
 ## sized for.[/b] The rise, the gap and the landing room are read off the bodies'
 ## transforms and shapes by [G2GReach], so moving a block moves the route and
-## `headless_run` re-decides it — game-arena's `climbs` pattern, for a genre with two
+## `headless_run` re-decides it — game-fatal-contact's `climbs` pattern, for a genre with two
 ## reaches rather than one. A map is content and content does not assert; the question
 ## is asked in the suite, where failing is useful.
 func add_course(of_name: String, track: int, kind: int, bodies: Array) -> Course:

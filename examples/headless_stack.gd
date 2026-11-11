@@ -11,7 +11,7 @@ const G2GPlayerStack := preload("../game/g2g_player_stack.gd")
 ## [/codeblock]
 ##
 ## [b]This game gained a three-hundred-line player layer with no suite that named it.[/b]
-## game-arena got one; the other four did not, so the roster, the sides, the classes, the
+## game-fatal-contact got one; the other four did not, so the roster, the sides, the classes, the
 ## collision layout and the spawn director were exercised only as far as `setup()` running
 ## inside somebody else's test. Every failure below is one that can only happen at a seam.
 ##

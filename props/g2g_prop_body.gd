@@ -2,7 +2,7 @@ extends RigidBody3D
 
 ## A placeable block, generated from three numbers rather than modelled.
 ##
-## [b]What a timer server actually uses props for.[/b] Not a sandbox — game-playground
+## [b]What a timer server actually uses props for.[/b] Not a sandbox — game-playlot
 ## is the sandbox. An admin building a practice line, a temporary boost block on a
 ## section people keep failing, a marker at the spot everybody asks about: those are
 ## the things a records server places, and every one of them wants to be frozen where

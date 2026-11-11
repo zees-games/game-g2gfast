@@ -159,7 +159,7 @@ class Route:
 	## The least clear air between the two footprints, units. Zero when they touch.
 	##
 	## The Euclidean distance between the footprints rather than the larger axis gap
-	## game-arena uses: that is right for boxes that overlap on one axis, and short for
+	## game-fatal-contact uses: that is right for boxes that overlap on one axis, and short for
 	## ones that do not — `bhop_g2g_stages`' zigzag is 80 units across AND the gap along,
 	## and the player flies the diagonal.
 	var gap: float = 0.0

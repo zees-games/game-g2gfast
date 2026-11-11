@@ -133,7 +133,7 @@ func pull() -> void:
 		net_beacon = player.beacon
 		net_weapon = G2GArsenal.wire_of(player.held_weapon)
 
-	# [b]No relevance to change for a beacon, unlike game-arena.[/b] Every player entity
+	# [b]No relevance to change for a beacon, unlike game-fatal-contact.[/b] Every player entity
 	# here is `always_relevant` already (`G2GNetBridge._build_entity`), so a beaconed
 	# runner reaches every client however far away they are — and switching relevance
 	# with the flag, as the arena does, would CUT every runner the moment their beacon

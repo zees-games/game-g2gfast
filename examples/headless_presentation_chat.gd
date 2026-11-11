@@ -373,7 +373,7 @@ func _test_blind_and_beacon() -> void:
 
 	# Measured against the VIEWPORT, not the HUD. At 64 x 64 headless this cannot say
 	# anything about a real window's layout; it can say the rect is the viewport's and not
-	# the HUD's own or zero, which is the bug game-arena's first rendered frame showed.
+	# the HUD's own or zero, which is the bug game-fatal-contact's first rendered frame showed.
 	var covered := hud.blind_overlay.get_global_rect()
 	var viewport := hud.get_viewport_rect()
 	_check(

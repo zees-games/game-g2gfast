@@ -29,7 +29,7 @@ The game is **Zee's Airdrift** (it was G2G Fast; the repository was game-g2gfast
 
 ## Layout
 
-`game/` is the simulation (`g2g_game.gd`; units, config and movement are the only boundary into metres), the player, the layers over the timer (combat, hunters, blocks, spectating, bots), hand-built and imported maps, and the client (`g2g_client.gd`, `g2g_hud.gd`, `ui/`; never loaded by a server); `game/net/` the bridge and wire. `maps/` holds the three hand-built maps, `imported/` (linked from g2gfast-maps), `zones/` and `routes/`; `examples/` the suites, `tools/` the tools. **The file-by-file table is in [docs/README.md](docs/README.md#layout).**
+`game/` is the simulation (`g2g_game.gd`; units, config and movement are the only boundary into metres), the player, the layers over the timer (combat, hunters, blocks, spectating, bots), hand-built and imported maps, and the client (`g2g_client.gd`, `g2g_hud.gd`, `ui/`; never loaded by a server); `game/net/` the bridge and wire. `maps/` holds the three hand-built maps, `imported/` (linked from airdrift-maps), `zones/` and `routes/`; `examples/` the suites, `tools/` the tools. **The file-by-file table is in [docs/README.md](docs/README.md#layout).**
 
 ## Running and testing
 
@@ -55,7 +55,7 @@ Short forms; the reasoning is in the linked file.
 
 - A map may change movement cvars through `cfg/game/game-g2gfast/dot_map/map/%.yml` (`G2GMapConfig`; default `sv_airaccelerate` 1000 for every map, 100 for the two maps that ask for it), restored on the next map. [movement](docs/movement.md#a-map-may-change-some-movement-cvars)
 
-- Every `G2GConfig` field is also a `g2g_<field>` cvar (not where an `sv_` one exists: `G2GModule.HAND_CVARS`), a key in one of four `cfg/game/game-g2gfast/config_<movement|content|modes|server>/game.yml` files (`G2GConfig.CFG_FILES` maps each `@export_group`; `G2GConfig.make_binder` is what the game, the client and the suites all use; every key is shipped commented out at its default by `addons/dot_game/qa/dot_game_cfg_templates.gd`, which `headless_config` holds in step; a key in the wrong file fails a dedicated boot) and a dot-workbench set per file; add a tunable as a documented `@export` there, never as a constant. Strict on a dedicated server. `mp_solidplayers` (1) gives every player a physics hull (`g2g_player_bodies.gd`) and `mp_teamblock`/`mp_enemyblock`/`!block`/`!noblock` decide which pairs stop; the genre default is `mp_enemyblock 0`, so runners still pass until an admin or a pair of `!block` requests says otherwise. A client meets a remote's hull where it is drawn (interpolated), not lagged back as game-arena does. [README](README.md#every-setting-as-a-file-a-cvar-and-a-panel)
+- Every `G2GConfig` field is also a `g2g_<field>` cvar (not where an `sv_` one exists: `G2GModule.HAND_CVARS`), a key in one of four `cfg/game/game-g2gfast/config_<movement|content|modes|server>/game.yml` files (`G2GConfig.CFG_FILES` maps each `@export_group`; `G2GConfig.make_binder` is what the game, the client and the suites all use; every key is shipped commented out at its default by `addons/dot_game/qa/dot_game_cfg_templates.gd`, which `headless_config` holds in step; a key in the wrong file fails a dedicated boot) and a dot-workbench set per file; add a tunable as a documented `@export` there, never as a constant. Strict on a dedicated server. `mp_solidplayers` (1) gives every player a physics hull (`g2g_player_bodies.gd`) and `mp_teamblock`/`mp_enemyblock`/`!block`/`!noblock` decide which pairs stop; the genre default is `mp_enemyblock 0`, so runners still pass until an admin or a pair of `!block` requests says otherwise. A client meets a remote's hull where it is drawn (interpolated), not lagged back as game-fatal-contact does. [README](README.md#every-setting-as-a-file-a-cvar-and-a-panel)
 
 **Timer**
 
@@ -91,7 +91,7 @@ Short forms; the reasoning is in the linked file.
 
 - Hand-built maps: pastel `G2GTextures.ROLE_COLOURS` and `G2GLighting.DAYLIGHT` via `builtin()`, turned down under Compatibility; imported maps keep their own. [map-rendering](docs/map-rendering.md#the-hand-built-maps-pastel-grid-daylight-document)
 - A new drawing rule goes in `G2GBspMap._material_for` / `G2GLighting`, so published packs get it without a republish. [map-rendering](docs/map-rendering.md#a-rule-that-applies-at-build-time-reaches-published-packs)
-- Never write `ALPHA` unconditionally. The water shader is copied in game-arena; keep the two in step. [map-rendering](docs/map-rendering.md#opaque-unless-the-material-says-translucent)
+- Never write `ALPHA` unconditionally. The water shader is copied in game-fatal-contact; keep the two in step. [map-rendering](docs/map-rendering.md#opaque-unless-the-material-says-translucent)
 - `$additive` surfaces draw with `blend_add` (manifest `additive`); a dark spawn view is in `DARK_SPAWNS` with why, or it is a bug. [map-rendering](docs/map-rendering.md#opaque-unless-the-material-says-translucent)
 - The atlas is expose-clip-gamma from the median luxel; never /255, never a tone map; displacements sample over the flat quad. [map-rendering](docs/map-rendering.md#the-lightmap-atlas-keeps-the-maps-contrast)
 - Own texture, else Kenney stand-in, else the tinted prototype grid; flat black is missing; black is trusted only when named. [map-rendering](docs/map-rendering.md#textures-the-bsp-did-not-carry)

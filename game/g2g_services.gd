@@ -6,7 +6,7 @@ const G2GModTools := preload("g2g_mod_tools.gd")
 
 ## Chat, voice and moderation on a dedicated timer server.
 ##
-## The same shape as game-arena's `ArenaServices`, and deliberately a second copy
+## The same shape as game-fatal-contact's `ArenaServices`, and deliberately a second copy
 ## rather than a shared file: nothing is shared between games in this family that is
 ## not an addon, and a helper living in one game and loaded by another would be a
 ## dependency neither declares. What differs is what a timer server wants, and it is

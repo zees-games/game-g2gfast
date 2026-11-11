@@ -411,13 +411,13 @@ func refresh_spawn_rules() -> void:
 	# [b]The combat layer's own number, not a second copy of it.[/b] `G2GArsenal`'s match
 	# rules carry `spawn_protection_sec` and the health window is set from them; writing
 	# 2.0 here as well would be the same figure in two files, which is the disagreement
-	# game-arena had between its effect table and its modes.
+	# game-fatal-contact had between its effect table and its modes.
 	var fighting := game.combat != null and game.combat.enabled
 	spawns.rules.protection_sec = (
 		game.combat.match_node.rules.spawn_protection_sec
 		if fighting and game.combat.match_node != null else 0.0
 	)
-	# Off for the reason game-arena's is: it is the behaviour a deathmatch wants and it
+	# Off for the reason game-fatal-contact's is: it is the behaviour a deathmatch wants and it
 	# can only be revoked in one of the two records of it. See `ArenaPlayerStack`.
 	spawns.rules.protection_breaks_on_attack = false
 

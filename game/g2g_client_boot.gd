@@ -296,7 +296,7 @@ func rise(id: StringName) -> void:
 
 ## Lists what the browser found, on the HUD. What `!servers` and F3 both call.
 ##
-## [b]A chat command rather than a screen, and game-arena has a screen.[/b] That game
+## [b]A chat command rather than a screen, and game-fatal-contact has a screen.[/b] That game
 ## has a [DotScreenStack]; this client has a HUD and a keyboard, and the genre's answer
 ## to "show me the servers" is a chat trigger, because that is what a bhop player's
 ## fingers already do. The list model, the sources, the filters and the favourites are
@@ -688,7 +688,7 @@ var mouse_capture_override: Variant = null
 ## web [member _awaiting_click] leaves it released before the first click too — in both
 ## of those states the pointer is a pointer, so spending its motion on the view turns
 ## the player away from the "click to play" notice they are being asked to click.
-## `game-arena` guarded this from the start; this file and `game-playground` did not.
+## `game-fatal-contact` guarded this from the start; this file and `game-playlot` did not.
 ##
 ## [b]A method with an override rather than a read of `Input.mouse_mode` at the call
 ## site, because that read cannot be tested here.[/b] The dummy display server pins the

@@ -421,7 +421,7 @@ func _build_player_stack() -> void:
 		player_stack = null
 
 
-## The engine's rate when a server has set it, else the export. See game-playground.
+## The engine's rate when a server has set it, else the export. See game-playlot.
 func _resolve_tick_rate() -> int:
 	return Engine.physics_ticks_per_second if Engine.physics_ticks_per_second > 0 else tick_rate
 

@@ -76,7 +76,7 @@ enum Role {
 ## The base colour each role is tinted with. The generated grid is greyscale and is
 ## multiplied by these, so a texture set installed later is tinted the same way.
 ##
-## [b]Pastels, the family's sunny look (game-arena's built-in maps)[/b]: a near-white
+## [b]Pastels, the family's sunny look (game-fatal-contact's built-in maps)[/b]: a near-white
 ## floor, sky-blue ramps, a mint start, a pink end, butter-yellow blocks and lavender
 ## bonus surfaces, so a bonus route is still visibly not the main one. Bonus is the cool
 ## one because bonus tracks include whole surf ramps, and a warm pastel on a ramp's shaded

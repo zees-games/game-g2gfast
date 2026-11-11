@@ -160,7 +160,7 @@ func _ready() -> void:
 	controller.name = "Controller"
 	controller.tick_rate = tick_rate
 	# EXTERNAL: the game owns the tick, so the timer can be fed the position the move
-	# just produced. See game-playground's docs/simulation.md for the ordering argument.
+	# just produced. See game-playlot's docs/simulation.md for the ordering argument.
 	controller.drive = DotFpsController.Drive.EXTERNAL
 	controller.tunables = base_tunables
 	# Every player, both ends: an admin's noclip is a modifier whose index travels on the
@@ -543,7 +543,7 @@ func present(delta: float) -> void:
 ## Placed at the DRAWN position — the render state on the local player, the interpolated
 ## one on a remote player — for the reason [DotFxBeacon] is top level.
 ##
-## [b]Not hidden on a death, where game-arena's is.[/b] A runner here has no death a
+## [b]Not hidden on a death, where game-fatal-contact's is.[/b] A runner here has no death a
 ## client can see: the deathmatch layer's health is the server's, a body that dies stays
 ## where it fell until the respawn a moment later, and the respawn is a teleport of the
 ## same node — so the flag and the marker simply follow it.

@@ -262,7 +262,7 @@ func _test_rescan() -> void:
 	var config := G2GConfig.new()
 	config.records_directory = ""
 	config.map_seconds = 0.0
-	# The default first map is an imported one, which a checkout without g2gfast-maps (CI)
+	# The default first map is an imported one, which a checkout without airdrift-maps (CI)
 	# does not hold; that logs an ERR for a map this section never looks at.
 	config.initial_map = &"bhop_g2g_intro"
 	game = G2GGame.new()
@@ -535,7 +535,7 @@ func _test_maps_are_surveyed() -> void:
 
 ## What a hand-written map knows no start reaches, in units, and why.
 ##
-## [b]Here rather than on the map, for tonight.[/b] game-playground's maps carry their own
+## [b]Here rather than on the map, for tonight.[/b] game-playlot's maps carry their own
 ## `survey_declared()`; these three were being edited elsewhere when the survey arrived,
 ## so the declarations sit beside the check and are read off each map's own constants.
 ## Every one is asserted to still cover something unreached, so none can outlive the

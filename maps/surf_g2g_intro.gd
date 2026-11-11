@@ -100,7 +100,7 @@ static func bonus_bank_surface_y(x: float) -> float:
 # rode 18 m, came to rest in the crease and sat there for the remaining 1,200 ticks.
 #
 # So the thing carrying the player is a single face pitched past the standable limit,
-# the way `the plunge` is in game-playground — the bot holds forward and nothing else —
+# the way `the plunge` is in game-playlot — the bot holds forward and nothing else —
 # and the two 60° banks are at the EDGES, where a drifting player is thrown back to the
 # middle instead of off the route. That is the arrangement a surf map's own tube
 # sections use, and it is the one that survives being driven.

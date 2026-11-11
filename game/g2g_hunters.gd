@@ -102,7 +102,7 @@ func setup() -> DotResult:
 	senses.switch_ratio = 0.55
 	senses.commitment_grace = 4.0
 	# On. This game's world IS a physics space — its players collide against one — so
-	# a line-of-sight test is a real question here, unlike in game-arena where it
+	# a line-of-sight test is a real question here, unlike in game-fatal-contact where it
 	# would answer "clear" for every pair. It is also what stops a hunter committing
 	# to somebody two stages away through a wall.
 	senses.line_of_sight_enabled = true
@@ -434,7 +434,7 @@ func hunter_attack(npc: DotNpcInstance, victim: StringName, amount: float) -> vo
 
 	# Attacker 0, which dot-combat reads as the world. A hunter is not on the
 	# scoreboard and crediting one would put a row there keyed on an id no player has
-	# — the bug game-arena shipped from the other end.
+	# — the bug game-fatal-contact shipped from the other end.
 	# Asked of the table rather than computed from the name. The two were the same
 	# number until entity ids stopped being derived from player ids; a swipe that
 	# computed one would now be damaging an entity that does not exist, silently,

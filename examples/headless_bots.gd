@@ -15,7 +15,7 @@ const G2GSurfCourse := preload("../game/g2g_surf_course.gd")
 ## On a hand-built map with no surf cache a bot is the rule-based route bot on the whole run;
 ## on surf_beginner, whose cache has stage 1, it rides that stage with dot-bot's surf pilot and
 ## is put back at the stage's start each time it arrives in stage 2. The surf half needs
-## `maps/imported/surf_beginner` (g2gfast-maps, linked by dot-bootstrap) and says so when it is
+## `maps/imported/surf_beginner` (airdrift-maps, linked by dot-bootstrap) and says so when it is
 ## missing, as `headless_imported` does. The cost a bot's driving adds per tick is printed: it is
 ## the number docs/routes.md quotes.
 ##
@@ -27,7 +27,7 @@ const SECTIONS := 6
 const CHECKS := 25
 
 ## Checks the navigation section did not make because the maps were absent; the count above
-## holds for a checkout with g2gfast-maps linked.
+## holds for a checkout with airdrift-maps linked.
 var _skipped_checks := 0
 
 const SERVER_DIR := "user://g2g_bots"
@@ -251,7 +251,7 @@ func _test_nav_routes_get_further() -> void:
 		if DirAccess.dir_exists_absolute("res://maps/imported/%s" % map_id):
 			held_maps += 1
 	if held_maps == 0:
-		# Third-party maps are not redistributable, so CI checks out without g2gfast-maps.
+		# Third-party maps are not redistributable, so CI checks out without airdrift-maps.
 		# Nothing to plan over is not a planner failure, and saying so beats a false green.
 		print("        SKIP  navigation planning: none of %s is in maps/imported (g2gfast-maps not linked)" % str(NAV_MAPS))
 		_skipped_checks += NAV_MAPS.size() + 2

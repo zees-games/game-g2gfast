@@ -15,7 +15,7 @@ const G2GServices := preload("g2g_services.gd")
 ## Kept out of [G2GClient], which is already about a camera, a sampler, the HUD and the
 ## keys, and none of this is about any of that.
 ##
-## [b]There is no map-sync client here, and game-arena has one.[/b] The difference is
+## [b]There is no map-sync client here, and game-fatal-contact has one.[/b] The difference is
 ## real rather than an omission: `G2GGame` drives a [DotMapSession] on every instance
 ## including a mirroring client, and the bridge already sends a map change as a game
 ## event that the client's own session loads. Adding [DotMapSyncClient] on top would be
@@ -210,7 +210,7 @@ func _build_voice() -> void:
 	voice.register_service = true
 	# Not positional. The server routes voice to everybody by default here — a course
 	# is long and thin and half the server is two hundred metres away — so playing it
-	# from a direction would put most of the room behind the listener. game-arena is
+	# from a direction would put most of the room behind the listener. game-fatal-contact is
 	# the other way round and says so.
 	voice.positional_playback = false
 	voice.playback_root_ref = DotNodeRef.of_self()

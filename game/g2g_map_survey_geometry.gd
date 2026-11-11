@@ -21,7 +21,7 @@ const G2GReach := preload("g2g_reach.gd")
 ## crouched player (54 u), the step [code]sv_stepsize[/code] (18 u), the slope limit
 ## [code]max_slope[/code] (45.57°), and a jump [G2GReach]'s RUN reach and climb limit.
 ##
-## [b]How it works[/b] (game-playground's `PlaygroundMapSurvey`, reimplemented here — a copy
+## [b]How it works[/b] (game-playlot's `PlaygroundMapSurvey`, reimplemented here — a copy
 ## per project is the family's rule). The boxes are read off the built map and rasterised
 ## into columns on a [constant CELL] grid: each column is the list of solid spans a
 ## vertical line through it passes. The top of a span is somewhere to stand if the face it

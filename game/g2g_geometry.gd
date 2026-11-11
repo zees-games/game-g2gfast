@@ -11,7 +11,7 @@ const G2GUnits := preload("g2g_units.gd")
 ## [code]1.2192[/code]. A surf ramp built as "128 wide at 60°" is a ramp a mapper
 ## who has built one before can read.
 ##
-## Deliberately duplicated from game-playground rather than shared: the family rule
+## Deliberately duplicated from game-playlot rather than shared: the family rule
 ## is that games copy what they need, because a shared helper is a dependency and
 ## these two games will diverge.
 

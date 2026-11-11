@@ -386,7 +386,7 @@ const FORMER_IDS: PackedStringArray = ["game-g2gfast"]
 
 
 ## Declares the rename to dot-core (API 31), so whatever names the game by its new id (rotation
-## `games:` keys, `cfg/game/game-airdrift/` lookups) also finds its `game-g2gfast` ones. Idempotent.
+
 static func register_ids() -> void:
 	DotAddonConfig.register_former_game(GAME_ID, FORMER_IDS)
 

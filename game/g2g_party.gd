@@ -13,8 +13,8 @@ extends Node
 ##
 ## Three games in this family take dot-peer-to-peer and answer differently:
 ##
-## - **game-playground** hosts authoritatively, because nothing it builds is ranked.
-## - **game-arena** and **game-hungario** sandbox it: play, file nothing.
+## - **game-playlot** hosts authoritatively, because nothing it builds is ranked.
+## - **game-fatal-contact** and **game-hungario** sandbox it: play, file nothing.
 ## - **This one does both halves of that and adds a third**: a run made in a
 ##   peer-to-peer session is [b]tainted[/b] the moment it starts, using the field dot-timer
 ##   has had since it was written and which `G2GEffects` was the first caller of.

@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 ## A hunter's body: a capsule that walks and falls.
 ##
-## [b]A [CharacterBody3D] here, where game-arena's monsters are plain [Node3D]s, and
+## [b]A [CharacterBody3D] here, where game-fatal-contact's monsters are plain [Node3D]s, and
 ## the difference is the two games' collision.[/b] Arena is analytic — its map is a
 ## list of boxes and there is no physics space on its server — so a monster there moves
 ## by writing a position. This game's players collide against Godot's physics, and a
