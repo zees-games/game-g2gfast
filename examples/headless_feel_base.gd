@@ -1,4 +1,5 @@
 extends DotGameCheckSuite
+const G2GTestPorts := preload("test_ports.gd")
 
 ## Constants, the stand-in client and server, and the sampling harness of headless_feel.
 

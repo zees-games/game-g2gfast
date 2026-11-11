@@ -1,4 +1,5 @@
 extends DotGameCheckSuite
+const G2GTestPorts := preload("test_ports.gd")
 
 const G2GConfig := preload("../game/g2g_config.gd")
 const G2GGame := preload("../game/g2g_game.gd")

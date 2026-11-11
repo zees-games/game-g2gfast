@@ -1,4 +1,5 @@
 extends "dedicated_votes.gd"
+const G2GTestPorts := preload("test_ports.gd")
 
 func _ready() -> void:
 	DotLog.set_level(DotLog.Level.ERROR)

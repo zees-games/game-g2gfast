@@ -1,4 +1,5 @@
 extends DotGameCheckSuite
+const G2GTestPorts := preload("test_ports.gd")
 
 ## A module reload leaves ONE link under the server, and a real client over a real socket
 ## still hears the server's RPCs afterwards.
