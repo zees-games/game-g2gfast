@@ -11,6 +11,12 @@
   ],
   "note": "The floor catch-all teleports aim at four jail cells (a 4 m wide closet under the map with a timed water and explosion trap). Their only way out is push_jailout, a trigger_push the map starts disabled and a script enables, and glass_jailbottom, a script-driven door; the importer runs no outputs, so a faller was stuck for good (found by headless_imported's fall-out walk, pit 19). Dropped, a fall is the map's own drop back into the fight."
  },
+ "open_doors": [
+  {
+   "name": "glass_jailbottom",
+   "note": "The jail door. Every teleport destination (jailtop, jail1 to jail4) sits beside this func_door, which a func_button opens; the importer runs no outputs, so it stayed shut and a faller was stuck. Found by tools/teleport_traps.py."
+  }
+ ],
  "author": "paper-cut, z-machine(original)",
  "attribution": {
   "author": "paper-cut, z-machine(original)",
