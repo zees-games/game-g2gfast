@@ -97,6 +97,8 @@ var rules: Dictionary = {"flashlight": true, "thirdperson": true, "commands": []
 var _offline := true
 var _style_index := 0
 var _sampler: DotFpsSampler = null
+## The phone's stick and buttons (dot-mobile); hidden on a desktop. Built with the HUD.
+var touch: G2GTouch = null
 var _transit_text := ""
 
 ## Whether the cursor is waiting for a click before it can be captured. Web only.

@@ -19,6 +19,7 @@ One subject per file. [CLAUDE.md](../CLAUDE.md) has the rules in one line each; 
 | [testing.md](testing.md) | The suites and what each proves, lists asserted both ways, checks that could not fail, the tools |
 | [history.md](history.md) | Bugs this game found and how they looked |
 | [gamebanana-ranking.md](gamebanana-ranking.md) | Candidate maps for import, ranked, and why each was or was not taken |
+| [touch.md](touch.md) | Phones and tablets: dot-mobile's stick, drag-look and buttons, the two samplers, the emulated mouse, the server's cvars |
 | [not-yet.md](not-yet.md) | What is declared but not built: Workshop maps load as timer courses only |
 
 ## Layout

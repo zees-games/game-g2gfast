@@ -281,6 +281,10 @@ var covered: Callable = Callable()
 ## `sv_allow_thirdperson` writes it; bound REPLICATED by the module, followed by a client.
 var view_rules: DotPlayerViewRules = DotPlayerViewRules.new()
 
+## dot-mobile's `sv_mobile_*`, `sv_aim_assist*` and `sv_autofire*`: what a phone player may use. Bound REPLICATED by
+## the module, followed by a client. Aim assist and auto-fire need targets this game does not hand in, so stay inert.
+var mobile_rules: DotMobileRules = DotMobileRules.new()
+
 ## dot-replay's `mp_killview*`: the killer's replayed eye, off until the server turns it on.
 var killview_rules: DotKillViewRules = DotKillViewRules.new()
 

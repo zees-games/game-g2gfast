@@ -70,6 +70,9 @@ func _bind_rule_cvars() -> void:
 			bridge.broadcast_rules())
 	var _killview := game.killview_rules.bind_cvars(
 		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
+	# sv_mobile_*: what a phone player may use (dot-mobile). REPLICATED, because each client draws its own controls.
+	var _mobile := game.mobile_rules.bind_cvars(
+		add_cvar, DotConVar.FLAG_ARCHIVE | DotConVar.FLAG_NOTIFY | DotConVar.FLAG_REPLICATED)
 
 	# Told to every client: the light is drawn there, and 0 switches it off on the next RULES.
 	add_cvar("sv_flashlight", "1" if game.config.flashlight else "0",

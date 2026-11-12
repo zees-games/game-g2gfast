@@ -333,6 +333,21 @@ func _grab_mouse() -> void:
 	_say_click_to_play()
 
 
+## The touch overlay over the HUD. Its sampler follows [method _active_sampler] and it pauses while anything else
+## has the screen. Restart is R; the menu button opens what Escape does.
+func _build_touch() -> void:
+	if touch != null or game == null:
+		return
+	touch = G2GTouch.new()
+	touch.name = "Touch"
+	add_child(touch)
+	touch.sampler_fn = _active_sampler
+	touch.busy_fn = func() -> bool: return _covered() or _input_busy()
+	var restart := func() -> void:
+		var _at := _restart_key()
+	touch.build(self, game.mobile_rules, restart, Callable(self, &"open_menu"))
+
+
 ## Tells the player the one thing they have to do, once there is a HUD to say it on.
 ##
 ## `_ready()` builds the HUD only on the offline path; a networked client gets one when
@@ -366,6 +381,7 @@ func _watch(id: StringName) -> void:
 		hud.name = "Hud"
 		add_child(hud)
 		_follow_hud()
+		_build_touch()
 	hud.bind(game, id)
 	# The server's time left, which may well have arrived before there was a HUD: HELLO
 	# and the admit's CLOCK come together, and JOIN is what makes the player watched.
@@ -474,6 +490,8 @@ func _wire_bridge_world() -> void:
 		# The server's mp_forceview: this end places its own camera (G2GGame keeps every
 		# camera under it).
 		var _view := game.view_rules.follow_cvars(link)
+		# sv_mobile_*: the touch controls this end draws.
+		var _mobile := game.mobile_rules.follow_cvars(link)
 		# mp_solidplayers, then mp_teamblock, mp_enemyblock and the `!block` requests, followed so this end predicts
 		# against the same pairs. Needs dot-team; without it players are not blocked at all.
 		var _solid := game.body_rules.follow_cvars(link)

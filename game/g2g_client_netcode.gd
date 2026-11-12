@@ -70,7 +70,8 @@ func _build_netcode() -> DotResult:
 	_wire_bridge_feedback()
 	_wire_bridge_world()
 
-	_sampler = DotFpsSampler.new(game.tunables)
+	# A touch sampler on a phone or tablet: the same keys, plus the stick and drag-look G2GTouch forwards.
+	_sampler = DotFpsTouchSampler.new(game.tunables) if DotPlatform.has_touch() else DotFpsSampler.new(game.tunables)
 	DotFpsSampler.register_default_actions(_sampler)
 
 	if link.has_method("is_playing") and bool(link.call("is_playing")):
@@ -152,6 +153,8 @@ func _process(delta: float) -> void:
 	if bridge != null:
 		_cover_transit(bridge.transit_text())
 
+	if touch != null:
+		touch.sync()
 	_fold_look()
 	_fold_correction()
 	_fold_clock()
@@ -308,6 +311,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	# forgets, and this project already lost a whole keyboard once to a guard in the
 	# wrong place.
 	if presentation != null and presentation.swallows_input():
+		return
+
+	# A finger is the touch overlay's, and so is the mouse Godot emulates from it: a tap neither captures the pointer
+	# (there is none to capture on a phone) nor turns the view twice. The first tap is the "click" that starts play.
+	if touch != null and touch.takes(event):
+		if _awaiting_click and event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed:
+			_awaiting_click = false
+			if hud != null:
+				hud.notice("")
 		return
 
 	# [b]Before the `player == null` guard, deliberately.[/b] A browser player clicks

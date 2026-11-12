@@ -204,7 +204,8 @@ func _ready() -> void:
 		_apply_own_body()
 
 	if samples_input:
-		sampler = DotFpsSampler.new(controller.tunables)
+		sampler = DotFpsTouchSampler.new(controller.tunables) if DotPlatform.has_touch() \
+			else DotFpsSampler.new(controller.tunables)
 		DotFpsSampler.register_default_actions(sampler)
 
 
