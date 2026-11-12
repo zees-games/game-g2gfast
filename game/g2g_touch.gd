@@ -1,4 +1,3 @@
-class_name G2GTouch
 extends Node
 
 ## Touch controls on a phone or tablet: dot-mobile's stick, drag-look and buttons over the HUD, driving the client's
