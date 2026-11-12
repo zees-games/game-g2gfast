@@ -150,8 +150,12 @@ const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_ela
 	"bhop_overthinker", "bhop_tesquo_v2", "surf_aquaflow", "surf_greensway", "surf_interference",
 	"surf_lt_omnific", "surf_lt_unicorn", "surf_quilavar", "surf_vegetables"]
 
+## Maps imported before the teleport audit whose source .bsp is not on hand to re-import,
+## asserted both ways: a re-import adds the audit and must take the map off.
+const NO_TELEPORT_AUDIT := ["surf_hologram", "surf_intro", "surf_stonework4"]
+
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
-const CHECKS_PER_MAP := 58
+const CHECKS_PER_MAP := 59
 
 ## Sections every map runs, entered against run to their last line.
 ## A runtime error aborts that function silently, so a section that bailed out after a failed guard counts as not finished; the two that end early because a map has nothing to check say so first.

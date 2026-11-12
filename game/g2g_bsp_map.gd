@@ -51,6 +51,10 @@ const NO_RESTART := "no_restart"
 ## pit without it (an old manifest, a teleport aimed at nothing) still means the spawn.
 const SENDS_TO := "sends_to"
 
+## Payload key on a TELEPORT zone the map fires as the run ends (manifest `finish`):
+## it sends past the end, often back to the start, so it is no door into a stage.
+const FINISH_DOOR := "finish_door"
+
 ## Zone kinds by the name the manifest writes, which is [enum DotTimerZone.Kind]'s.
 ##
 ## [b]Names on the wire, not numbers.[/b] A manifest is read by a build that may be
@@ -789,6 +793,8 @@ func _zone_from(entry: Dictionary) -> DotTimerZone:
 		zone.destination_yaw = float(entry.get("destination_yaw", 0.0))
 		if kind == DotTimerZone.Kind.RESPAWN:
 			zone.payload[SENDS_TO] = true
+	if entry.get("finish", false):
+		zone.payload[FINISH_DOOR] = true
 	zone.comment = str(entry.get("comment", ""))
 	# A stage with nowhere to stand is a split only; see `G2GGame.request_stage`.
 	if entry.get("restart", true) == false:

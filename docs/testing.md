@@ -27,6 +27,7 @@ A list that exempts maps from a check is a mute button unless it is asserted in 
 - `NOT_COURSES`: maps with no runnable finish on purpose (a vehicle map, section-chain maps whose END nothing distinguishes, maps game-fatal-contact owns are not imported here at all). A listed map that grows a finish fails, which is how the list is found stale. **A suite that is red for a reason nobody intends to fix is a suite people stop reading.**
 - `NO_PIT`, separate from `NOT_COURSES`, so maps that have pits keep being asked.
 - `ARRIVES_IN_PIT` and `BONUSES_WITHOUT_PITS`: both empty, both still asserted.
+- `NO_TELEPORT_AUDIT`: maps imported before the teleport audit with no source to re-import; a listed map that gains the audit fails.
 - `OWN_TEXTURES`, `STOCK_DRAWN`, `BLENDED`: floors for maps someone has looked at.
 - `DARK_SPAWNS`: maps whose view from the spawn is under `SPAWN_VIEW_FLOOR` on purpose, each with why. The view is estimated, not rendered (headless has no renderer): rays from the eye through the drawn meshes, each hit the material's averaged albedo times the atlas texel under it, each miss the sky.
 - `headless_mechanics`' `TRAP_BLOCK_FLOORS`.

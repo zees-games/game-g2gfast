@@ -66,7 +66,26 @@ func _test_zones() -> void:
 		"every route has a start, a finish, a spawn and a pit" if expected.is_empty()
 			else "its bonuses without a pit are the ones listed, and only those",
 		"reported %s, listed %s" % [reported, expected])
+
+	# The importer resolves every trigger_teleport to where this map sends it (dot-map-convert's
+	# `teleport_audit`); a shadowed, looping, in-solid or unresolved one is a player sent wrong.
+	var audit: Variant = _manifest().get("teleport_audit")
+	if NO_TELEPORT_AUDIT.has(String(_map_id)):
+		_check(audit == null, "has no teleport audit, and still has none",
+			"listed in NO_TELEPORT_AUDIT; re-imported, so take it out")
+	else:
+		var broken: Array = audit.get("broken", []) if audit is Dictionary else [{"problem": "no audit"}]
+		var shown := PackedStringArray()
+		for b: Dictionary in broken:
+			shown.append("%s #%s %s -> %s" % [b.get("problem"), b.get("entity", "?"), b.get("targetname", ""), b.get("target", "")])
+		_check(broken.is_empty(), "and every teleport sends where the map does", "; ".join(shown))
 	_done()
+
+
+func _manifest() -> Dictionary:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(
+		"res://maps/imported/%s/%s.json" % [_map_id, _map_id]))
+	return parsed if parsed is Dictionary else {}
 
 
 func _test_runnable() -> void:
@@ -294,6 +313,9 @@ func _test_stands_where_it_sends_you() -> void:
 				# opposite ways), and a stage can face only one of them.
 				var door_yaws: Array[float] = []
 				for door: DotTimerZone in zones.of_kind(DotTimerZone.Kind.TELEPORT, track):
+					# A finish door sends past the end (surf_rookie's lands back in stage 1), not into the stage.
+					if door.payload.has(G2GBspMap.FINISH_DOOR):
+						continue
 					if stage.contains(door.destination + Vector3.UP * 0.1):
 						door_yaws.append(door.destination_yaw)
 				if door_yaws.is_empty():
