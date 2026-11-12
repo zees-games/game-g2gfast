@@ -333,6 +333,8 @@ func _build_loadouts() -> void:
 	config.conform_on_load = true
 	loadouts.config = config
 	loadouts.store = DotLoadoutStoreMemory.new()
+	# Adds what the site store says the player owns (no-op without a backbone client).
+	DotGameStoreEntitlements.attach(loadouts)
 
 	add_child(loadouts)
 
