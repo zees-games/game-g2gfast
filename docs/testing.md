@@ -18,6 +18,7 @@
 | `headless_client` | The real offline `G2GClient`: typing does not move the runner (it holds W with the chat box open), the double-tap R, the spectator's drawn camera. |
 | `headless_feel` | The real client over a real lossy socket at several display rates (see [netcode.md](netcode.md#what-a-connected-player-sees)); `-- --ws` for a browser's link. Prints measurements; asserts the view, the correction and the clock-slip fixes (the slip against a control). |
 | `headless_stack` | The player stack's joins. |
+| `headless_native_motor` | dot-sim's motor held to the all-script motor on the three hand-built maps with this game's tunables, at 128 and 64 Hz: the native body, the native tick's start and end, and the whole tick native must each match the script on every tick and every motor counter. Skips cleanly without the library (`DOT_SIM_REQUIRE_NATIVE=1` fails instead). The ladder runs in script and is not replayed. |
 | `jitter_probe` | **Not in `SUITES`**; run it by hand after touching rendering or the tick rate. The only check that samples a rendered frame: four configurations, fails unless exactly the shipped one is smooth. |
 
 ## Lists asserted both ways
