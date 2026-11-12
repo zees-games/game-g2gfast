@@ -8,6 +8,8 @@ const CHANNEL := "g2g.touch"
 
 ## Jump and crouch hold their command bits on the sampler, so a run sees a thumb exactly as it sees Space and Ctrl.
 const RESTART := &"restart"
+## Held while a finger is on it; the client reads it where it reads the mouse button (see G2GClientNetcode.fire_wanted).
+const FIRE := &"fire"
 
 var controls: DotMobileControls = null
 var menu_button: Button = null
@@ -51,8 +53,14 @@ static func layout() -> Array[Dictionary]:
 	return [
 		{"id": &"jump", "label": "JUMP", "offset": Vector2(70, 60), "radius": 56.0, "hold": DotFpsCommand.BUTTON_JUMP},
 		{"id": &"crouch", "label": "DUCK", "offset": Vector2(190, 40), "radius": 42.0, "hold": DotFpsCommand.BUTTON_CROUCH},
+		{"id": FIRE, "label": "FIRE", "offset": Vector2(300, 80), "radius": 52.0},
 		{"id": RESTART, "label": "R", "offset": Vector2(60, 200), "radius": 32.0},
 	]
+
+
+## Whether a finger is on FIRE.
+func fire_held() -> bool:
+	return controls != null and controls.is_held(FIRE)
 
 
 ## Follows the active sampler and pauses while anything else has the screen. Called every frame by the client.

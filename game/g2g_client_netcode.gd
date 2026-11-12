@@ -146,6 +146,15 @@ func _use_key_frame(delta: float) -> void:
 	hud.set_hold_progress(game.weapon_layer.update_prompt(player, arsenal, down, delta))
 
 
+## Whether the trigger is down: the left button while the pointer is the view's (the click that captures it
+## is not a shot, and a menu or the console has released it), or a finger on the touch FIRE button.
+## [member G2GNetBridgeWire.attack_wanted] is set from this every frame.
+func fire_wanted() -> bool:
+	if touch != null and touch.fire_held():
+		return true
+	return mouse_drives_view() and Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+
+
 func _process(delta: float) -> void:
 	if net != null and not _offline:
 		net.interpolate_frame()
@@ -165,6 +174,8 @@ func _process(delta: float) -> void:
 	if game != null:
 		_present_others()
 		_use_key_frame(delta)
+	if bridge != null:
+		bridge.attack_wanted = fire_wanted()
 	# Every frame rather than on change: a style change hands the player new tunables, and
 	# two assignments a frame are cheaper than tracking which object the sampler holds.
 	_apply_look()

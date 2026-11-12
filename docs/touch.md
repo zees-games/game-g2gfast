@@ -1,6 +1,6 @@
 # Touch controls
 
-On a phone or tablet (`DotPlatform.has_touch()`), the client shows dot-mobile's overlay over the HUD: a stick planted where the left thumb lands, drag-to-look on the right half, and three drawn buttons. On a desktop nothing shows and nothing changes.
+On a phone or tablet (`DotPlatform.has_touch()`), the client shows dot-mobile's overlay over the HUD: a stick planted where the left thumb lands, drag-to-look on the right half, and four drawn buttons (jump, duck, FIRE, R). On a desktop nothing shows and nothing changes.
 
 ## What a thumb does
 

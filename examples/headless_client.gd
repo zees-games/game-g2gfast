@@ -3,6 +3,7 @@ extends DotGameCheckSuite
 const G2GClient := preload("../game/g2g_client.gd")
 const G2GGame := preload("../game/g2g_game.gd")
 const G2GEvents := preload("../game/net/g2g_events.gd")
+const G2GNetBridge := preload("../game/net/g2g_net_bridge.gd")
 const G2GPlayer := preload("../game/g2g_player.gd")
 const G2GHud := preload("../game/g2g_hud.gd")
 const G2GSoloMaps := preload("../game/g2g_solo_maps.gd")
@@ -24,8 +25,8 @@ const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 92
-const SECTIONS := 16
+const CHECKS := 98
+const SECTIONS := 17
 
 var _entered := 0
 var _completed := 0
@@ -75,6 +76,7 @@ func _run() -> void:
 	await _test_a_dead_body_falls()
 	await _test_the_map_menu()
 	await _test_the_wheel_jumps()
+	await _test_the_fire_bit_follows_the_trigger()
 	_test_solo_in_the_shell()
 	await _test_the_stage_splits_panel()
 	await _test_the_end_of_a_deathmatch()
@@ -495,6 +497,43 @@ func _test_the_wheel_jumps() -> void:
 		_check(not sampler.sample(0.0).is_pressed(DotFpsCommand.BUTTON_JUMP),
 			"and only that one command")
 	_done()
+
+
+## The client never set [member G2GNetBridgeWire.attack_wanted], so the fire bit in every input packet stayed
+## false. The left button (pointer captured) and the touch FIRE button now set it, and nothing else does.
+func _test_the_fire_bit_follows_the_trigger() -> void:
+	_section("the trigger sets attack_wanted, which is the packet's fire bit")
+	var bridge := G2GNetBridge.new()
+	add_child(bridge)
+	_client.bridge = bridge
+	_check(not _client.fire_wanted() and not bridge.attack_wanted, "idle: no fire")
+	_client.mouse_capture_override = true
+	_press_left(true)
+	_check(_client.fire_wanted(), "the left button with the pointer captured is fire")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(bridge.attack_wanted, "and the frame hands it to the bridge")
+	_client.mouse_capture_override = false
+	_check(not _client.fire_wanted(), "a released pointer (menu, console) is not fire")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(not bridge.attack_wanted, "and the bridge is told so")
+	_client.mouse_capture_override = null
+	_press_left(false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check(not bridge.attack_wanted, "releasing the button clears it")
+	_client.bridge = null
+	bridge.free()
+	_done()
+
+
+func _press_left(down: bool) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = MOUSE_BUTTON_LEFT
+	ev.pressed = down
+	Input.parse_input_event(ev)
+	Input.flush_buffered_events()
 
 
 ## The family's rule since the first play test: M opens the map list (every map, not the
