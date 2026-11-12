@@ -92,6 +92,7 @@ func _process(_delta: float) -> bool:
 
 func _capture(name: String) -> void:
 	var image := root.get_texture().get_image()
-	image.save_png("%s/%s.png" % [OUT_DIR, name])
-	print("wrote %s (%d x %d)" % [name, image.get_width(), image.get_height()])
-	_seq_begin("%s/%s.png" % [OUT_DIR, name])
+	var path := OUT_DIR.path_join(name + ".png")
+	image.save_png(path)
+	print("wrote ", name, " (", image.get_width(), " x ", image.get_height(), ")")
+	_seq_begin(path)
