@@ -2,6 +2,7 @@
   "format": 1,
   "addons": {
     "dot_mobile": 1,
+    "dot_player_controller": 27,
     "dot_replay": 6,
     "dot_ui": 13,
     "dot_vote": 17
