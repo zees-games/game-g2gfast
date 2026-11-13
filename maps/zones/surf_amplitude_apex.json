@@ -1,0 +1,45 @@
+{
+ "id": "surf_amplitude_apex",
+ "author": "buck nasty",
+ "attribution": {
+  "author": "buck nasty",
+  "source": "https://gamebanana.com/mods/121622 (Creators credited on the page: buck nasty (BuckNasty submitter); the archive ships surf_amplitude_apex.bsp; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 with GameBanana's standard ask-first checklist, which does not forbid a port; credited, linked, removal offered)",
+  "archive": "surf_amplitude_apex.zip",
+  "recorded": "2026-11-02"
+ },
+ "notes": "Staged by chk-maps run 134, not yet imported (game-g2gfast held). Stages start at stage1_start, stage2_start, stage3_start; the finish is the teleport to `win`. The map also has jails and fail teleports, so check in headless_imported that the `win` trigger is the course end and not a round-end sweep.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     -14468,
+     12042,
+     1790
+    ],
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round where the player lands: stage1_start floats 676 units over the floor (the push at 1864 carries them), so the start stands on the floor under it"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": [
+    -14468,
+    12042,
+    1790
+   ]
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "win",
+   "note": "teleport into the win room after stage 3"
+  }
+ ]
+}

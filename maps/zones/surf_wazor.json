@@ -1,0 +1,50 @@
+{
+ "id": "surf_wazor",
+ "author": "Krusty, Mike999, AmstaFF, Junior and Caterpillar",
+ "attribution": {
+  "author": "Krusty, Mike999, AmstaFF, Junior and Caterpillar",
+  "source": "https://gamebanana.com/mods/123253 (Key authors credited on the page: Krusty (submitter .Krusty), Mike999, AmstaFF, Junior, Caterpillar; made with Mirror Map Studios; the archive ships surf_wazor.bsp; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivs 4.0 with GameBanana's standard ask-first checklist, which does not forbid a port; credited, linked, removal offered)",
+  "archive": "surf_wazor.rar",
+  "recorded": "2026-11-04"
+ },
+ "notes": "Staged by chk-maps run 150, not yet imported (game-g2gfast held and out of scope). A linear skill-surf course (the page: 5 stages, easy to hard, 5-minute round, then a scout fight). Route read from the teleports: spawn box -> lvl.1 -> Level1_start -> lvl.3 -> wu -> Level2_start (red_wall) -> stagelast -> the teleport to `bob` at (9240 -15050 -5787), which also Enables the six start-disabled `tele` sweeps. The finish is the teleport to `bob`; the start-disabled `tele`, `ct_tele` and `t_tele` triggers (weapon rooms t_awp, ct_scout, ...) are the round-end sweep, not finishes. Verify in headless_imported before committing.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": [
+     -1731,
+     -3967,
+     4220
+    ],
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round where the spawn box's teleport lands (lvl.1); the floor there is about 140 units under the destination, so the box is centred lower to hold the resting player"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "lvl.1",
+   "note": "the CT spawns are in the weapon room, so name the course start rather than let the importer pick a team spawn"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "bob",
+   "note": "the last stage exit; enables the round-end tele sweep"
+  }
+ ],
+ "round_teleports": {
+  "names": [
+   "ct_tele",
+   "t_tele",
+   "tele"
+  ],
+  "note": "start-disabled team/stage teleports the round logic switches on (knife fight, scout fight, stage sweeps); this game runs no round, so they were pits over the whole course"
+ }
+}

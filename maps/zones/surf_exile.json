@@ -1,0 +1,51 @@
+{
+ "id": "surf_exile",
+ "author": "Pyaniy ezhik, Nomax and Sh0k_vv",
+ "attribution": {
+  "author": "Pyaniy ezhik, Nomax and Sh0k_vv",
+  "source": "https://gamebanana.com/mods/122023 (Creators credited on the page: Pyaniy ezhik (submitter), Nomax, Sh0k_vv; the archive ships surf_exile.bsp; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 with GameBanana's standard ask-first checklist, which does not forbid a port; credited, linked, removal offered)",
+  "archive": "_4069-.zip",
+  "recorded": "2026-11-02"
+ },
+ "notes": "Staged by chk-maps run 134, not yet imported (game-g2gfast held). The spawn room's teleport (*222) sends everyone to `tp_start`; levels return falls to tp_level_1..5. The finish is the teleport into `fin_win`; the start-disabled per-level TTELEPORT triggers (FIL2LVL..FIL5LVL) are the round-end sweep and are not finishes. Verify in headless_imported before committing. fin_win is only the round-end sweep's destination; the course's last teleport targets jailwin_tp.",
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "tp_start",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round the start destination"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "tp_start"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "note": "the last teleport of the course, into jailwin_tp (the winners' room); nothing teleports to fin_win",
+   "near": {
+    "class": "trigger_teleport",
+    "point": [
+     -128,
+     7624,
+     -1044
+    ],
+    "within": 600
+   }
+  }
+ ],
+ "round_teleports": {
+  "names": [
+   "ttele*port"
+  ],
+  "note": "the start-disabled per-level TTELEPORT triggers are the round-end sweep (to fin_*), not finishes"
+ }
+}
