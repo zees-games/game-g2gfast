@@ -152,7 +152,7 @@ const ADDITIVE := ["bhop_angst", "bhop_arcane_v2", "bhop_crash_egypt", "bhop_ela
 
 ## Maps imported before the teleport audit whose source .bsp is not on hand to re-import,
 ## asserted both ways: a re-import adds the audit and must take the map off.
-const NO_TELEPORT_AUDIT := ["surf_hologram", "surf_intro", "surf_stonework4"]
+const NO_TELEPORT_AUDIT := ["surf_hologram", "surf_intro"]
 
 ## Checks every map gets. Tracks and stages add one each on top — see [member _expected].
 const CHECKS_PER_MAP := 59
