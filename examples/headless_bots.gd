@@ -254,7 +254,7 @@ func _test_nav_routes_get_further() -> void:
 	if held_maps == 0:
 		# Third-party maps are not redistributable, so CI checks out without airdrift-maps.
 		# Nothing to plan over is not a planner failure, and saying so beats a false green.
-		print("        SKIP  navigation planning: none of %s is in maps/imported (g2gfast-maps not linked)" % str(NAV_MAPS))
+		print("        SKIP  navigation planning: none of %s is in maps/imported (airdrift-maps not linked)" % str(NAV_MAPS))
 		_skipped_checks += NAV_MAPS.size() + 2
 		_done()
 		return

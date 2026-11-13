@@ -25,7 +25,7 @@ func _ready() -> void:
 func _run() -> void:
 	print("game-g2gfast: maps drawn from the dot-map world document")
 	if not FileAccess.file_exists("res://worlds/%s.json" % PILOT[0]):
-		print("SKIP: no worlds/ (g2gfast-maps/worlds is not linked)")
+		print("SKIP: no worlds/ (airdrift-maps/worlds is not linked)")
 		get_tree().quit(0)
 		return
 	var catalogue := G2GMapCatalogue.discover()

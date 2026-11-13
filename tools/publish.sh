@@ -1,5 +1,5 @@
 #!/bin/bash
-# Publishes this game's pack (id game-airdrift; formerly game-g2gfast). worlds/, maps/imported and the model/pbr libraries link to g2gfast-maps.
+# Publishes this game's pack (id game-airdrift; formerly game-g2gfast). worlds/, maps/imported and the model/pbr libraries link to airdrift-maps (checked out as ../g2gfast-maps).
 #   tools/publish.sh [--version V | --bump patch] [--site URL --token-file F --dry-run ...]   (lock: ./content.lock.json, override with --lock)
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
