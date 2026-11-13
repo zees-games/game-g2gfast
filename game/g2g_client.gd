@@ -34,6 +34,8 @@ func _ready() -> void:
 		_offer_solo_maps()
 	game.covered = _covered
 	add_child(game)
+	if _offline:
+		_offer_collection()
 	_wire_gate_to_maps()
 
 	# Connected before anything can create a player. `JOIN` is what creates the local

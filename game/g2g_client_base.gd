@@ -243,6 +243,14 @@ func _offer_solo_maps() -> void:
 	game.offered_maps = G2GSoloMaps.IDS
 
 
+## Widens the stock list to the maps collection as the origin publishes it. Not awaited: M
+## shows the stock list until the collection is in, and keeps it if no origin answers.
+func _offer_collection() -> void:
+	if G2GSoloMaps.session() == null or game == null:
+		return
+	var _offered: DotResult = await game.offer_collection("%s/%s" % [G2GSoloMaps.OWNER, G2GSoloMaps.COLLECTION], G2GSoloMaps.IDS)
+
+
 func _leave() -> void:
 	# Solo in the shell: the way back is the shell's menu. A page cannot close its tab, and
 	# a quit there is a frozen canvas.

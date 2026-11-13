@@ -127,12 +127,6 @@ func block_side(id: Variant) -> Variant:
 @export var game_manager_service: StringName = DotGameManager.SERVICE
 
 
-## Map ids offered on M although this build has not fetched them: choosing one downloads it
-## (see [method ensure_map_content]). A solo game in the browser sets it ([G2GSoloMaps]);
-## empty everywhere else, so desktop and servers list what they hold.
-var offered_maps: PackedStringArray = PackedStringArray()
-
-
 var authoritative: bool = true
 
 ## What the loaded map's brush entities do to a player (water, pushes, sinking blocks...).
