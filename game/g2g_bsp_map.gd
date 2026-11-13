@@ -106,6 +106,8 @@ var global_worlds := false
 var global_world: DotMapWorld = null
 
 var manifest: Dictionary = {}
+## The mesh prefix of a map copied in by hand (`G2GMapCatalogue._local`), or empty for an imported one.
+var local_prefix := ""
 ## Hulls by kind ("clip", "glass", "fence", "sky" -> how many), from the manifest's `collision.hull_kinds`. Empty for a manifest written before the importer recorded kinds, which loads as all solid.
 var hull_kind_counts: Dictionary = {}
 var _bounds_min := Vector3.ZERO
@@ -132,6 +134,8 @@ func _build() -> void:
 func build_from(map: DotMapDef) -> bool:
 	if map == null:
 		return false
+	if not str(map.meta.get("local_prefix", "")).is_empty():
+		return _build_local(String(map.id), str(map.meta["local_prefix"]))
 	var path := str(map.meta.get("manifest", ""))
 	if path.is_empty():
 		DotLog.error(CHANNEL, "the catalogue entry names no manifest", {"map": String(map.id)})
@@ -201,6 +205,36 @@ func _construct() -> void:
 		"mesh_instances": drawn.size() + props.size(),
 		"collision_shapes": solids,
 	})
+
+
+## A local map: dot-map's [DotMapWorld] draws it and makes it solid, and [member manifest] is written to hold only the
+## spawn, so the zones ([method _legacy_zones]) and the brush mechanics read it as an old import with nothing else.
+## Its doors stand still: nothing here steps the world's movers.
+func _build_local(id: String, prefix: String) -> bool:
+	if _built:
+		return not manifest.is_empty()
+	_built = true
+	local_prefix = prefix
+	var options := {"authoritative": false, "environment": false, "sounds": false, "map_id": id}
+	var built := DotMapWorld.build(prefix, {}, options)
+	# A copy without its `.doc.json` (the entity logic) is still a world to stand in, with no doors or triggers.
+	if not built.ok and not FileAccess.file_exists(prefix + ".doc.json"):
+		options["doc"] = {"format": "dot-bsp-source", "version": 1, "entities": [], "commands": []}
+		built = DotMapWorld.build(prefix, {}, options)
+	if not built.ok:
+		DotLog.error(CHANNEL, "a local map would not build", {"map": id, "why": str(built.error)})
+		return false
+	global_world = built.value
+	global_world.name = "GlobalWorld"
+	add_child(global_world)
+	var spots := DotMapLocalMaps.spawns(global_world.mesh)
+	var spot: Dictionary = spots[0] if not spots.is_empty() else {"origin": Vector3.ZERO, "yaw": 0.0}
+	var at := G2GUnits.vector_to_units(spot["origin"])
+	fallback_spawn_units = at
+	manifest = {"id": id, "spawn": {"origin": [at.x, at.y, at.z], "yaw": float(spot["yaw"])}}
+	G2GLighting.apply(self, {})
+	DotLog.info(CHANNEL, "local map built", {"map": id, "prefix": prefix, "spawns": spots.size()})
+	return true
 
 
 ## The map's own lighting (sun, ambient, fog, sky), not the hand-built maps' daylight.

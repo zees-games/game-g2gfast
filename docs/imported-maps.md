@@ -135,3 +135,12 @@ Needs numpy, scipy and trimesh, and refuses a map whose zones file has no attrib
 ## Pilot: drawing through dot-map's world document (`g2g_global_worlds`, default off)
 
 `bhop_training_fun`, `bhop_eazy` and ten more (aztec, bunnyhop_pro, amor, eazy_v2, grove, eclipse, year3000, greensway, beginner, kitsune) are also converted by `bsp.py regen g2g/<id> --out worlds/<id>` into airdrift-maps' `worlds/` (checked out as `../g2gfast-maps/worlds/`) (the layout mg-wipeout-maps uses; `worlds`, `pbr-library` and `model-library` are gitignored links here). With `g2g_global_worlds 1`, `G2GBspMap` builds a `DotMapWorld` (drawn, no collision) in place of the manifest's surfaces and hides those; collision, zones, spawns, lighting and dressing are still the manifest's. `examples/headless_global_worlds.tscn` checks it; `PREVIEW_WORLDS=1 tools/bsp_preview.sh <id> spawn` renders it. The plan for every map is the nightly item `g2g-global-migrate-1`.
+
+## Maps copied in by hand
+
+A raw dot-map convert folder (`<name>.json`, `<name>.bin`, `textures/`) copied to `addons/maps/<folder>/` in a source checkout or to the user data folder's `maps/<folder>/` plays offline as `<name>_local`, titled "(local)". The folder may be the convert folder itself or a map folder with `convert/` inside; dot-map's `DotMapLocalMaps` finds it, and the first root wins.
+
+- Listed only when `G2GMapCatalogue.list_local` is on, which the offline client sets. A server never lists one, so no rotation, vote or announcement names a map other machines lack.
+- `user://maps` is also a root for the legacy imported maps above. The two are told apart by the manifest: a mesh manifest says `"format": "dot-bsp-mesh"`, and the legacy scan skips it there.
+- `G2GBspMap.build_from` draws it with `DotMapWorld` (collision and props on) and takes the start from `DotMapLocalMaps.spawns` (one is generated on the widest floor when the map names none). There are no zones: it is a map to run around on, not a timed course. Doors stand still, because nothing steps the world's movers yet. The start's yaw is passed as the mesh gives it; whether it needs the `- 90` above is unchecked.
+- `headless_local_maps` covers both roots with a small fixture; `-- --source=<convert folder>` repeats the checks on a real conversion.

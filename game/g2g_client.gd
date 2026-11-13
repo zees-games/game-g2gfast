@@ -1,5 +1,7 @@
 extends "g2g_client_netcode.gd"
 
+const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
+
 func _ready() -> void:
 	# First, before anything can be drawn: the map arrives after this node is in the tree.
 	_build_gate()
@@ -30,6 +32,8 @@ func _ready() -> void:
 	config.authoritative = _offline
 	config.initial_map = config.initial_map if _offline else &""
 	game.config = config
+	# Maps copied in by hand are the player's own: offered alone, never named to a server.
+	G2GMapCatalogue.list_local = _offline
 	if _offline:
 		_offer_solo_maps()
 	game.covered = _covered

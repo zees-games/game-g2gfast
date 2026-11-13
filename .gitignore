@@ -96,6 +96,8 @@ screenshots/
 
 # One-off debug scenes a session leaves at the root.
 /_scratch_*
+# Maps a player copies in by hand (dot-map DotMapLocalMaps); no leading slash, because hv reads `/addons/<name>` lines as links.
+addons/maps/
 /addons/dot_sql
 
 # Converted worlds (dot-map regen, `g2g_global_worlds`) and the art stores they name (licence.pbr_store ../pbr-library): links to airdrift-maps (checked out as g2gfast-maps).

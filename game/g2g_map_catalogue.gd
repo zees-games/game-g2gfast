@@ -57,6 +57,14 @@ const STRIPPED := [".remap", ".import"]
 const BUILT_IN_AUTHOR := "g2gfast"
 const IMPORTED_AUTHOR := "imported"
 
+## Lists the maps copied in by hand ([code]DotMapLocalMaps[/code]: a raw convert folder under `res://addons/maps/` or
+## `user://maps/`, as `<name>_local`). An offline client turns it on; a server never does, so no rotation, vote or pack names one.
+static var list_local := false
+
+## What a dot-map mesh manifest says it is. `user://maps` is a root for both this game's imported maps and local ones, and
+## each scan would otherwise take the other's folders for its own.
+const MESH_FORMAT := "dot-bsp-mesh"
+
 
 ## The person to credit for [param map], or "" when there is nobody to name.
 ## The version a map pack is published as: `0.0.0-` and the first twelve hex digits of
@@ -206,6 +214,7 @@ static func rescan(
 static func scan(extra_roots: PackedStringArray = PackedStringArray()) -> Array[DotMapDef]:
 	var out: Array[DotMapDef] = []
 	out.append_array(_built_in())
+	out.append_array(_local())
 	var seen: Dictionary = {}
 	for root in roots(extra_roots):
 		for map in _imported(root):
@@ -221,6 +230,31 @@ static func scan(extra_roots: PackedStringArray = PackedStringArray()) -> Array[
 	# did not agree and a rotation with no file cycled maps in no stable order.
 	out.sort_custom(func(a: DotMapDef, b: DotMapDef) -> bool: return String(a.id) < String(b.id))
 	return out
+
+
+## The local maps while [member list_local] is on. The folder is a mesh, not a scene: the shared imported scene builds it
+## (`G2GBspMap.build_from` reads `local_prefix`).
+static func _local() -> Array[DotMapDef]:
+	var out: Array[DotMapDef] = []
+	if not list_local:
+		return out
+	for entry: Dictionary in DotMapLocalMaps.scan():
+		var prefix := str(entry["prefix"])
+		if not is_mesh_manifest(prefix + ".json"):
+			continue
+		var map := DotMapLocalMaps.to_def(entry)
+		map.scene_path = IMPORTED_SCENE
+		map.author = IMPORTED_AUTHOR
+		map.meta["manifest"] = ""
+		map.meta["local_prefix"] = prefix
+		map.meta["imported"] = true
+		out.append(map)
+	return out
+
+
+## Whether the manifest at [param path] is dot-map's mesh format rather than this game's imported-map manifest.
+static func is_mesh_manifest(path: String) -> bool:
+	return FileAccess.get_file_as_string(path).contains(MESH_FORMAT)
 
 
 static func _built_in() -> Array[DotMapDef]:
@@ -253,6 +287,9 @@ static func _imported(root: String) -> Array[DotMapDef]:
 		# The manifest is the map. Its absence means this directory is something else,
 		# which is the normal case for a root an operator also keeps .bsp files in.
 		if not FileAccess.file_exists(manifest):
+			continue
+		# Only in a root local maps share: reading every manifest under res://maps/imported would cost seconds.
+		if DotMapLocalMaps.roots().has(root) and is_mesh_manifest(manifest):
 			continue
 		var map := _define(StringName(id), IMPORTED_SCENE, manifest, IMPORTED_AUTHOR)
 		# Without the mesh the map loads to an empty world and nothing says why, so a

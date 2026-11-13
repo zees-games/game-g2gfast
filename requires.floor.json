@@ -1,6 +1,7 @@
 {
   "format": 1,
   "addons": {
+    "dot_map": 23,
     "dot_mobile": 1,
     "dot_player_controller": 27,
     "dot_replay": 6,

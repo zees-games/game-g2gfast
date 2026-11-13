@@ -37,7 +37,7 @@
 GAME_NAME="Airdrift"
 PACK="g2gfast"
 EXTRA_PACKS=""
-SUITES="headless_config headless_figure headless_workbench headless_mapcfg headless_global_worlds headless_hull_kinds headless_run headless_net headless_link headless_bots headless_maps headless_workshop headless_presentation headless_client headless_feel headless_stack headless_native_motor headless_imported headless_mechanics headless_weapondrop dedicated"
+SUITES="headless_config headless_figure headless_workbench headless_mapcfg headless_global_worlds headless_hull_kinds headless_run headless_net headless_link headless_bots headless_maps headless_workshop headless_presentation headless_client headless_feel headless_stack headless_native_motor headless_imported headless_local_maps headless_mechanics headless_weapondrop dedicated"
 # --------------------------------------------------------------------------------
 
 set -uo pipefail
