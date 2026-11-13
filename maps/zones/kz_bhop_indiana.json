@@ -1,0 +1,44 @@
+{
+  "id": "kz_bhop_indiana",
+  "author": "Ghost1246511",
+  "attribution": {
+    "author": "Ghost1246511",
+    "source": "https://gamebanana.com/mods/126462 (Creators credited on the page: Ghost1246511 (submitter) plus 19 asset credits (TopHATTwaffle, Fibbs, Karatekaefer and others); the archive ships kz_bhop_indiana.bsp; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 with GameBanana's standard ask-first checklist, which does not forbid a port; credited, linked, removal offered)",
+    "archive": "kz_bhop_indiana.rar",
+    "recorded": "2026-11-02"
+  },
+  "notes": "Staged by chk-maps run 134, not yet imported (game-g2gfast held). There is no start destination: the eight counter-terrorist spawns sit in a box at z 232 around the origin (target_start is only the intro camera's target). The finish is the teleport to `tele_end`, beside the `end` filter and the `coursewin` hud hint. Verify in headless_imported before committing. Finish pinned to the teleport at the course's lowest point (two teleports reach tele_end).",
+  "zones": [
+    {
+      "kind": "START",
+      "track": 0,
+      "box": [
+        [
+          -160,
+          -120,
+          200
+        ],
+        [
+          288,
+          192,
+          700
+        ]
+      ],
+      "note": "box round where the player rests"
+    },
+    {
+      "kind": "END",
+      "track": 0,
+      "note": "the deepest of the two teleports into tele_end (the end room), the course's last drop; the other one, high above the start, is not the finish",
+      "near": {
+        "class": "trigger_teleport",
+        "point": [
+          11676,
+          6752,
+          -6784
+        ],
+        "within": 400
+      }
+    }
+  ]
+}
