@@ -1,0 +1,61 @@
+{
+ "id": "surf_lithium",
+ "author": "copy-mark and jesuswashomeless",
+ "attribution": {
+  "author": "copy-mark and jesuswashomeless",
+  "source": "https://gamebanana.com/mods/122444 (Creators credited on the page: copy-mark, jesuswashomeless (submitted by Lightning.); the archive ships surf_lithium.bsp; licence stated on the page: Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 with GameBanana's standard ask-first checklist, which does not forbid a port; credited, linked, removal offered)",
+  "archive": "surf_lithium.rar",
+  "recorded": "2026-11-02"
+ },
+ "notes": "Zones as built like surf_lithium2: levels level1..level5, the finish is the teleport to end (the end-button room), a bonus ending at Bonus_end_dest, end_of_round_teleports sweep everyone at round end.",
+ "round_teleports": {
+  "names": [
+   "end_of_round_teleports"
+  ],
+  "note": "round-end sweep, not a finish"
+ },
+ "zones": [
+  {
+   "kind": "START",
+   "track": 0,
+   "around": {
+    "point": "level1",
+    "extents": [
+     192,
+     192,
+     96
+    ]
+   },
+   "note": "round the start destination"
+  },
+  {
+   "kind": "SPAWN",
+   "track": 0,
+   "destination": "level1"
+  },
+  {
+   "kind": "END",
+   "track": 0,
+   "teleport_to": "end",
+   "note": "teleport into the end-button room"
+  }
+ ],
+ "remove": [
+  {
+   "box": [
+    [
+     -5810,
+     -4373,
+     14
+    ],
+    [
+     -5294,
+     -4368,
+     18
+    ]
+   ],
+   "faces_only": true,
+   "note": "one-unit sliver faces at z 16 where ramp brushes 813 and 814 meet floor brush 820; drawn from the wrong side they read as a floor seen from beneath. Faces only: every brush stays solid."
+  }
+ ]
+}
