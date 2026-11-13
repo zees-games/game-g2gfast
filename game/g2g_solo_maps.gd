@@ -55,6 +55,12 @@ static func session() -> Object:
 	return DotRegistry.get_service(SERVICE)
 
 
+## True for a course id a solo session may start on: the shell already checked it, but a map
+## id becomes a pack path, so this game does not trust it blindly.
+static func valid_start_map(id: String) -> bool:
+	return id != "" and RegEx.create_from_string("^[a-z0-9][a-z0-9_-]{0,63}$").search(id) != null
+
+
 ## The map ids of [param collection]'s `collection.json` body `{format, id, version, packs:
 ## ["<owner>/<map>"]}`: packs under [param owner] only, since a map is fetched under one owner.
 static func collection_maps(body: Variant, collection: String, owner: String) -> DotResult:

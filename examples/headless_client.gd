@@ -25,7 +25,7 @@ const G2GClientKillView := preload("../game/g2g_client_killview.gd")
 ##
 ## Exits non-zero on any failure.
 
-const CHECKS := 104
+const CHECKS := 106
 const SECTIONS := 18
 
 var _entered := 0
@@ -701,6 +701,7 @@ func _test_the_stage_splits_panel() -> void:
 ## Stands in for the browser shell's solo session: a node under `dot_solo` with `leave()`.
 class FakeSolo extends Node:
 	var left := 0
+	var start_map: StringName = &""
 
 	func leave() -> void:
 		left += 1
@@ -722,6 +723,16 @@ func _test_solo_in_the_shell() -> void:
 	_client._leave()
 	_check(solo.left == 1, "Leave in a solo session asks the shell to leave once", str(solo.left))
 
+	var first := _client.game.config.initial_map
+	solo.start_map = &"bhop_not_stock"
+	_client._offer_solo_maps()
+	_check(_client.game.config.initial_map == &"bhop_not_stock" and "bhop_not_stock" in _client.game.offered_maps,
+		"a solo session's start map is the first course and on M", str(_client.game.config.initial_map))
+	solo.start_map = &"../escape"
+	_client.game.config.initial_map = first
+	_client._offer_solo_maps()
+	_check(_client.game.config.initial_map == first, "a start map that is not a course id is ignored")
+	solo.start_map = &""
 	_client._offer_solo_maps()
 	# A checkout with the maps linked holds every stock course, so add one nothing holds.
 	var ghost := PackedStringArray(G2GSoloMaps.IDS)

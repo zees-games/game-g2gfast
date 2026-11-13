@@ -234,13 +234,21 @@ func cycle_spectate(forward: bool) -> void:
 
 ## Inside the browser shell's solo session (`dot_solo`), a pack's courses are named by the
 ## stock list and fetched from the shell's origin on demand, under its owner. A no-op
-## anywhere else, so a desktop offline game lists what it holds.
+## anywhere else, so a desktop offline game lists what it holds. A session's start map (the
+## site's "Play map", `?map=`) replaces the first course; the game fetches it like a pick.
 func _offer_solo_maps() -> void:
-	if G2GSoloMaps.session() == null:
+	var solo := G2GSoloMaps.session()
+	if solo == null:
 		return
 	if game.config.map_content_owner.strip_edges().is_empty():
 		game.config.map_content_owner = G2GSoloMaps.OWNER
-	game.offered_maps = G2GSoloMaps.IDS
+	var offered := PackedStringArray(G2GSoloMaps.IDS)
+	var start := str(solo.get(&"start_map")) if &"start_map" in solo else ""
+	if G2GSoloMaps.valid_start_map(start):
+		game.config.initial_map = StringName(start)
+		if not offered.has(start):
+			offered.append(start)
+	game.offered_maps = offered
 
 
 ## Widens the stock list to the maps collection as the origin publishes it. Not awaited: M
