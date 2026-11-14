@@ -206,6 +206,28 @@ func rescan_maps() -> Dictionary:
 	return change
 
 
+## Offline: copies the dropped [param paths] into `user://maps` ([method G2GMapCatalogue.accept_dropped]) and rescans, so
+## each map joins M as "<title> (local)" at once. Returns the line to show: the maps added, and each path that is not a
+## map with its reason. A server never lists local maps, so a drop there adds nothing to its rotation.
+func add_dropped_maps(paths: PackedStringArray) -> String:
+	var result := G2GMapCatalogue.accept_dropped(paths)
+	var titles := PackedStringArray()
+	if not (result.get("added", []) as Array).is_empty():
+		var _change := rescan_maps()
+	for entry: Dictionary in result.get("added", []):
+		var id := StringName(str(entry["id"]))
+		if maps != null and maps.catalogue != null and maps.catalogue.has(id):
+			titles.append(maps.catalogue.get_map(id).label())
+	# dot-map has already logged each one.
+	var errors: PackedStringArray = result.get("errors", PackedStringArray())
+	var lines := PackedStringArray()
+	if not titles.is_empty():
+		lines.append("Added %s. Press M to play it." % ", ".join(titles))
+	if not errors.is_empty():
+		lines.append("Not a map: %s" % "; ".join(errors))
+	return "\n".join(lines)
+
+
 # --- Movement cvars --------------------------------------------------------
 
 ## Rebuilds the movement from [member config] and hands it to every player.

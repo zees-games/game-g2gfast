@@ -6,6 +6,7 @@ const G2GLighting := preload("g2g_lighting.gd")
 const G2GTextures := preload("g2g_textures.gd")
 const G2GStockSubstitutes := preload("g2g_stock_substitutes.gd")
 const G2GMapDressing := preload("g2g_map_dressing.gd")
+const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 
 ## A map imported from a Source .bsp, built at load from a manifest anywhere on disk.
 ##
@@ -216,6 +217,10 @@ func _build_local(id: String, prefix: String) -> bool:
 	_built = true
 	local_prefix = prefix
 	var options := {"authoritative": false, "environment": false, "sounds": false, "map_id": id}
+	# A `<map>_orig` local pack draws with its own textures (dot-map 24); every other map keeps the free ones.
+	var surfaces := G2GMapCatalogue.local_surfaces(StringName(id))
+	if surfaces != null:
+		options["surfaces"] = surfaces
 	var built := DotMapWorld.build(prefix, {}, options)
 	# A copy without its `.doc.json` (the entity logic) is still a world to stand in, with no doors or triggers.
 	if not built.ok and not FileAccess.file_exists(prefix + ".doc.json"):

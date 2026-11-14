@@ -9,6 +9,7 @@ const G2GClientExtras := preload("g2g_client_extras.gd")
 const G2GConfig := preload("g2g_config.gd")
 const G2GFlashlight := preload("g2g_flashlight.gd")
 const G2GGame := preload("g2g_game.gd")
+const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
 const G2GZoneEditor := preload("g2g_zone_editor.gd")
 const G2GZoneOutlines := preload("g2g_zone_outlines.gd")
 const G2GHud := preload("g2g_hud.gd")
@@ -249,6 +250,18 @@ func _offer_solo_maps() -> void:
 		if not offered.has(start):
 			offered.append(start)
 	game.offered_maps = offered
+
+
+## Solo only: a converted map folder or `.zip` dragged onto the window is copied into `user://maps` and offered in M as
+## "<title> (local)" ([method G2GGame.add_dropped_maps]); the HUD says what was added, or why a path is not a map. Never
+## online: a local map exists on this machine alone. Needs dot-map 24 ([method G2GMapCatalogue.can_drop]).
+func _watch_map_drops() -> void:
+	if not _offline or not is_inside_tree() or not G2GMapCatalogue.can_drop():
+		return
+	get_window().files_dropped.connect(func(files: PackedStringArray) -> void:
+		var text: String = game.add_dropped_maps(files) if game != null else ""
+		if hud != null and text != "":
+			hud.notice(text))
 
 
 ## Widens the stock list to the maps collection as the origin publishes it. Not awaited: M

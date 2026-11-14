@@ -65,6 +65,39 @@ static var list_local := false
 ## each scan would otherwise take the other's folders for its own.
 const MESH_FORMAT := "dot-bsp-mesh"
 
+## The dot-map API level with drag-and-drop, zips and original-texture packs (`accept_dropped`, `surfaces_for`). The floor
+## stays 23 while the live shell pins it, so those members are reached by name after [method can_drop] and the scripts
+## parse on 23; drop the guard once the oldest shell ships 24 (as game-fatal-contact does, fc-local-maps-floor24).
+const DROP_LEVEL := 24
+
+
+## Whether this host's dot-map takes dropped maps and zips and draws `<map>_orig` packs with their own textures.
+static func can_drop() -> bool:
+	return DotAddonApi.build_level("dot_map") >= DROP_LEVEL
+
+
+## Copies the dropped [param paths] (a converted map folder, its convert folder, or a `.zip` of either) into
+## `user://maps` with dot-map's [code]DotMapLocalMaps.accept_dropped[/code]: `{added, errors}`, or one error when the
+## host's dot-map is older than [constant DROP_LEVEL].
+static func accept_dropped(paths: PackedStringArray) -> Dictionary:
+	if not can_drop():
+		return {"added": [], "errors": PackedStringArray(["this build cannot import maps (dot-map %d, needs %d)" % [
+			DotAddonApi.build_level("dot_map"), DROP_LEVEL]])}
+	var local_maps: Object = DotMapLocalMaps  # API 24 by name: a call on the class itself does not parse on 23
+	return local_maps.call(&"accept_dropped", paths)
+
+
+## The surfaces builder for local map [param id]: the map's own textures for a `<map>_orig` pack, the free ones otherwise;
+## null on a dot-map older than [constant DROP_LEVEL] or for an id that is not local (the world then draws with its default).
+static func local_surfaces(id: StringName) -> DotMapSurfaces:
+	if not can_drop():
+		return null
+	var entry := DotMapLocalMaps.find(id)
+	if entry.is_empty():
+		return null
+	var local_maps: Object = DotMapLocalMaps
+	return local_maps.call(&"surfaces_for", entry) as DotMapSurfaces
+
 
 ## The person to credit for [param map], or "" when there is nobody to name.
 ## The version a map pack is published as: `0.0.0-` and the first twelve hex digits of

@@ -1,7 +1,5 @@
 extends "g2g_client_netcode.gd"
 
-const G2GMapCatalogue := preload("g2g_map_catalogue.gd")
-
 func _ready() -> void:
 	# First, before anything can be drawn: the map arrives after this node is in the tree.
 	_build_gate()
@@ -40,6 +38,8 @@ func _ready() -> void:
 	add_child(game)
 	if _offline:
 		_offer_collection()
+		# Solo: a converted map dragged onto the window joins M as "(local)".
+		_watch_map_drops()
 	_wire_gate_to_maps()
 
 	# Connected before anything can create a player. `JOIN` is what creates the local
